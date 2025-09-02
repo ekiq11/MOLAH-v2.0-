@@ -9,12 +9,12 @@ import 'dart:convert';
 import 'dart:io';
 
 // Import custom components
-import 'package:pizab_molah/dialogs/topup_dialog.dart';
-import 'package:pizab_molah/dialogs/notification_dialog.dart';
-import 'package:pizab_molah/screens/pembayaran.dart';
-import 'package:pizab_molah/utils/fetcher_data.dart';
-import 'package:pizab_molah/login.dart';
-import 'package:pizab_molah/utils/login_preferences.dart';
+import 'dialogs/topup_dialog.dart';
+import 'dialogs/notification_dialog.dart';
+import 'screens/pembayaran.dart';
+import 'utils/fetcher_data.dart';
+import 'login.dart';
+import 'utils/login_preferences.dart';
 import 'widgets/quick_actions.dart';
 import 'widgets/report_section.dart';
 import 'widgets/student_info.dart';

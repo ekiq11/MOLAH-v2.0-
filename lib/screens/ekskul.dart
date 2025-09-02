@@ -1,13 +1,21 @@
+// File: ekskul_payment_screen.dart
+// ignore_for_file: deprecated_member_use
+
 import 'dart:math';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/rendering.dart';
 import 'package:http/http.dart' as http;
 import 'package:csv/csv.dart';
 import 'package:mmkv/mmkv.dart';
-import 'dart:convert';
-import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class EkskulPaymentScreen extends StatefulWidget {
   final String nisn;
@@ -160,33 +168,6 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
     }
   }
 
-  // Method untuk validasi data CSV
-  bool _validateCSVRow(List<dynamic> row) {
-    // Check minimum columns
-    if (row.length < 11) {
-      return false;
-    }
-
-    final nisn = row[1]?.toString().trim() ?? '';
-    final nama = row[2]?.toString().trim() ?? '';
-
-    // Skip empty NISN
-    if (nisn.isEmpty) return false;
-
-    // Skip summary rows
-    if (nisn.toUpperCase().contains('TOTAL') ||
-        nisn.toUpperCase().contains('PENGELUARAN') ||
-        nama.toUpperCase().contains('TOTAL') ||
-        nama.toUpperCase().contains('PENGELUARAN')) {
-      return false;
-    }
-
-    // Skip empty names
-    if (nama.isEmpty) return false;
-
-    return true;
-  }
-
   Map<String, dynamic> _parsePaymentCSV(List<List<dynamic>> csvData) {
     try {
       if (csvData.length < 5) {
@@ -204,9 +185,6 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
       }
 
       // Start from row 3 (index 2) based on your CSV structure
-      // Baris 0: Header kolom
-      // Baris 1: Kosong/header tambahan
-      // Baris 2: Data mulai dari sini
       for (int i = 2; i < csvData.length; i++) {
         final row = csvData[i];
 
@@ -218,8 +196,6 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
           continue;
         }
 
-        // Column mapping based on your CSV:
-        // A(0)=NO, B(1)=NISN, C(2)=NAMA, D(3)=STATUS, E(4)=EKSKUL, etc.
         final nisn = row[1]?.toString().trim() ?? '';
         final nama = row[2]?.toString().trim() ?? '';
 
@@ -333,28 +309,19 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
         .trim();
 
     // Handle dots - bisa jadi thousands separator atau decimal
-    // Untuk currency Indonesia, dot biasanya thousands separator
-    // Contoh: "1.000.000" = 1000000, "1.000,50" = 100050
     if (valueStr.contains('.')) {
-      // Jika ada koma juga, dot adalah thousands separator
       if (valueStr.contains(',')) {
         valueStr = valueStr.replaceAll('.', '');
-        // Handle decimal comma (convert to int, ignore decimal)
         if (valueStr.contains(',')) {
           valueStr = valueStr.split(',')[0];
         }
       } else {
-        // Jika hanya ada dot, bisa jadi thousands atau decimal
-        // Cek pola: jika ada 3 digit terakhir setelah dot terakhir, kemungkinan thousands
         final parts = valueStr.split('.');
         if (parts.length > 1 && parts.last.length == 3 && parts.length > 2) {
-          // Pattern like "1.000.000" - thousands separator
           valueStr = valueStr.replaceAll('.', '');
         } else if (parts.length == 2 && parts.last.length <= 2) {
-          // Pattern like "1000.50" - decimal point, take only integer part
           valueStr = parts.first;
         } else {
-          // Default: treat as thousands separator
           valueStr = valueStr.replaceAll('.', '');
         }
       }
@@ -445,6 +412,21 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
     });
   }
 
+  // Method untuk navigasi ke halaman invoice
+  void _navigateToInvoice(int monthIndex, String monthName) {
+    HapticFeedback.lightImpact();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EkskulInvoiceScreen(
+          paymentData: _paymentData,
+          monthIndex: monthIndex,
+          monthName: monthName,
+        ),
+      ),
+    );
+  }
+
   // Method untuk mendapatkan status pembayaran
   Map<String, dynamic> _getPaymentStatus() {
     final iuranTahunan = _paymentData['iuran_tahunan'] ?? 0;
@@ -487,6 +469,7 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
       'April',
       'Mei',
       'Juni',
+      'Juli',
     ];
     return monthIndex < months.length
         ? months[monthIndex]
@@ -504,92 +487,20 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
     return months;
   }
 
-  // Method untuk ekspor data ke format yang bisa dibagikan
-  String _exportPaymentSummary() {
-    if (_paymentData.isEmpty) return '';
+  String _formatCurrency(int amount) {
+    if (amount == 0) return 'Rp 0';
 
-    final status = _getPaymentStatus();
-    final paidMonths = _getPaidMonths();
+    final formatted = amount.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
 
-    return '''
-RIWAYAT PEMBAYARAN EKSTRAKURIKULER
-
-Nama: ${_paymentData['nama']}
-NISN: ${_paymentData['nisn']}
-Status: ${_paymentData['status']}
-Ekstrakurikuler: ${_paymentData['ekskul']}
-
-RINGKASAN PEMBAYARAN:
-- Iuran per bulan: ${_formatCurrency(_paymentData['iuran_per_bulan'] ?? 0)}
-- Total iuran tahunan: ${_formatCurrency(_paymentData['iuran_tahunan'] ?? 0)}
-- Sudah dibayar: ${_formatCurrency(_paymentData['nominal_dibayar'] ?? 0)}
-- Sisa pembayaran: ${_formatCurrency(_paymentData['sisa_pembayaran'] ?? 0)}
-- Status: ${status['status']}
-- Progress: ${(status['progress'] * 100).toStringAsFixed(1)}%
-
-BULAN YANG SUDAH LUNAS:
-${paidMonths.isEmpty ? 'Belum ada pembayaran' : paidMonths.map((month) => '✓ $month').join('\n')}
-
-Generated: ${DateTime.now().toString().split('.')[0]}
-    ''';
+    return 'Rp $formatted';
   }
+
+  // Method untuk ekspor data ke format yang bisa dibagikan
 
   // Method untuk handle sharing
-  void _sharePaymentSummary() {
-    final summary = _exportPaymentSummary();
-    if (summary.isNotEmpty) {
-      Clipboard.setData(ClipboardData(text: summary));
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Ringkasan pembayaran disalin ke clipboard'),
-          backgroundColor: Colors.green[600],
-          action: SnackBarAction(
-            label: 'OK',
-            textColor: Colors.white,
-            onPressed: () {},
-          ),
-        ),
-      );
-    }
-  }
-
-  Widget _buildShimmerContainer({
-    required double width,
-    required double height,
-    double borderRadius = 8,
-  }) {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(borderRadius),
-        color: Colors.grey[300],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: AnimatedBuilder(
-          animation: _shimmerAnimation,
-          builder: (context, child) {
-            return Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [
-                    Colors.grey[300]!,
-                    Colors.grey[100]!,
-                    Colors.grey[300]!,
-                  ],
-                  stops: [0.0, 0.5, 1.0],
-                  transform: GradientRotation(_shimmerAnimation.value * 0.3),
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -613,11 +524,6 @@ Generated: ${DateTime.now().toString().split('.')[0]}
         ),
         actions: [
           if (!_isLoading && _paymentData.isNotEmpty) ...[
-            IconButton(
-              icon: Icon(Icons.share),
-              onPressed: _sharePaymentSummary,
-              tooltip: 'Bagikan ringkasan',
-            ),
             IconButton(
               icon: Icon(Icons.refresh),
               onPressed: _fetchPaymentData,
@@ -848,37 +754,25 @@ Generated: ${DateTime.now().toString().split('.')[0]}
                           ),
                         ),
                       ),
-                      SizedBox(width: 8),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: status['color'].withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(status['icon'], color: Colors.white, size: 12),
-                            SizedBox(width: 4),
-                            Text(
-                              status['status'],
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ],
               ],
             ),
+          ),
+          Column(
+            children: [
+              Icon(status['icon'], color: Colors.white, size: 24),
+              SizedBox(height: 4),
+              Text(
+                status['status'],
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1335,6 +1229,7 @@ Generated: ${DateTime.now().toString().split('.')[0]}
           else ...[
             // Monthly payment details
             Container(
+              width: double.infinity,
               padding: EdgeInsets.all(16),
               margin: EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
@@ -1358,7 +1253,7 @@ Generated: ${DateTime.now().toString().split('.')[0]}
               ),
             ),
 
-            // List of paid months
+            // List of paid months - CLICKABLE untuk invoice
             Column(
               children: paidMonths.asMap().entries.map((entry) {
                 final index = entry.key;
@@ -1388,69 +1283,87 @@ Generated: ${DateTime.now().toString().split('.')[0]}
                       ),
                       SizedBox(width: 16),
                       Expanded(
-                        child: Container(
-                          padding: EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.green[50],
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.green[200]!),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    month,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.grey[800],
-                                    ),
-                                  ),
-                                  Text(
-                                    'Pembayaran bulan ke-${index + 1}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                  if (_paymentData['iuran_per_bulan'] != null &&
-                                      _paymentData['iuran_per_bulan'] > 0) ...[
-                                    SizedBox(height: 2),
-                                    Text(
-                                      _formatCurrency(
-                                        _paymentData['iuran_per_bulan'],
+                        child: GestureDetector(
+                          onTap: () => _navigateToInvoice(index, month),
+                          child: Container(
+                            padding: EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.green[50],
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.green[200]!),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        month,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey[800],
+                                        ),
                                       ),
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.green[700],
-                                        fontWeight: FontWeight.w500,
+                                      Text(
+                                        'Pembayaran bulan ke-${index + 1}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                        ),
                                       ),
+                                      if (_paymentData['iuran_per_bulan'] !=
+                                              null &&
+                                          _paymentData['iuran_per_bulan'] >
+                                              0) ...[
+                                        SizedBox(height: 2),
+                                        Text(
+                                          _formatCurrency(
+                                            _paymentData['iuran_per_bulan'],
+                                          ),
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.green[700],
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green[400],
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        'LUNAS',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    Icon(
+                                      Icons.receipt_long,
+                                      color: Colors.green[600],
+                                      size: 20,
                                     ),
                                   ],
-                                ],
-                              ),
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
                                 ),
-                                decoration: BoxDecoration(
-                                  color: Colors.green[400],
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  'LUNAS',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -1463,17 +1376,6 @@ Generated: ${DateTime.now().toString().split('.')[0]}
         ],
       ),
     );
-  }
-
-  String _formatCurrency(int amount) {
-    if (amount == 0) return 'Rp 0';
-
-    final formatted = amount.toString().replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]}.',
-    );
-
-    return 'Rp $formatted';
   }
 
   // Shimmer components
@@ -1687,6 +1589,860 @@ Generated: ${DateTime.now().toString().split('.')[0]}
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildShimmerContainer({
+    required double width,
+    required double height,
+    double borderRadius = 8,
+  }) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(borderRadius),
+        color: Colors.grey[300],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: AnimatedBuilder(
+          animation: _shimmerAnimation,
+          builder: (context, child) {
+            return Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    Colors.grey[300]!,
+                    Colors.grey[100]!,
+                    Colors.grey[300]!,
+                  ],
+                  stops: [0.0, 0.5, 1.0],
+                  transform: GradientRotation(_shimmerAnimation.value * 0.3),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+// KELAS INVOICE SCREEN TERPISAH
+class EkskulInvoiceScreen extends StatefulWidget {
+  final Map<String, dynamic> paymentData;
+  final int monthIndex;
+  final String monthName;
+
+  const EkskulInvoiceScreen({
+    super.key,
+    required this.paymentData,
+    required this.monthIndex,
+    required this.monthName,
+  });
+
+  @override
+  State<EkskulInvoiceScreen> createState() => _EkskulInvoiceScreenState();
+}
+
+class _EkskulInvoiceScreenState extends State<EkskulInvoiceScreen>
+    with TickerProviderStateMixin {
+  final GlobalKey _invoiceKey = GlobalKey();
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+  bool _isGenerating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeAnimations();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void _initializeAnimations() {
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0.0, 0.2), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
+
+    _animationController.forward();
+  }
+
+  String _generateInvoiceNumber() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final random = Random().nextInt(9999);
+    return 'INV-${timestamp.toString().substring(6)}-${random.toString().padLeft(4, '0')}';
+  }
+
+  String _formatCurrency(int amount) {
+    if (amount == 0) return 'Rp 0';
+    final formatted = amount.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
+    return 'Rp $formatted';
+  }
+
+  String _formatDate(DateTime date) {
+    const months = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+
+  Future<void> _downloadInvoice() async {
+    setState(() {
+      _isGenerating = true;
+    });
+
+    try {
+      // Haptic feedback
+      HapticFeedback.lightImpact();
+
+      // Capture widget as image
+      RenderRepaintBoundary boundary =
+          _invoiceKey.currentContext!.findRenderObject()
+              as RenderRepaintBoundary;
+
+      // Higher resolution for better quality
+      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      ByteData? byteData = await image.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
+      Uint8List pngBytes = byteData!.buffer.asUint8List();
+
+      // Save to device
+      await _saveImageToDevice(pngBytes);
+    } catch (e) {
+      _showErrorSnackBar('Gagal mengunduh invoice: $e');
+    } finally {
+      setState(() {
+        _isGenerating = false;
+      });
+    }
+  }
+
+  Future<void> _copyInvoiceSummary() async {
+    try {
+      HapticFeedback.lightImpact();
+
+      final summary = _generateTextSummary();
+      await Clipboard.setData(ClipboardData(text: summary));
+
+      _showSuccessSnackBar('Ringkasan invoice disalin ke clipboard');
+    } catch (e) {
+      _showErrorSnackBar('Gagal menyalin ringkasan: $e');
+    }
+  }
+
+  Future<void> _saveImageToDevice(Uint8List bytes) async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName =
+          'Invoice_Ekskul_${widget.paymentData['nisn']}_${widget.monthName}_${DateTime.now().millisecondsSinceEpoch}.png';
+      final file = File('${directory.path}/$fileName');
+
+      await file.writeAsBytes(bytes);
+
+      _showSuccessSnackBar('Invoice berhasil disimpan: $fileName');
+    } catch (e) {
+      _showErrorSnackBar('Gagal menyimpan file: $e');
+    }
+  }
+
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.white, size: 20),
+            SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.green[600],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.error, color: Colors.white, size: 20),
+            SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.red[600],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: Duration(seconds: 4),
+      ),
+    );
+  }
+
+  Future<void> _shareInvoice() async {
+    setState(() {
+      _isGenerating = true;
+    });
+
+    try {
+      HapticFeedback.lightImpact();
+
+      // Ambil widget sebagai image
+      RenderRepaintBoundary boundary =
+          _invoiceKey.currentContext!.findRenderObject()
+              as RenderRepaintBoundary;
+      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      ByteData? byteData = await image.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
+      Uint8List pngBytes = byteData!.buffer.asUint8List();
+
+      // Simpan ke file sementara
+      final directory = await getTemporaryDirectory();
+      final filePath = '${directory.path}/invoice.png';
+      final file = File(filePath);
+      await file.writeAsBytes(pngBytes);
+
+      // Share file menggunakan share_plus
+      await Share.shareXFiles([XFile(filePath)], text: 'Invoice Anda');
+
+      _showSuccessSnackBar('Invoice berhasil dibagikan');
+    } catch (e) {
+      _showErrorSnackBar('Gagal membagikan invoice: $e');
+    } finally {
+      setState(() {
+        _isGenerating = false;
+      });
+    }
+  }
+
+  String _generateTextSummary() {
+    final invoiceNumber = _generateInvoiceNumber();
+    final currentDate = _formatDate(DateTime.now());
+    final iuranPerBulan = widget.paymentData['iuran_per_bulan'] ?? 0;
+
+    return '''
+🧾 BUKTI PEMBAYARAN EKSTRAKURIKULER
+
+No. Invoice: $invoiceNumber
+Tanggal: $currentDate
+
+👤 INFORMASI SISWA:
+Nama: ${widget.paymentData['nama']}
+NISN: ${widget.paymentData['nisn']}
+Ekstrakurikuler: ${widget.paymentData['ekskul']}
+
+💰 DETAIL PEMBAYARAN:
+Periode: ${widget.monthName} (Bulan ke-${widget.monthIndex + 1})
+Jumlah: ${_formatCurrency(iuranPerBulan)}
+Status: LUNAS ✅
+
+📍 Pesantren Islam Zaid bin Tsabit
+Sistem Pembayaran Ekstrakurikuler
+$currentDate
+    ''';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 400;
+
+    return Scaffold(
+      backgroundColor: Colors.grey[100],
+      appBar: AppBar(
+        title: Text(
+          'Invoice Pembayaran',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: isSmallScreen ? 16 : 18,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.grey[800],
+        elevation: 1,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.copy_all_rounded, size: isSmallScreen ? 20 : 24),
+            onPressed: _isGenerating ? null : _downloadInvoice,
+            tooltip: 'Download',
+          ),
+        ],
+      ),
+      body: SlideTransition(
+        position: _slideAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+            child: Column(
+              children: [
+                // Invoice Widget
+                RepaintBoundary(
+                  key: _invoiceKey,
+                  child: _buildInvoiceWidget(screenSize, isSmallScreen),
+                ),
+
+                SizedBox(height: 20),
+
+                // Action Buttons
+                _buildActionButtons(isSmallScreen),
+
+                SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInvoiceWidget(Size screenSize, bool isSmallScreen) {
+    final invoiceNumber = _generateInvoiceNumber();
+    final currentDate = DateTime.now();
+    final iuranPerBulan = widget.paymentData['iuran_per_bulan'] ?? 0;
+
+    // Calculate responsive sizes
+    final invoiceWidth = screenSize.width - (isSmallScreen ? 24 : 32);
+    final headerFontSize = isSmallScreen ? 16.0 : 18.0;
+    final titleFontSize = isSmallScreen ? 14.0 : 16.0;
+    final bodyFontSize = isSmallScreen ? 12.0 : 14.0;
+    final smallFontSize = isSmallScreen ? 10.0 : 12.0;
+
+    return Container(
+      width: invoiceWidth,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            blurRadius: 15,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Colors.green[600]!, Colors.green[600]!],
+              ),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Pesantren Islam Zaid bin Tsabit',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: headerFontSize,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Sistem Pembayaran Ekstrakurikuler',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: smallFontSize,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.receipt_long,
+                        color: Colors.white,
+                        size: isSmallScreen ? 20 : 24,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 16),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 10 : 12,
+                    vertical: isSmallScreen ? 6 : 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'BUKTI PEMBAYARAN EKSKUL',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: titleFontSize,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Invoice Details
+          Padding(
+            padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Invoice Info
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'No. Invoice',
+                          style: TextStyle(
+                            fontSize: smallFontSize,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          invoiceNumber,
+                          style: TextStyle(
+                            fontSize: bodyFontSize,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[800],
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Tanggal',
+                          style: TextStyle(
+                            fontSize: smallFontSize,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          _formatDate(currentDate),
+                          style: TextStyle(
+                            fontSize: bodyFontSize,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+
+                Divider(height: 32, thickness: 1, color: Colors.grey[300]),
+
+                // Student Information
+                _buildInfoSection(
+                  'INFORMASI SISWA',
+                  [
+                    _buildInfoRow(
+                      'Nama',
+                      widget.paymentData['nama'] ?? '-',
+                      bodyFontSize,
+                      smallFontSize,
+                    ),
+                    _buildInfoRow(
+                      'NISN',
+                      widget.paymentData['nisn'] ?? '-',
+                      bodyFontSize,
+                      smallFontSize,
+                    ),
+                    _buildInfoRow(
+                      'Ekstrakurikuler',
+                      widget.paymentData['ekskul'] ?? '-',
+                      bodyFontSize,
+                      smallFontSize,
+                    ),
+                    _buildInfoRow(
+                      'Status',
+                      widget.paymentData['status'] ?? '-',
+                      bodyFontSize,
+                      smallFontSize,
+                    ),
+                  ],
+                  titleFontSize,
+                  isSmallScreen,
+                ),
+
+                SizedBox(height: 20),
+
+                // Payment Details
+                _buildInfoSection(
+                  'DETAIL PEMBAYARAN',
+                  [
+                    _buildInfoRow(
+                      'Periode',
+                      '${widget.monthName} (Bulan ke-${widget.monthIndex + 1})',
+                      bodyFontSize,
+                      smallFontSize,
+                    ),
+                    _buildInfoRow(
+                      'Iuran per Bulan',
+                      _formatCurrency(iuranPerBulan),
+                      bodyFontSize,
+                      smallFontSize,
+                    ),
+                  ],
+                  titleFontSize,
+                  isSmallScreen,
+                ),
+
+                SizedBox(height: 20),
+
+                // Payment Amount - Highlighted
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Colors.green[50]!, Colors.green[100]!],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.green[300]!, width: 1.5),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'TOTAL PEMBAYARAN',
+                            style: TextStyle(
+                              fontSize: titleFontSize,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green[700],
+                            ),
+                          ),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isSmallScreen ? 8 : 10,
+                              vertical: isSmallScreen ? 4 : 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green[600],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'LUNAS',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: smallFontSize,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _formatCurrency(iuranPerBulan),
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 24 : 28,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green[700],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: 20),
+
+                // Payment Method (Simulated)
+                _buildInfoSection(
+                  'METODE PEMBAYARAN',
+                  [
+                    _buildInfoRow(
+                      'Via',
+                      'Transfer Bank / Tunai',
+                      bodyFontSize,
+                      smallFontSize,
+                    ),
+                    _buildInfoRow(
+                      'Waktu Pembayaran',
+                      _formatDate(currentDate),
+                      bodyFontSize,
+                      smallFontSize,
+                    ),
+                  ],
+                  titleFontSize,
+                  isSmallScreen,
+                ),
+
+                SizedBox(height: 24),
+
+                // Footer
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.verified,
+                            color: Colors.green[600],
+                            size: isSmallScreen ? 16 : 18,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            'PEMBAYARAN TERVERIFIKASI',
+                            style: TextStyle(
+                              fontSize: smallFontSize,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green[700],
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Invoice ini adalah bukti sah pembayaran ekstrakurikuler',
+                        style: TextStyle(
+                          fontSize: smallFontSize,
+                          color: Colors.grey[600],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Simpan bukti ini untuk keperluan administrasi',
+                        style: TextStyle(
+                          fontSize: smallFontSize - 1,
+                          color: Colors.grey[500],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoSection(
+    String title,
+    List<Widget> children,
+    double titleFontSize,
+    bool isSmallScreen,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: titleFontSize,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[700],
+            letterSpacing: 0.5,
+          ),
+        ),
+        SizedBox(height: isSmallScreen ? 8 : 12),
+        ...children,
+      ],
+    );
+  }
+
+  Widget _buildInfoRow(
+    String label,
+    String value,
+    double bodyFontSize,
+    double smallFontSize,
+  ) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: smallFontSize,
+                color: Colors.grey[600],
+              ),
+            ),
+          ),
+          Text(
+            ': ',
+            style: TextStyle(fontSize: smallFontSize, color: Colors.grey[600]),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: bodyFontSize,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[800],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Perbaiki widget _buildActionButtons
+  Widget _buildActionButtons(bool isSmallScreen) {
+    return Column(
+      children: [
+        // Baris pertama - tombol utama
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: _isGenerating ? null : _shareInvoice,
+                icon: _isGenerating
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      )
+                    : Icon(Icons.share, size: isSmallScreen ? 18 : 20),
+                label: Text(
+                  _isGenerating ? 'Proses...' : 'Share Invoice',
+                  style: TextStyle(fontSize: isSmallScreen ? 12 : 14),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green[600],
+                  foregroundColor: Colors.white,
+                  elevation: 0, // <-- hilangkan shadow
+                  padding: EdgeInsets.symmetric(
+                    vertical: isSmallScreen ? 12 : 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+
+            SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _isGenerating ? null : _copyInvoiceSummary,
+                icon: Icon(
+                  Icons.copy_all_rounded,
+                  size: isSmallScreen ? 18 : 20,
+                ),
+                label: Text(
+                  'Salin Invoice',
+                  style: TextStyle(fontSize: isSmallScreen ? 12 : 14),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.grey[700],
+                  side: BorderSide(color: Colors.grey[400]!),
+                  padding: EdgeInsets.symmetric(
+                    vertical: isSmallScreen ? 12 : 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

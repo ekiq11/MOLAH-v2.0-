@@ -1,8 +1,15 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'dart:ui' as ui;
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:csv/csv.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'package:share_plus/share_plus.dart';
 
 class SPPPaymentPage extends StatefulWidget {
   final String nisn;
@@ -114,12 +121,15 @@ class SantriData {
     }
   }
 }
+// LENGKAP MODIFIKASI UNTUK _SPPPaymentPageState
+// Hapus semua fungsi yang berhubungan dengan dialog dan ganti dengan navigasi
 
 class _SPPPaymentPageState extends State<SPPPaymentPage>
     with TickerProviderStateMixin {
   SantriData? santriData;
   bool isLoading = true;
   String errorMessage = '';
+  // HAPUS: final GlobalKey _invoiceKey = GlobalKey();
 
   late AnimationController _shimmerController;
   late Animation<double> _shimmerAnimation;
@@ -172,6 +182,41 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
   String _normalizeNisn(String nisn) {
     return nisn.trim().replaceFirst(RegExp(r'^0+'), '');
   }
+
+  // GANTI: _showInvoiceDialog dengan _navigateToInvoice
+  void _navigateToInvoice(String month, int monthIndex) {
+    if (santriData == null) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SPPInvoiceScreen(
+          santriData: santriData!,
+          monthName: month,
+          monthIndex: monthIndex,
+        ),
+      ),
+    );
+  }
+
+  // HAPUS semua fungsi dialog berikut ini:
+  // - _showInvoiceDialog
+  // - _downloadInvoice
+  // - _buildInvoiceContent
+  // - _buildInvoiceSection (yang untuk dialog)
+  // - _buildInvoiceRow (yang untuk dialog)
+  // - _buildInvoiceForCapture
+  // - _generateInvoiceId
+  // - _getJatuhTempo
+  // - _formatDate
+  // - _formatDateTime
+
+  // KEEP semua fungsi lainnya seperti:
+  // - fetchData()
+  // - _formatCurrency()
+  // - _buildContent()
+  // - _buildProfileCard()
+  // - dll.
 
   Future<void> fetchData() async {
     try {
@@ -336,28 +381,6 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
-        // leading: IconButton(
-        //   icon: Container(
-        //     padding: const EdgeInsets.all(8),
-        //     decoration: BoxDecoration(
-        //       color: Colors.white,
-        //       borderRadius: BorderRadius.circular(12),
-        //       boxShadow: [
-        //         BoxShadow(
-        //           color: Colors.black.withOpacity(0.1),
-        //           blurRadius: 4,
-        //           offset: const Offset(0, 2),
-        //         ),
-        //       ],
-        //     ),
-        //     child: Icon(
-        //       Icons.arrow_back_ios_new,
-        //       color: Colors.grey[700],
-        //       size: 18,
-        //     ),
-        //   ),
-        //   onPressed: () => Navigator.pop(context),
-        // ),
         title: Text(
           'Pembayaran SPP & Uang Pangkal',
           style: TextStyle(
@@ -397,6 +420,298 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
           : _buildContent(),
     );
   }
+
+  // Dalam _buildPaymentHistory(), ubah onTap:
+  Widget _buildPaymentHistory() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            spreadRadius: 0,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.history_rounded,
+                color: Color(0xFF4F46E5),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Riwayat Pembayaran SPP',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[800],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF4F46E5).withOpacity(0.1),
+                  const Color(0xFF7C3AED).withOpacity(0.05),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFF4F46E5).withOpacity(0.2),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildStatusInfo(
+                  'Lunas',
+                  '${santriData!.lunasBulanKe}',
+                  const Color(0xFF10B981),
+                ),
+                Container(width: 1, height: 40, color: Colors.grey[300]),
+                _buildStatusInfo(
+                  'Belum Lunas',
+                  '${12 - santriData!.lunasBulanKe}',
+                  const Color(0xFFEF4444),
+                ),
+                Container(width: 1, height: 40, color: Colors.grey[300]),
+                _buildStatusInfo('Total Bulan', '12', const Color(0xFF6B7280)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              int crossAxisCount = 3;
+              if (constraints.maxWidth > 400) crossAxisCount = 4;
+              if (constraints.maxWidth > 500) crossAxisCount = 6;
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  childAspectRatio: 0.85,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                ),
+                itemCount: monthNames.length,
+                itemBuilder: (context, index) {
+                  String monthName = monthNames[index];
+                  bool isPaid = index < santriData!.lunasBulanKe;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    decoration: BoxDecoration(
+                      gradient: isPaid
+                          ? LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                const Color(0xFF10B981).withOpacity(0.15),
+                                const Color(0xFF059669).withOpacity(0.2),
+                              ],
+                            )
+                          : LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                const Color(0xFFEF4444).withOpacity(0.08),
+                                const Color(0xFFDC2626).withOpacity(0.12),
+                              ],
+                            ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isPaid
+                            ? const Color(0xFF10B981).withOpacity(0.3)
+                            : const Color(0xFFEF4444).withOpacity(0.2),
+                        width: isPaid ? 2 : 1.5,
+                      ),
+                      boxShadow: isPaid
+                          ? [
+                              BoxShadow(
+                                color: const Color(0xFF10B981).withOpacity(0.2),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ]
+                          : [
+                              BoxShadow(
+                                color: const Color(0xFFEF4444).withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => _navigateToInvoice(
+                          monthName,
+                          index,
+                        ), // PERUBAHAN UTAMA DI SINI
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 8,
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: isPaid
+                                        ? [
+                                            const Color(0xFF10B981),
+                                            const Color(0xFF059669),
+                                          ]
+                                        : [
+                                            const Color(0xFFEF4444),
+                                            const Color(0xFFDC2626),
+                                          ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color:
+                                          (isPaid
+                                                  ? const Color(0xFF10B981)
+                                                  : const Color(0xFFEF4444))
+                                              .withOpacity(0.4),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  isPaid
+                                      ? Icons.check_rounded
+                                      : Icons.schedule_rounded,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Flexible(
+                                child: Text(
+                                  monthName,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey[700],
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color:
+                                      (isPaid
+                                              ? const Color(0xFF10B981)
+                                              : const Color(0xFFEF4444))
+                                          .withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  isPaid ? 'LUNAS' : 'BELUM',
+                                  style: TextStyle(
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w700,
+                                    color: isPaid
+                                        ? const Color(0xFF059669)
+                                        : const Color(0xFFDC2626),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline_rounded,
+                  color: const Color(0xFF6B7280),
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Informasi Pembayaran',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF6B7280),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Ketuk bulan untuk melihat invoice/bukti pembayaran. Pembayaran dimulai dari bulan Juli.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // KEEP semua widget build method lainnya seperti:
+  // _buildLoadingWidget(), _buildErrorWidget(), _buildNotFoundWidget(),
+  // _buildContent(), _buildProfileCard(), _buildPaymentSummary(),
+  // _buildUangPangkalProgress(), _buildSummaryItem(), _buildStatusInfo()
+  // (Tidak perlu diubah)
 
   Widget _buildLoadingWidget() {
     return SingleChildScrollView(
@@ -917,6 +1232,7 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
     );
   }
 
+  // Sisa widget lainnya tetap sama...
   Widget _buildPaymentSummary() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1237,306 +1553,6 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
     );
   }
 
-  Widget _buildPaymentHistory() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 20,
-            spreadRadius: 0,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.history_rounded,
-                color: Color(0xFF4F46E5),
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Riwayat Pembayaran SPP',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[800],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  const Color(0xFF4F46E5).withOpacity(0.1),
-                  const Color(0xFF7C3AED).withOpacity(0.05),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: const Color(0xFF4F46E5).withOpacity(0.2),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildStatusInfo(
-                  'Lunas',
-                  '${santriData!.lunasBulanKe}',
-                  const Color(0xFF10B981),
-                ),
-                Container(width: 1, height: 40, color: Colors.grey[300]),
-                _buildStatusInfo(
-                  'Belum Lunas',
-                  '${12 - santriData!.lunasBulanKe}',
-                  const Color(0xFFEF4444),
-                ),
-                Container(width: 1, height: 40, color: Colors.grey[300]),
-                _buildStatusInfo('Total Bulan', '12', const Color(0xFF6B7280)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              int crossAxisCount = 3;
-              if (constraints.maxWidth > 400) crossAxisCount = 4;
-              if (constraints.maxWidth > 500) crossAxisCount = 6;
-              return GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  childAspectRatio: 0.85,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
-                ),
-                itemCount: monthNames.length,
-                itemBuilder: (context, index) {
-                  String monthName = monthNames[index];
-                  bool isPaid = index < santriData!.lunasBulanKe;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    decoration: BoxDecoration(
-                      gradient: isPaid
-                          ? LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                const Color(0xFF10B981).withOpacity(0.15),
-                                const Color(0xFF059669).withOpacity(0.2),
-                              ],
-                            )
-                          : LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                const Color(0xFFEF4444).withOpacity(0.08),
-                                const Color(0xFFDC2626).withOpacity(0.12),
-                              ],
-                            ),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isPaid
-                            ? const Color(0xFF10B981).withOpacity(0.3)
-                            : const Color(0xFFEF4444).withOpacity(0.2),
-                        width: isPaid ? 2 : 1.5,
-                      ),
-                      boxShadow: isPaid
-                          ? [
-                              BoxShadow(
-                                color: const Color(0xFF10B981).withOpacity(0.2),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ]
-                          : [
-                              BoxShadow(
-                                color: const Color(0xFFEF4444).withOpacity(0.1),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                isPaid
-                                    ? '$monthName: Sudah Lunas ✅'
-                                    : '$monthName: Belum Lunas',
-                              ),
-                              backgroundColor: isPaid
-                                  ? const Color(0xFF10B981)
-                                  : const Color(0xFFEF4444),
-                              duration: const Duration(seconds: 1),
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                          );
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 12,
-                            horizontal: 8,
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: isPaid
-                                        ? [
-                                            const Color(0xFF10B981),
-                                            const Color(0xFF059669),
-                                          ]
-                                        : [
-                                            const Color(0xFFEF4444),
-                                            const Color(0xFFDC2626),
-                                          ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color:
-                                          (isPaid
-                                                  ? const Color(0xFF10B981)
-                                                  : const Color(0xFFEF4444))
-                                              .withOpacity(0.4),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 3),
-                                    ),
-                                  ],
-                                ),
-                                child: Icon(
-                                  isPaid
-                                      ? Icons.check_rounded
-                                      : Icons.schedule_rounded,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Flexible(
-                                child: Text(
-                                  monthName,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.grey[700],
-                                  ),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color:
-                                      (isPaid
-                                              ? const Color(0xFF10B981)
-                                              : const Color(0xFFEF4444))
-                                          .withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  isPaid ? 'LUNAS' : 'BELUM',
-                                  style: TextStyle(
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.w700,
-                                    color: isPaid
-                                        ? const Color(0xFF059669)
-                                        : const Color(0xFFDC2626),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[200]!),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.info_outline_rounded,
-                  color: const Color(0xFF6B7280),
-                  size: 16,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Informasi Pembayaran',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF6B7280),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Ketuk bulan untuk melihat status pembayaran. Pembayaran dimulai dari bulan Juli.',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildStatusInfo(String label, String value, Color color) {
     return Column(
       children: [
@@ -1566,6 +1582,946 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
             fontSize: 11,
             color: Colors.grey[600],
             fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// KELAS SPP INVOICE SCREEN TERPISAH// KELAS SPP INVOICE SCREEN TERPISAH
+class SPPInvoiceScreen extends StatefulWidget {
+  final SantriData santriData;
+  final String monthName;
+  final int monthIndex;
+
+  const SPPInvoiceScreen({
+    super.key,
+    required this.santriData,
+    required this.monthName,
+    required this.monthIndex,
+  });
+
+  @override
+  State<SPPInvoiceScreen> createState() => _SPPInvoiceScreenState();
+}
+
+class _SPPInvoiceScreenState extends State<SPPInvoiceScreen>
+    with TickerProviderStateMixin {
+  final GlobalKey _invoiceKey = GlobalKey();
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+  bool _isGenerating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeAnimations();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void _initializeAnimations() {
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0.0, 0.2), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
+
+    _animationController.forward();
+  }
+
+  String _generateInvoiceId() {
+    final now = DateTime.now();
+    final monthIndex = widget.monthIndex + 1;
+    return 'SPP${widget.santriData.nisn.substring(widget.santriData.nisn.length - 4)}${monthIndex.toString().padLeft(2, '0')}${now.year}';
+  }
+
+  String _formatCurrency(String amount) {
+    if (amount.isEmpty || amount == '-') return 'Rp 0';
+    String cleanAmount = amount.replaceAll(RegExp(r'[^\d-]'), '');
+    if (cleanAmount.isEmpty) return 'Rp 0';
+    try {
+      int number = int.parse(cleanAmount);
+      bool isNegative = number < 0;
+      number = number.abs();
+      String formatted = number.toString().replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+        (Match m) => '${m[1]}.',
+      );
+      return isNegative ? 'Rp ($formatted)' : 'Rp $formatted';
+    } catch (e) {
+      return 'Rp $amount';
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Ags',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+
+  String _formatDateTime(DateTime dateTime) {
+    return '${_formatDate(dateTime)} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _getJatuhTempo() {
+    final monthNames = [
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+    ];
+    final monthIndex = monthNames.indexOf(widget.monthName);
+    final now = DateTime.now();
+    final targetMonth = monthIndex + 7 > 12 ? monthIndex - 5 : monthIndex + 7;
+    final targetYear = monthIndex + 7 > 12 ? now.year + 1 : now.year;
+    final dueDate = DateTime(targetYear, targetMonth, 5);
+    return _formatDate(dueDate);
+  }
+
+  bool get isPaid => widget.monthIndex < widget.santriData.lunasBulanKe;
+
+  DateTime? get paymentDate {
+    if (!isPaid) return null;
+    final now = DateTime.now();
+    return DateTime(
+      now.year,
+      widget.monthIndex + 7 > 12
+          ? widget.monthIndex - 5
+          : widget.monthIndex + 7,
+      15,
+    );
+  }
+
+  Future<void> _downloadInvoice() async {
+    setState(() {
+      _isGenerating = true;
+    });
+
+    try {
+      HapticFeedback.lightImpact();
+
+      // Capture widget as image
+      RenderRepaintBoundary boundary =
+          _invoiceKey.currentContext!.findRenderObject()
+              as RenderRepaintBoundary;
+
+      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      ByteData? byteData = await image.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
+      Uint8List pngBytes = byteData!.buffer.asUint8List();
+
+      // Save to device
+      final directory = await getTemporaryDirectory();
+      final invoiceId = _generateInvoiceId();
+      final file = File('${directory.path}/invoice_$invoiceId.png');
+      await file.writeAsBytes(pngBytes);
+
+      // Share the file
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text:
+            'Bukti Pembayaran SPP - ${widget.monthName}\nNISN: ${widget.santriData.nisn}\nNama: ${widget.santriData.nama}',
+      );
+
+      _showSuccessSnackBar('Invoice berhasil disimpan dan dibagikan!');
+    } catch (e) {
+      _showErrorSnackBar('Gagal mengunduh invoice: $e');
+    } finally {
+      setState(() {
+        _isGenerating = false;
+      });
+    }
+  }
+
+  Future<void> _shareInvoice() async {
+    setState(() {
+      _isGenerating = true;
+    });
+
+    try {
+      HapticFeedback.lightImpact();
+
+      final summary = _generateTextSummary();
+      await Clipboard.setData(ClipboardData(text: summary));
+
+      _showSuccessSnackBar('Ringkasan invoice disalin ke clipboard');
+    } catch (e) {
+      _showErrorSnackBar('Gagal membagikan invoice: $e');
+    } finally {
+      setState(() {
+        _isGenerating = false;
+      });
+    }
+  }
+
+  String _generateTextSummary() {
+    final invoiceId = _generateInvoiceId();
+    final currentDate = _formatDate(DateTime.now());
+
+    return '''
+🧾 ${isPaid ? 'BUKTI PEMBAYARAN SPP' : 'TAGIHAN SPP'}
+
+No. Invoice: $invoiceId
+Tanggal: $currentDate
+
+👤 INFORMASI SANTRI:
+Nama: ${widget.santriData.nama}
+NISN: ${widget.santriData.nisn}
+Status: ${widget.santriData.status}
+
+💰 DETAIL PEMBAYARAN:
+Periode: ${widget.monthName}
+Iuran per Bulan: ${_formatCurrency(widget.santriData.monthlyFee.toInt().toString())}
+Status: ${isPaid ? 'LUNAS ✅' : 'BELUM LUNAS ⏳'}
+${isPaid ? 'Tanggal Pembayaran: ${paymentDate != null ? _formatDate(paymentDate!) : '-'}' : 'Jatuh Tempo: ${_getJatuhTempo()}'}
+
+📍 Pesantren Islam Zaid bin Tsabit
+Sistem Pembayaran SPP
+$currentDate
+    ''';
+  }
+
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: const Color(0xFF10B981),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: const Color(0xFFEF4444),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 400;
+
+    return Scaffold(
+      backgroundColor: Colors.grey[100],
+      appBar: AppBar(
+        title: Text(
+          isPaid ? 'Bukti Pembayaran SPP' : 'Tagihan SPP',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: isSmallScreen ? 16 : 18,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.grey[800],
+        elevation: 1,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.copy_all_rounded, size: isSmallScreen ? 20 : 24),
+            onPressed: _isGenerating ? null : _shareInvoice,
+            tooltip: 'Download',
+          ),
+        ],
+      ),
+      body: SlideTransition(
+        position: _slideAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+            child: Column(
+              children: [
+                // Invoice Widget
+                RepaintBoundary(
+                  key: _invoiceKey,
+                  child: _buildInvoiceWidget(screenSize, isSmallScreen),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Action Buttons
+                _buildActionButtons(isSmallScreen),
+
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInvoiceWidget(Size screenSize, bool isSmallScreen) {
+    _generateInvoiceId();
+    final currentDate = DateTime.now();
+
+    // Calculate responsive sizes
+    final invoiceWidth = screenSize.width - (isSmallScreen ? 24 : 32);
+    final headerFontSize = isSmallScreen ? 16.0 : 18.0;
+    final titleFontSize = isSmallScreen ? 14.0 : 16.0;
+    final bodyFontSize = isSmallScreen ? 12.0 : 14.0;
+    final smallFontSize = isSmallScreen ? 10.0 : 12.0;
+
+    return Container(
+      width: invoiceWidth,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 30,
+            spreadRadius: 0,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: isPaid
+                    ? [const Color(0xFF10B981), const Color(0xFF059669)]
+                    : [const Color(0xFFEF4444), const Color(0xFFDC2626)],
+              ),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Pesantren Islam Zaid bin Tsabit',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: headerFontSize,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Sistem Pembayaran SPP',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: smallFontSize,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.receipt_rounded,
+                        color: Colors.white,
+                        size: isSmallScreen ? 20 : 24,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 10 : 12,
+                        vertical: isSmallScreen ? 6 : 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        isPaid ? 'BUKTI PEMBAYARAN SPP' : 'TAGIHAN SPP',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: titleFontSize,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 8 : 12,
+                        vertical: isSmallScreen ? 4 : 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Text(
+                        isPaid ? 'LUNAS' : 'BELUM LUNAS',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: smallFontSize,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Invoice Details
+          Padding(
+            padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Invoice Info
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'No. Invoice',
+                          style: TextStyle(
+                            fontSize: smallFontSize,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          _generateInvoiceId(),
+                          style: TextStyle(
+                            fontSize: bodyFontSize,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[800],
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Tanggal',
+                          style: TextStyle(
+                            fontSize: smallFontSize,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          _formatDate(currentDate),
+                          style: TextStyle(
+                            fontSize: bodyFontSize,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+
+                Divider(height: 32, thickness: 1, color: Colors.grey[300]),
+
+                // Student Information
+                _buildInfoSection(
+                  'INFORMASI SANTRI',
+                  [
+                    _buildInfoRow(
+                      'NISN',
+                      widget.santriData.nisn,
+                      bodyFontSize,
+                      smallFontSize,
+                    ),
+                    _buildInfoRow(
+                      'Nama',
+                      widget.santriData.nama,
+                      bodyFontSize,
+                      smallFontSize,
+                    ),
+                    _buildInfoRow(
+                      'Status',
+                      widget.santriData.status,
+                      bodyFontSize,
+                      smallFontSize,
+                    ),
+                    _buildInfoRow(
+                      'Periode',
+                      widget.monthName,
+                      bodyFontSize,
+                      smallFontSize,
+                    ),
+                  ],
+                  titleFontSize,
+                  isSmallScreen,
+                ),
+
+                SizedBox(height: 20),
+
+                // Payment Details
+                _buildInfoSection(
+                  'DETAIL PEMBAYARAN',
+                  [
+                    _buildInfoRow(
+                      'Iuran per Bulan',
+                      _formatCurrency(
+                        widget.santriData.monthlyFee.toInt().toString(),
+                      ),
+                      bodyFontSize,
+                      smallFontSize,
+                    ),
+                    if (isPaid) ...[
+                      _buildInfoRow(
+                        'Tanggal Pembayaran',
+                        paymentDate != null ? _formatDate(paymentDate!) : '-',
+                        bodyFontSize,
+                        smallFontSize,
+                      ),
+                    ] else ...[
+                      _buildInfoRow(
+                        'Jatuh Tempo',
+                        _getJatuhTempo(),
+                        bodyFontSize,
+                        smallFontSize,
+                      ),
+                    ],
+                  ],
+                  titleFontSize,
+                  isSmallScreen,
+                ),
+
+                SizedBox(height: 20),
+
+                // Payment Amount - Highlighted
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: isPaid
+                          ? [Colors.green[50]!, Colors.green[100]!]
+                          : [Colors.orange[50]!, Colors.orange[100]!],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isPaid ? Colors.green[300]! : Colors.orange[300]!,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'TOTAL PEMBAYARAN',
+                            style: TextStyle(
+                              fontSize: titleFontSize,
+                              fontWeight: FontWeight.bold,
+                              color: isPaid
+                                  ? Colors.green[700]
+                                  : Colors.orange[700],
+                            ),
+                          ),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isSmallScreen ? 8 : 10,
+                              vertical: isSmallScreen ? 4 : 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isPaid
+                                  ? Colors.green[600]
+                                  : Colors.orange[600],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              isPaid ? 'LUNAS' : 'BELUM LUNAS',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: smallFontSize,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _formatCurrency(
+                              widget.santriData.monthlyFee.toInt().toString(),
+                            ),
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 24 : 28,
+                              fontWeight: FontWeight.bold,
+                              color: isPaid
+                                  ? Colors.green[700]
+                                  : Colors.orange[700],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: 20),
+
+                // Payment Status Info
+                _buildInfoSection(
+                  'STATUS PEMBAYARAN',
+                  [
+                    _buildInfoRow(
+                      'Status Pembayaran',
+                      isPaid ? 'LUNAS' : 'BELUM LUNAS',
+                      bodyFontSize,
+                      smallFontSize,
+                      isHighlight: true,
+                    ),
+                  ],
+                  titleFontSize,
+                  isSmallScreen,
+                ),
+
+                SizedBox(height: 24),
+
+                // Footer
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4F46E5).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: const Color(0xFF4F46E5).withOpacity(0.2),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            isPaid ? Icons.verified : Icons.info_outline,
+                            color: const Color(0xFF4F46E5),
+                            size: isSmallScreen ? 16 : 18,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            isPaid
+                                ? 'BUKTI PEMBAYARAN'
+                                : 'INFORMASI PEMBAYARAN',
+                            style: TextStyle(
+                              fontSize: smallFontSize,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF4F46E5),
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        isPaid
+                            ? 'Jazakumullahu khairan, Anda telah melakukan pembayaran SPP untuk bulan ${widget.monthName}.'
+                            : 'Silakan lakukan pembayaran sebelum jatuh tempo',
+                        style: TextStyle(
+                          fontSize: smallFontSize,
+                          color: const Color(0xFF4F46E5),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: 16),
+
+                // Verification Container - Only show if paid
+                if (isPaid) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey[200]!),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.verified,
+                              color: Colors.green[600],
+                              size: isSmallScreen ? 16 : 18,
+                            ),
+                            SizedBox(width: 6),
+                            Text(
+                              'PEMBAYARAN TERVERIFIKASI',
+                              style: TextStyle(
+                                fontSize: smallFontSize,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green[700],
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Invoice ini adalah bukti sah pembayaran SPP',
+                          style: TextStyle(
+                            fontSize: smallFontSize,
+                            color: Colors.grey[600],
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Simpan bukti ini untuk keperluan administrasi',
+                          style: TextStyle(
+                            fontSize: smallFontSize - 1,
+                            color: Colors.grey[500],
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                ],
+
+                // Generated timestamp
+                Center(
+                  child: Text(
+                    'Dibuat pada: ${_formatDateTime(currentDate)}',
+                    style: TextStyle(
+                      fontSize: smallFontSize - 1,
+                      color: Colors.grey[500],
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoSection(
+    String title,
+    List<Widget> children,
+    double titleFontSize,
+    bool isSmallScreen,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: titleFontSize,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[700],
+            letterSpacing: 0.5,
+          ),
+        ),
+        SizedBox(height: isSmallScreen ? 8 : 12),
+        ...children,
+      ],
+    );
+  }
+
+  Widget _buildInfoRow(
+    String label,
+    String value,
+    double bodyFontSize,
+    double smallFontSize, {
+    bool isHighlight = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: smallFontSize,
+                color: Colors.grey[600],
+              ),
+            ),
+          ),
+          Text(
+            ': ',
+            style: TextStyle(fontSize: smallFontSize, color: Colors.grey[600]),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: bodyFontSize,
+                fontWeight: isHighlight ? FontWeight.w700 : FontWeight.w600,
+                color: isHighlight
+                    ? (value.contains('LUNAS')
+                          ? const Color(0xFF10B981)
+                          : const Color(0xFFEF4444))
+                    : Colors.grey[800],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons(bool isSmallScreen) {
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: _isGenerating ? null : _downloadInvoice,
+            icon: _isGenerating
+                ? SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : Icon(Icons.share, size: isSmallScreen ? 18 : 20),
+            label: Text(
+              _isGenerating ? 'Proses...' : 'Share Invoice',
+              style: TextStyle(fontSize: isSmallScreen ? 12 : 14),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isPaid
+                  ? const Color(0xFF10B981)
+                  : const Color(0xFFEF4444),
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ),
+        SizedBox(width: 12),
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: _isGenerating ? null : _shareInvoice,
+            icon: Icon(Icons.copy_all_outlined, size: isSmallScreen ? 18 : 20),
+            label: Text(
+              'Salin Invoice',
+              style: TextStyle(fontSize: isSmallScreen ? 12 : 14),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: isPaid
+                  ? const Color(0xFF10B981)
+                  : const Color(0xFFEF4444),
+              side: BorderSide(
+                color: isPaid
+                    ? const Color(0xFF10B981)
+                    : const Color(0xFFEF4444),
+              ),
+              padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
           ),
         ),
       ],

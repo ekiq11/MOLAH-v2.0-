@@ -1,8 +1,8 @@
 // splashscreen.dart - Debug Version
 import 'package:flutter/material.dart';
-import 'package:pizab_molah/home.dart';
-import 'package:pizab_molah/login.dart';
-import 'package:pizab_molah/utils/login_preferences.dart';
+import 'home.dart';
+import 'login.dart';
+import 'utils/login_preferences.dart';
 import 'package:mmkv/mmkv.dart';
 
 class SplashScreen extends StatefulWidget {

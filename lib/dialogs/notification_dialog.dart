@@ -161,7 +161,7 @@ class GoogleSheetsMonitorService {
       id: '$_sppNotificationId\_$username',
       title: 'Pengingat Pembayaran SPP',
       message:
-          'Pemberitahuan Pembayaran SPP Pesantren Islam Zaid bin Tsabit paling lambat tanggal 5 setiap bulannya. Saat ini sudah memasuki awal bulan, Wali santri dihimbau untuk segera melakukan pembayaran SPP.',
+          'Pemberitahuan Pembayaran SPP Pesantren Islam Zaid bin Tsabit paling lambat tanggal 5 setiap bulannya. Saat ini memasuki awal bulan, Wali santri dihimbau untuk segera melakukan pembayaran SPP.',
       sheetName: _sppSheetName,
       timestamp: DateTime.now(),
       changes: {'type': 'reminder', 'category': 'spp_payment'},
