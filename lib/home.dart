@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:csv/csv.dart';
 import 'package:mmkv/mmkv.dart';
+import 'package:pizab_molah/helper/loading_timer.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -11,7 +12,7 @@ import 'dart:io';
 // Import custom components
 import 'dialogs/topup_dialog.dart';
 import 'dialogs/notification_dialog.dart';
-import 'screens/pembayaran.dart';
+import 'screens/pembayaran.dart' hide CsvToListConverter;
 import 'utils/fetcher_data.dart';
 import 'login.dart';
 import 'utils/login_preferences.dart';
@@ -81,11 +82,6 @@ class _HomeScreenState extends State<HomeScreen>
           'https://docs.google.com/spreadsheets/d/1BZbBczH2OY8SB2_1tDpKf_B8WvOyk8TJl4esfT-dgzw/export?format=csv&gid=1307491664',
       'name': 'Primary Data Source',
     },
-    {
-      'url':
-          'https://docs.google.com/spreadsheets/d/1BZbBczH2OY8SB2_1tDpKf_B8WvOyk8TJl4esfT-dgzw/export?format=csv&gid=1307491664',
-      'name': 'Secondary Data Source',
-    },
   ];
 
   static const Map<String, String> _fieldNames = {
@@ -103,22 +99,29 @@ class _HomeScreenState extends State<HomeScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _initializeAnimation();
     _initializeApp();
   }
 
   @override
-  void dispose() {
+  void dispose() async {
+    debugPrint('🧹 _HomeScreenState.dispose: Cleaning up...');
+    _dataTimer?.cancel();
+    _debounceTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _shimmerController.stop();
     _animationController.dispose();
     _shimmerController.dispose();
-    _dataTimer?.cancel();
-    _debounceTimer?.cancel();
+
     _httpClient.close();
+    // Bersihkan timeout dialog
+    LoadingTimeoutDialog.cancelTimeout();
 
     // Cleanup enhanced notifications service
-    GoogleSheetsMonitorService.cleanupForUser(widget.username);
+    GoogleSheetsMonitorService.stopMonitoringForUser(widget.username);
+    await GoogleSheetsMonitorService.cleanupForUser(widget.username);
     super.dispose();
+    debugPrint('✅ _HomeScreenState disposed successfully');
   }
 
   @override
@@ -167,16 +170,28 @@ class _HomeScreenState extends State<HomeScreen>
       _initializeAnimation();
       await _initializeMMKV();
 
+      // Mulai timeout dialog sebelum loading data
+      if (mounted) {
+        LoadingTimeoutDialog.startTimeout(context, _handleRetryLoading);
+      }
+
       // Load cached data first for immediate display
       await _loadCachedData();
 
       // Initialize enhanced notifications service
-      unawaited(_initializeNotifications());
+      unawaited(
+        _initializeNotifications().catchError((e) {
+          debugPrint('Error in unawaited _initializeNotifications: $e');
+        }),
+      );
 
       // Check if cache is still valid, if not fetch new data
       await _checkCacheAndRefresh();
 
       _startPolling();
+
+      // Cancel timeout jika berhasil load
+      LoadingTimeoutDialog.cancelTimeout();
     } catch (e) {
       debugPrint('Error initializing app: $e');
       if (mounted) {
@@ -185,6 +200,18 @@ class _HomeScreenState extends State<HomeScreen>
           _errorMessage = 'Gagal memuat data';
         });
       }
+    }
+  }
+
+  /// Handler untuk retry dari timeout dialog
+  void _handleRetryLoading() {
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = '';
+      });
+      LoadingTimeoutDialog.startTimeout(context, _handleRetryLoading);
+      _initializeApp(); // ✅ Tambahkan ini
     }
   }
 
@@ -297,7 +324,9 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _performDataFetch({bool silent = false}) async {
+    // Start timeout untuk operasi fetch data jika tidak silent
     if (!silent && mounted) {
+      LoadingTimeoutDialog.startTimeout(context, _handleRetryDataFetch);
       setState(() => _isLoading = true);
       if (!_shimmerController.isAnimating) {
         _shimmerController.repeat();
@@ -309,19 +338,6 @@ class _HomeScreenState extends State<HomeScreen>
     );
 
     // Quick connectivity check with reduced timeout
-    try {
-      final result = await InternetAddress.lookup('dns.google').timeout(
-        const Duration(seconds: 3), // Reduced from 5 seconds
-      );
-      if (result.isEmpty || result[0].rawAddress.isEmpty) {
-        throw Exception('No internet connection');
-      }
-    } catch (e) {
-      debugPrint('❌ Internet connectivity check failed: $e');
-      await _handleFetchError('Tidak ada koneksi internet', silent);
-      return;
-    }
-
     // Try CSV sources with improved error handling
     for (int sourceIndex = 0; sourceIndex < _csvSources.length; sourceIndex++) {
       final source = _csvSources[sourceIndex];
@@ -342,6 +358,10 @@ class _HomeScreenState extends State<HomeScreen>
               debugPrint(
                 '✅ Data parsing successful for user: ${widget.username}',
               );
+
+              // Cancel timeout karena berhasil
+              LoadingTimeoutDialog.cancelTimeout();
+
               await _processNewData(newData);
               return;
             }
@@ -359,6 +379,76 @@ class _HomeScreenState extends State<HomeScreen>
 
     debugPrint('⚠️ All CSV sources failed, trying fallback methods...');
     await _tryFallbackMethods(silent);
+  }
+
+  // Handler untuk retry fetch data dari timeout dialog
+  void _handleRetryDataFetch() {
+    _fetchSantriData(silent: false);
+  }
+
+  Future<void> _tryFallbackMethods(bool silent) async {
+    try {
+      debugPrint('🔄 Trying DataFetcher fallback...');
+      final dataFetcher = DataFetcher();
+      final fallbackData = await dataFetcher
+          .fetchSantriData(widget.username)
+          .timeout(const Duration(seconds: 10));
+
+      if (fallbackData.isNotEmpty) {
+        debugPrint('✅ Fallback data fetcher successful');
+
+        // Cancel timeout karena berhasil
+        LoadingTimeoutDialog.cancelTimeout();
+
+        await _processNewData(fallbackData);
+        return;
+      }
+    } catch (fallbackError) {
+      debugPrint('❌ Fallback fetch error: $fallbackError');
+    }
+
+    // Cancel timeout sebelum handle error
+    LoadingTimeoutDialog.cancelTimeout();
+    await _handleFetchError('Semua sumber data gagal diakses', silent);
+  }
+
+  Future<void> _handleFetchError(dynamic error, bool silent) async {
+    debugPrint('❌ Fetch error: $error');
+
+    // Cancel timeout dan stop shimmer
+    LoadingTimeoutDialog.cancelTimeout();
+    if (_shimmerController.isAnimating) {
+      _shimmerController.stop();
+    }
+
+    String errorMessage = 'Gagal memuat data';
+
+    if (error.toString().contains('internet') ||
+        error.toString().contains('connection')) {
+      errorMessage = 'Tidak ada koneksi internet';
+    } else if (error.toString().contains('timeout')) {
+      errorMessage = 'Koneksi timeout, coba lagi nanti';
+    } else if (error.toString().contains('400')) {
+      errorMessage = 'Server sedang bermasalah';
+    }
+
+    if (mounted) {
+      if (_santriData.isEmpty) {
+        setState(() {
+          _santriData = _getDefaultData();
+          _isLoading = false;
+          _errorMessage = silent ? '' : errorMessage;
+        });
+        _animationController.forward();
+      } else {
+        setState(() {
+          _errorMessage = silent
+              ? ''
+              : 'Menggunakan data tersimpan - $errorMessage';
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   Map<String, String> _getOptimizedHeaders() {
@@ -443,26 +533,6 @@ class _HomeScreenState extends State<HomeScreen>
       debugPrint('❌ CSV parse error: $e');
       return {};
     }
-  }
-
-  Future<void> _tryFallbackMethods(bool silent) async {
-    try {
-      debugPrint('🔄 Trying DataFetcher fallback...');
-      final dataFetcher = DataFetcher();
-      final fallbackData = await dataFetcher
-          .fetchSantriData(widget.username)
-          .timeout(const Duration(seconds: 10));
-
-      if (fallbackData.isNotEmpty) {
-        debugPrint('✅ Fallback data fetcher successful');
-        await _processNewData(fallbackData);
-        return;
-      }
-    } catch (fallbackError) {
-      debugPrint('❌ Fallback fetch error: $fallbackError');
-    }
-
-    await _handleFetchError('Semua sumber data gagal diakses', silent);
   }
 
   bool _isMatchingUser(String targetUsername, String csvValue) {
@@ -702,43 +772,6 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  Future<void> _handleFetchError(dynamic error, bool silent) async {
-    debugPrint('❌ Fetch error: $error');
-
-    if (_shimmerController.isAnimating) {
-      _shimmerController.stop();
-    }
-
-    String errorMessage = 'Gagal memuat data';
-
-    if (error.toString().contains('internet') ||
-        error.toString().contains('connection')) {
-      errorMessage = 'Tidak ada koneksi internet';
-    } else if (error.toString().contains('timeout')) {
-      errorMessage = 'Koneksi timeout, coba lagi nanti';
-    } else if (error.toString().contains('400')) {
-      errorMessage = 'Server sedang bermasalah';
-    }
-
-    if (mounted) {
-      if (_santriData.isEmpty) {
-        setState(() {
-          _santriData = _getDefaultData();
-          _isLoading = false;
-          _errorMessage = silent ? '' : errorMessage;
-        });
-        _animationController.forward();
-      } else {
-        setState(() {
-          _errorMessage = silent
-              ? ''
-              : 'Menggunakan data tersimpan - $errorMessage';
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
   Map<String, dynamic> _getDefaultData() {
     return {
       'nisn': widget.username,
@@ -794,17 +827,22 @@ class _HomeScreenState extends State<HomeScreen>
         // Hapus kunci yang sudah diketahui
         for (final key in keysToRemove) {
           if (_mmkv!.containsKey(key)) {
-            _mmkv!.removeValue(key);
+            if (_mmkv?.containsKey(key) == true) {
+              _mmkv?.removeValue(key);
+            }
             debugPrint('🗑️ Removed MMKV key: $key');
           }
         }
 
         // 🔥 Hapus semua kunci yang mengandung username (opsional, lebih aman)
         // Di _handleLogout()
+        if (_mmkv == null) return;
         final allKeys = _mmkv!.allKeys;
         for (final key in allKeys) {
           if (key.contains(widget.username)) {
-            _mmkv!.removeValue(key);
+            if (_mmkv?.containsKey(key) == true) {
+              _mmkv?.removeValue(key);
+            }
             debugPrint('🧹 Removed MMKV key: $key');
           }
         }
@@ -833,9 +871,10 @@ class _HomeScreenState extends State<HomeScreen>
     } catch (e) {
       debugPrint('💥 Logout error: $e');
       if (mounted) {
-        Navigator.pushReplacement(
+        Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => LoginScreen()),
+          (route) => false,
         );
       }
     }
@@ -954,7 +993,7 @@ class _HomeScreenState extends State<HomeScreen>
       context: context,
       currentBalance: _santriData['saldo'] ?? '0',
       nisn: widget.username,
-      namaSantri: _santriData['nama'],
+      namaSantri: _santriData['nama'] ?? 'Nama Santri',
     );
   }
 
@@ -971,6 +1010,9 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _handleRefresh() async {
+    if (mounted) {
+      LoadingTimeoutDialog.startTimeout(context, _handleRetryDataFetch);
+    }
     await _fetchSantriData();
     if (_enhancedNotifications != null) {
       unawaited(GoogleSheetsMonitorService.forceCheckForUser(widget.username));
@@ -1044,8 +1086,8 @@ class _HomeScreenState extends State<HomeScreen>
         elevation: 0,
         items: [
           const BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            activeIcon: Icon(Icons.home),
+            icon: Icon(Icons.home_rounded),
+            activeIcon: Icon(Icons.home_rounded),
             label: 'Home',
           ),
           BottomNavigationBarItem(
@@ -1054,13 +1096,13 @@ class _HomeScreenState extends State<HomeScreen>
             label: 'Notifikasi',
           ),
           const BottomNavigationBarItem(
-            icon: Icon(Icons.payment),
-            activeIcon: Icon(Icons.payment),
-            label: 'Pembayaran',
+            icon: Icon(Icons.receipt_long, color: Colors.grey),
+            activeIcon: Icon(Icons.receipt_long_rounded),
+            label: 'Tagihan',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.logout, color: Colors.grey),
-            activeIcon: Icon(Icons.logout, color: Colors.red[600]),
+            icon: Icon(Icons.logout_rounded, color: Colors.grey),
+            activeIcon: Icon(Icons.logout_rounded, color: Colors.red[600]),
             label: 'Keluar',
           ),
         ],
@@ -1155,71 +1197,74 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildEnhancedNotificationPage(Size screenSize) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: ValueListenableBuilder<List<NotificationItem>>(
-          valueListenable: _enhancedNotifications ?? ValueNotifier([]),
-          builder: (context, notifications, child) {
-            final unreadCount = notifications.where((n) => !n.isRead).length;
-            return Row(
-              children: [
-                Icon(Icons.notifications_active, color: Colors.red[600]),
-                SizedBox(width: screenSize.width * 0.03),
-                Flexible(
-                  child: Text(
-                    'Notifikasi ($unreadCount baru)',
-                    style: TextStyle(
-                      color: Colors.grey[800],
-                      fontWeight: FontWeight.bold,
-                      fontSize: screenSize.width * 0.045,
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        elevation: 1,
-        centerTitle: false,
-        actions: [
-          ValueListenableBuilder<List<NotificationItem>>(
+    return Column(
+      children: [
+        AppBar(
+          title: ValueListenableBuilder<List<NotificationItem>>(
             valueListenable: _enhancedNotifications ?? ValueNotifier([]),
             builder: (context, notifications, child) {
-              if (notifications.isNotEmpty) {
-                return TextButton(
-                  onPressed: () async {
-                    await GoogleSheetsMonitorService.clearAllNotificationsForUser(
-                      widget.username,
-                    );
-                    if (mounted) setState(() {});
-                  },
-                  child: Text(
-                    'Hapus Semua',
-                    style: TextStyle(
-                      color: Colors.red[600],
-                      fontWeight: FontWeight.w500,
-                      fontSize: screenSize.width * 0.032,
+              final unreadCount = notifications.where((n) => !n.isRead).length;
+              return Row(
+                children: [
+                  Icon(Icons.notifications_active, color: Colors.red[600]),
+                  SizedBox(width: screenSize.width * 0.03),
+                  Flexible(
+                    child: Text(
+                      'Notifikasi ($unreadCount baru)',
+                      style: TextStyle(
+                        color: Colors.grey[800],
+                        fontWeight: FontWeight.bold,
+                        fontSize: screenSize.width * 0.045,
+                      ),
                     ),
                   ),
-                );
-              }
-              return const SizedBox.shrink();
+                ],
+              );
             },
           ),
-        ],
-      ),
-      body: ValueListenableBuilder<List<NotificationItem>>(
-        valueListenable: _enhancedNotifications ?? ValueNotifier([]),
-        builder: (context, notifications, child) {
-          if (notifications.isEmpty) {
-            return _buildEmptyNotifications(screenSize);
-          }
-          return _buildEnhancedNotificationList(notifications, screenSize);
-        },
-      ),
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black87,
+          elevation: 1,
+          centerTitle: false,
+          actions: [
+            ValueListenableBuilder<List<NotificationItem>>(
+              valueListenable: _enhancedNotifications ?? ValueNotifier([]),
+              builder: (context, notifications, child) {
+                if (notifications.isNotEmpty) {
+                  return TextButton(
+                    onPressed: () async {
+                      await GoogleSheetsMonitorService.clearAllNotificationsForUser(
+                        widget.username,
+                      );
+                      if (mounted) setState(() {});
+                    },
+                    child: Text(
+                      'Hapus Semua',
+                      style: TextStyle(
+                        color: Colors.red[600],
+                        fontWeight: FontWeight.w500,
+                        fontSize: screenSize.width * 0.032,
+                      ),
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+          ],
+        ),
+        Expanded(
+          child: ValueListenableBuilder<List<NotificationItem>>(
+            valueListenable: _enhancedNotifications ?? ValueNotifier([]),
+            builder: (context, notifications, child) {
+              if (notifications.isEmpty) {
+                return _buildEmptyNotifications(screenSize);
+              }
+              return _buildEnhancedNotificationList(notifications, screenSize);
+            },
+          ),
+        ),
+      ],
     );
   }
 

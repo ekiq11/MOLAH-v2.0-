@@ -225,7 +225,7 @@ class CombinedHeader extends StatelessWidget {
                     GestureDetector(
                       onTap: onTopUpTap,
                       child: Container(
-                        padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
+                        padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
@@ -241,10 +241,23 @@ class CombinedHeader extends StatelessWidget {
                             ),
                           ],
                         ),
-                        child: Icon(
-                          Icons.add_rounded,
-                          color: Colors.white,
-                          size: isSmallScreen ? 20 : 24,
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.add_rounded,
+                              color: Colors.white,
+                              size: isSmallScreen ? 18 : 20,
+                            ),
+                            Text(
+                              'Top Up',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.9),
+                                fontSize: isSmallScreen ? 10 : 11,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),

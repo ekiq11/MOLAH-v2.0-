@@ -30,7 +30,7 @@ class ReportSection extends StatelessWidget {
   // Method helper untuk format hafalan
   String _formatHafalan(dynamic hafalanData) {
     if (hafalanData == null) {
-      return '> 5 Juz';
+      return 'Belum terdata';
     }
 
     final String hafalanString = hafalanData.toString().trim();
@@ -42,7 +42,7 @@ class ReportSection extends StatelessWidget {
         hafalanString.toLowerCase() == 'tidak ada' ||
         hafalanString.toLowerCase() == 'belum ada' ||
         hafalanString == '0') {
-      return '> 5 Juz';
+      return 'Belum terdata';
     }
 
     // Jika valid, tambahkan ' Juz'
@@ -116,7 +116,7 @@ class ReportSection extends StatelessWidget {
                 );
               case 3:
                 return _buildInfoCard(
-                  title: 'IZIN TERAKHIR',
+                  title: 'IZIN',
                   value: _formatIzinTerakhir(santriData['izin_terakhir']),
                   icon: Icons.event,
                   iconColor: Colors.purple[700]!,

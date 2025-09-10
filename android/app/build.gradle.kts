@@ -15,17 +15,18 @@ plugins {
 }
 
 android {
-    namespace = "com.example.pizab_molah"
+    namespace = "com.pizab_molah"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_1_8  // 🔥 WAJIB 1_8
+        targetCompatibility = JavaVersion.VERSION_1_8  // 🔥 WAJIB 1_8
+        isCoreLibraryDesugaringEnabled = true          // ✅ AKTIFKAN INI
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = "1.8"
     }
     signingConfigs {
         create("release") {
@@ -61,7 +62,16 @@ android {
         }
     }
 }
+dependencies {
+    implementation("androidx.core:core-ktx:1.13.1")
 
+    // ✅ TAMBAHKAN BARIS INI
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // Optional: jika kamu pakai multidex
+    if (flutter.minSdkVersion < 21) {
+        implementation("androidx.multidex:multidex:2.0.1")
+    }
+}
 flutter {
     source = "../.."
 }

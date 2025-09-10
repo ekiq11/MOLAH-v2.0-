@@ -162,51 +162,110 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen>
       // Encode pesan untuk URL
       final String encodedMessage = Uri.encodeComponent(message);
 
-      // Daftar URL untuk dicoba (urutan penting: aplikasi dulu, lalu web)
-      final List<Uri> urls = [
-        // 1. Coba buka aplikasi WhatsApp langsung
-        Uri.parse('whatsapp://send?phone=$cleanNumber&text=$encodedMessage'),
-        // 2. wa.me — lebih modern dan direkomendasikan
-        Uri.parse('https://wa.me/$cleanNumber?text=$encodedMessage'),
-        // 3. API WhatsApp sebagai fallback
-        Uri.parse(
-          'https://api.whatsapp.com/send?phone=$cleanNumber&text=$encodedMessage',
-        ),
+      // PERBAIKAN: Daftar URL dengan prioritas yang tepat untuk Android 11+
+      final List<Map<String, dynamic>> urlConfigs = [
+        // 1. WhatsApp scheme langsung (paling prioritas)
+        {
+          'uri': Uri.parse(
+            'whatsapp://send?phone=$cleanNumber&text=$encodedMessage',
+          ),
+          'mode': LaunchMode.externalApplication,
+          'description': 'WhatsApp Direct Scheme',
+        },
+
+        // 2. Intent URI untuk Android (lebih reliable di Android 11+)
+        {
+          'uri': Uri.parse(
+            'intent://send?phone=$cleanNumber&text=$encodedMessage#Intent;scheme=whatsapp;package=com.whatsapp;end',
+          ),
+          'mode': LaunchMode.externalApplication,
+          'description': 'WhatsApp Intent URI',
+        },
+
+        // 3. wa.me dengan mode external (coba buka app dulu)
+        {
+          'uri': Uri.parse('https://wa.me/$cleanNumber?text=$encodedMessage'),
+          'mode': LaunchMode.externalApplication,
+          'description': 'wa.me External',
+        },
+
+        // 4. API WhatsApp dengan mode external
+        {
+          'uri': Uri.parse(
+            'https://api.whatsapp.com/send?phone=$cleanNumber&text=$encodedMessage',
+          ),
+          'mode': LaunchMode.externalApplication,
+          'description': 'WhatsApp API External',
+        },
       ];
 
       bool launched = false;
 
       // Coba setiap URL hingga salah satu berhasil
-      for (final uri in urls) {
+      for (final config in urlConfigs) {
         try {
-          final bool canLaunch = await canLaunchUrl(uri);
-          if (canLaunch) {
-            launched = await launchUrl(
-              uri,
-              mode: LaunchMode
-                  .externalApplication, // Prioritaskan aplikasi eksternal
-              webOnlyWindowName: '_blank',
-            );
-            if (launched) break;
+          debugPrint('Mencoba ${config['description']}: ${config['uri']}');
+
+          // PERBAIKAN: Langsung coba launch tanpa canLaunchUrl
+          // karena canLaunchUrl tidak akurat untuk deep links di Android 11+
+          launched = await launchUrl(
+            config['uri'],
+            mode: config['mode'],
+            webOnlyWindowName: '_blank',
+          );
+
+          if (launched) {
+            debugPrint('Berhasil dengan ${config['description']}');
+            break;
           }
         } catch (e) {
-          debugPrint('Gagal membuka $uri: $e');
+          debugPrint('Gagal dengan ${config['description']}: $e');
           continue;
         }
+
+        // Delay kecil antar percobaan
+        await Future.delayed(Duration(milliseconds: 150));
       }
 
-      // Jika semua gagal, coba fallback ke WebView
+      // PERBAIKAN: Fallback yang lebih baik
       if (!launched) {
-        final Uri webUri = Uri.parse(
-          'https://web.whatsapp.com/send?phone=$cleanNumber&text=$encodedMessage',
-        );
+        debugPrint('Mencoba fallback options...');
+
+        // Coba wa.me dengan platformApplicationBrowser (hybrid)
         try {
-          launched = await launchUrl(webUri, mode: LaunchMode.inAppWebView);
+          final Uri hybridUri = Uri.parse(
+            'https://wa.me/$cleanNumber?text=$encodedMessage',
+          );
+          launched = await launchUrl(
+            hybridUri,
+            mode: LaunchMode.platformDefault,
+          );
+
+          if (launched) {
+            debugPrint('Berhasil dengan wa.me hybrid mode');
+          }
         } catch (e) {
-          debugPrint('Fallback ke web.whatsapp.com juga gagal: $e');
+          debugPrint('wa.me hybrid mode gagal: $e');
+        }
+
+        // Fallback terakhir ke WebView
+        if (!launched) {
+          try {
+            final Uri webUri = Uri.parse(
+              'https://web.whatsapp.com/send?phone=$cleanNumber&text=$encodedMessage',
+            );
+            launched = await launchUrl(webUri, mode: LaunchMode.inAppWebView);
+
+            if (launched) {
+              debugPrint('Fallback ke web.whatsapp.com berhasil');
+            }
+          } catch (e) {
+            debugPrint('Fallback ke web.whatsapp.com juga gagal: $e');
+          }
         }
       }
 
+      // Tampilkan hasil
       if (launched) {
         _showSuccessDialog();
       } else {
@@ -221,6 +280,97 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen>
           _isProcessing = false;
         });
       }
+    }
+  }
+
+  // TAMBAHAN: Method helper untuk cek apakah WhatsApp terinstall
+  Future<bool> _isWhatsAppInstalled() async {
+    try {
+      // Coba launch dengan mode dry-run
+      final uri = Uri.parse('whatsapp://');
+      return await canLaunchUrl(uri);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // TAMBAHAN: Method alternatif yang lebih aggressive
+  Future<void> _openWhatsAppAlternative() async {
+    if (!mounted) return;
+
+    setState(() => _isProcessing = true);
+
+    try {
+      const String phone = "089693652230";
+      final String message = _buildWhatsAppMessage();
+
+      String cleanNumber = phone.replaceAll(RegExp(r'[^\d]'), '');
+      if (cleanNumber.startsWith('0')) {
+        cleanNumber = '62${cleanNumber.substring(1)}';
+      } else if (!cleanNumber.startsWith('62')) {
+        cleanNumber = '62$cleanNumber';
+      }
+
+      final String encodedMessage = Uri.encodeComponent(message);
+
+      // Method paling aggressive - coba semua sekaligus dengan Future.wait
+      final List<Future<bool>> launchAttempts = [
+        // WhatsApp direct
+        _tryLaunchUrl(
+          'whatsapp://send?phone=$cleanNumber&text=$encodedMessage',
+          LaunchMode.externalApplication,
+        ),
+
+        // Intent URI
+        _tryLaunchUrl(
+          'intent://send?phone=$cleanNumber&text=$encodedMessage#Intent;scheme=whatsapp;package=com.whatsapp;end',
+          LaunchMode.externalApplication,
+        ),
+
+        // wa.me
+        _tryLaunchUrl(
+          'https://wa.me/$cleanNumber?text=$encodedMessage',
+          LaunchMode.externalApplication,
+        ),
+      ];
+
+      // Tunggu hingga salah satu berhasil atau semua gagal
+      bool anyLaunched = false;
+      for (final attempt in launchAttempts) {
+        try {
+          if (await attempt) {
+            anyLaunched = true;
+            break;
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+
+      if (anyLaunched) {
+        _showSuccessDialog();
+      } else {
+        _showManualFallbackDialog();
+      }
+    } catch (e) {
+      debugPrint('Error: $e');
+      _showManualFallbackDialog();
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  // Helper method untuk launch URL dengan timeout
+  Future<bool> _tryLaunchUrl(String url, LaunchMode mode) async {
+    try {
+      final uri = Uri.parse(url);
+      return await launchUrl(
+        uri,
+        mode: mode,
+      ).timeout(Duration(seconds: 3), onTimeout: () => false);
+    } catch (e) {
+      debugPrint('Failed to launch $url: $e');
+      return false;
     }
   }
 

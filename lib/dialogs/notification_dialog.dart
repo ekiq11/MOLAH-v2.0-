@@ -1,4 +1,7 @@
+// ignore_for_file: unused_element
+
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 import 'package:csv/csv.dart';
 import 'package:mmkv/mmkv.dart';
@@ -70,52 +73,65 @@ class NotificationItem {
 
 // Enhanced Google Sheets Monitor Service yang terintegrasi dengan MMKV
 class GoogleSheetsMonitorService {
+  static FlutterLocalNotificationsPlugin? _localNotificationPlugin;
+
+  static Future<void> _initializeLocalNotifications() async {
+    if (_localNotificationPlugin != null) return;
+
+    _localNotificationPlugin = FlutterLocalNotificationsPlugin();
+
+    // Create notification channel explicitly
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'channel_sheets_monitor',
+      'Google Sheets Monitor',
+      description: 'Notifikasi untuk perubahan data dan pengingat SPP',
+      importance: Importance.high,
+      playSound: true,
+      enableVibration: true,
+      enableLights: true,
+    );
+
+    // Use null-aware operator to avoid null error
+    await _localNotificationPlugin
+        ?.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.createNotificationChannel(channel);
+
+    const AndroidInitializationSettings android = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
+    const DarwinInitializationSettings ios = DarwinInitializationSettings();
+
+    await _localNotificationPlugin!.initialize(
+      const InitializationSettings(android: android, iOS: ios),
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        // Handle when notification is clicked
+        debugPrint('Notification clicked: ${response.payload}');
+      },
+    );
+  }
+
   static MMKV? _mmkv;
   static Timer? _monitoringTimer;
   static final Map<String, ValueNotifier<List<NotificationItem>>>
   _userNotifications = {};
   static bool _isInitialized = false;
   static final Map<String, bool> _userInitialized = {};
-  // Di dalam kelas GoogleSheetsMonitorService, di bagian atas (setelah _sheetConfigs)
   static const String _sppNotificationId = 'spp_reminder_notification';
   static const String _sppSheetName = 'Pemberitahuan SPP';
-  // Tambahkan method ini di dalam kelas GoogleSheetsMonitorService
+
+  // Check if in SPP reminder period
   static bool _isInSPPReminderPeriod() {
     final now = DateTime.now();
     final day = now.day;
-
-    // Rentang: 25 - 31 bulan ini, atau 1 - 5 bulan depan
+    // Range: 25-31 of current month, or 1-5 of next month
     return (day >= 25) || (day <= 5);
   }
 
-  // Di dalam GoogleSheetsMonitorService, tambahkan method ini
-  static List<Map<String, dynamic>> _extractRowsAsMap(
-    List<List<dynamic>> data,
-  ) {
-    if (data.length < 2) return [];
-    final headers = data[0]
-        .map((e) => e.toString().toLowerCase().trim())
-        .toList();
-    final rows = <Map<String, dynamic>>[];
-    for (int i = 1; i < data.length; i++) {
-      final row = data[i];
-      final map = <String, String>{};
-      for (int j = 0; j < headers.length; j++) {
-        if (j < row.length) {
-          map[headers[j]] = row[j]?.toString().trim() ?? '';
-        }
-      }
-      // Tambahkan key unik (NISN + Nama) untuk identifikasi
-      final nisn = map['nisn'] ?? '';
-      final nama = map['nama santri']?.toLowerCase() ?? '';
-      map['_key'] = '$nisn-$nama';
-      rows.add(map);
-    }
-    return rows;
-  }
-
+  // Check if SPP notification shown today
   static bool _hasShownSPPNotificationToday(String username) {
-    if (_mmkv == null) return true; // Jika MMKV belum siap, jangan tampilkan
+    if (_mmkv == null) return true; // If MMKV not ready, don't show
     final key = 'spp_notif_shown_$username';
     final lastShown = _mmkv!.decodeString(key);
     if (lastShown == null) return false;
@@ -123,7 +139,7 @@ class GoogleSheetsMonitorService {
     try {
       final lastDate = DateTime.tryParse(lastShown);
       final now = DateTime.now();
-      // Jika sudah pernah ditampilkan hari ini
+      // If already shown today
       return lastDate?.year == now.year &&
           lastDate?.month == now.month &&
           lastDate?.day == now.day;
@@ -141,9 +157,9 @@ class GoogleSheetsMonitorService {
   static Future<void> _checkSPPReminderForUser(String username) async {
     if (username.isEmpty || _mmkv == null) return;
 
-    // Cek apakah dalam rentang tanggal
+    // Check if in date range
     if (!_isInSPPReminderPeriod()) {
-      // Jika tidak dalam rentang, reset status agar bisa muncul lagi nanti
+      // If not in range, reset status so it can appear again later
       final key = 'spp_notif_shown_$username';
       if (_mmkv!.containsKey(key)) {
         _mmkv!.removeValue(key);
@@ -151,17 +167,17 @@ class GoogleSheetsMonitorService {
       return;
     }
 
-    // Jika sudah muncul hari ini, skip
+    // If already shown today, skip
     if (_hasShownSPPNotificationToday(username)) {
       return;
     }
 
-    // Buat notifikasi
+    // Create notification
     final notification = NotificationItem(
-      id: '$_sppNotificationId\_$username',
+      id: '${_sppNotificationId}_$username',
       title: 'Pengingat Pembayaran SPP',
       message:
-          'Pemberitahuan Pembayaran SPP Pesantren Islam Zaid bin Tsabit paling lambat tanggal 5 setiap bulannya. Saat ini memasuki awal bulan, Wali santri dihimbau untuk segera melakukan pembayaran SPP.',
+          'Pemberitahuan Pembayaran SPP Pesantren Islam Zaid bin Tsabit paling lambat tanggal 5 setiap bulannya. Saat ini memasuki awal bulan, Wali santri dihimbau untuk segera melakukan pembayaran Kewajiban SPP.',
       sheetName: _sppSheetName,
       timestamp: DateTime.now(),
       changes: {'type': 'reminder', 'category': 'spp_payment'},
@@ -169,12 +185,55 @@ class GoogleSheetsMonitorService {
     );
 
     await _addNotificationForUser(username, notification);
-    _markSPPNotificationShown(username); // Tandai sudah muncul
+    _markSPPNotificationShown(username); // Mark as shown
 
-    debugPrint('✅ SPP reminder notification added for $username');
+    debugPrint('SPP reminder notification added for $username');
   }
 
-  // Konfigurasi sheets - sesuai dengan HomeScreen
+  // Display local notification
+  static Future<void> _showLocalNotification({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    try {
+      // Initialize notifications if not done
+      await _initializeLocalNotifications();
+
+      const AndroidNotificationDetails androidPlatformChannelSpecifics =
+          AndroidNotificationDetails(
+            'channel_sheets_monitor', // channel ID
+            'Google Sheets Monitor', // channel name
+            channelDescription:
+                'Notifikasi untuk perubahan data dan pengingat SPP',
+            importance: Importance.high,
+            priority: Priority.high,
+            ticker: 'ticker',
+            visibility: NotificationVisibility.public,
+          );
+
+      const NotificationDetails platformChannelSpecifics = NotificationDetails(
+        android: androidPlatformChannelSpecifics,
+      );
+
+      // Use unique ID based on timestamp
+      final notificationId = DateTime.now().millisecondsSinceEpoch.remainder(
+        2147483647,
+      );
+
+      await _localNotificationPlugin?.show(
+        notificationId,
+        title,
+        body,
+        platformChannelSpecifics,
+        payload: payload,
+      );
+    } catch (e) {
+      debugPrint('Failed to show local notification: $e');
+    }
+  }
+
+  // Sheet configurations - matching with HomeScreen
   static const List<Map<String, String>> _sheetConfigs = [
     {
       'url':
@@ -213,7 +272,7 @@ class GoogleSheetsMonitorService {
     },
   ];
 
-  // Field mapping - sesuai dengan data santri di HomeScreen
+  // Field mapping - matching with student data in HomeScreen
   static const Map<String, String> _fieldNames = {
     'saldo': 'Saldo',
     'status_izin': 'Status Perizinan',
@@ -228,7 +287,7 @@ class GoogleSheetsMonitorService {
     'asrama': 'Asrama',
   };
 
-  // Inisialisasi global MMKV
+  // Initialize global MMKV
   static Future<void> _initializeMMKV() async {
     if (_mmkv != null) return;
 
@@ -236,19 +295,17 @@ class GoogleSheetsMonitorService {
       await MMKV.initialize();
       _mmkv = MMKV.defaultMMKV();
       _isInitialized = true;
-      debugPrint('✅ MMKV initialized');
-    } on Exception catch (e) {
-      debugPrint('❌ MMKV init failed: $e');
-      // Fallback: gunakan shared_preferences atau in-memory cache
-      // (opsional, tergantung kebutuhan)
+      debugPrint('MMKV initialized');
+    } catch (e) {
+      debugPrint('MMKV init failed: $e');
       throw Exception('MMKV initialization failed');
     }
   }
 
-  // Inisialisasi untuk user tertentu
+  // Initialize for specific user
   static Future<void> initializeForUser(String username) async {
     if (username.isEmpty) {
-      debugPrint('❌ Username is empty, cannot initialize monitoring');
+      debugPrint('Username is empty, cannot initialize monitoring');
       return;
     }
 
@@ -256,13 +313,16 @@ class GoogleSheetsMonitorService {
       // Initialize MMKV first
       await _initializeMMKV();
 
+      // Initialize notifications
+      await _initializeLocalNotifications();
+
       // Skip if already initialized for this user
       if (_userInitialized[username] == true) {
-        debugPrint('⚠️ Already initialized for user: $username');
+        debugPrint('Already initialized for user: $username');
         return;
       }
 
-      // Buat notifier untuk user ini jika belum ada
+      // Create notifier for this user if not exists
       if (!_userNotifications.containsKey(username)) {
         _userNotifications[username] = ValueNotifier<List<NotificationItem>>(
           [],
@@ -279,25 +339,23 @@ class GoogleSheetsMonitorService {
       _startMonitoringForUser(username);
 
       _userInitialized[username] = true;
-      debugPrint(
-        '✅ GoogleSheetsMonitorService initialized for user: $username',
-      );
+      debugPrint('GoogleSheetsMonitorService initialized for user: $username');
     } catch (e) {
       debugPrint(
-        '❌ Error initializing GoogleSheetsMonitorService for $username: $e',
+        'Error initializing GoogleSheetsMonitorService for $username: $e',
       );
       _userInitialized[username] = false;
     }
   }
 
-  // Mendapatkan notifier untuk user tertentu
+  // Get notifier for specific user
   static ValueNotifier<List<NotificationItem>>? getNotificationsForUser(
     String username,
   ) {
     return _userNotifications[username];
   }
 
-  // Load cache awal untuk user tertentu dengan error handling yang lebih baik
+  // Load initial cache for specific user with better error handling
   static Future<void> _loadInitialCacheForUser(String username) async {
     if (_mmkv == null || username.isEmpty) return;
 
@@ -307,45 +365,62 @@ class GoogleSheetsMonitorService {
         final existingCache = _mmkv!.decodeString(cacheKey);
 
         if (existingCache == null || existingCache.isEmpty) {
-          debugPrint(
-            '📥 Loading initial cache for ${config['name']} - $username',
-          );
+          debugPrint('Loading initial cache for ${config['name']} - $username');
 
-          final data = await _fetchSheetData(config['url']!);
+          // Fetch data with extra timeout
+          final data = await _fetchSheetData(config['url']!, retryCount: 3);
           if (data.isEmpty) {
-            debugPrint('⚠️ No data received for ${config['name']}');
+            debugPrint('No data received for ${config['name']}');
             continue;
           }
 
-          final cacheData = {
+          // Filter data only for specific user (optional, for efficiency)
+          List<List<dynamic>> userData = data;
+          if (config['name'] == 'Riwayat Transaksi') {
+            userData = data.where((row) {
+              if (row.length <= 1) return false;
+              final headers = data[0]
+                  .map((e) => e.toString().toLowerCase())
+                  .toList();
+              final nisnIndex = _findColumnIndex(headers, ['nisn']);
+              if (nisnIndex == -1 || row.length <= nisnIndex) return false;
+              final csvNisn = row[nisnIndex]?.toString().trim() ?? '';
+              return _isMatchingUser(username, csvNisn);
+            }).toList();
+          }
+
+          // Prepare cache data
+          final cacheData = <String, dynamic>{
             'url': config['url'],
             'name': config['name'],
-            'data': data,
+            'data': userData, // Use filtered data
             'lastUpdated': DateTime.now().toIso8601String(),
             'username': username,
           };
 
-          // Khusus transaksi: ekstrak kode transaksi user
+          // Extract transactions only if needed
           if (config['name'] == 'Riwayat Transaksi') {
             final userTransactionIds = _extractUserTransactionIds(
-              data,
+              userData,
               username,
             );
             cacheData['transactions'] = userTransactionIds;
             debugPrint(
-              '💰 Found ${userTransactionIds.length} existing transactions for $username',
+              'Found ${userTransactionIds.length} existing transactions for $username',
             );
           }
 
-          _mmkv!.encodeString(cacheKey, jsonEncode(cacheData));
-          debugPrint('✅ Initial cache saved for ${config['name']} - $username');
+          // Save to MMKV with error handling
+          final encoded = jsonEncode(cacheData);
+          _mmkv!.encodeString(cacheKey, encoded);
+          debugPrint('Initial cache saved for ${config['name']} - $username');
         } else {
-          debugPrint(
-            '📋 Cache already exists for ${config['name']} - $username',
-          );
+          debugPrint('Cache already exists for ${config['name']} - $username');
         }
-      } catch (e) {
-        debugPrint('❌ Error loading initial cache for ${config['name']}: $e');
+      } catch (e, stack) {
+        debugPrint(
+          'Error loading initial cache for ${config['name']}: $e\n$stack',
+        );
       }
     }
   }
@@ -384,12 +459,12 @@ class GoogleSheetsMonitorService {
       }
       return userTransactionIds;
     } catch (e) {
-      debugPrint('❌ Error extracting transaction IDs: $e');
+      debugPrint('Error extracting transaction IDs: $e');
       return [];
     }
   }
 
-  // Fetch data dari Google Sheets dengan retry mechanism
+  // Fetch data from Google Sheets with retry mechanism
   static Future<List<List<dynamic>>> _fetchSheetData(
     String url, {
     int retryCount = 3,
@@ -429,7 +504,7 @@ class GoogleSheetsMonitorService {
           );
         }
       } catch (e) {
-        debugPrint('❌ Attempt $attempt failed to fetch data: $e');
+        debugPrint('Attempt $attempt failed to fetch data: $e');
         if (attempt == retryCount) {
           throw Exception(
             'Failed to fetch data after $retryCount attempts: $e',
@@ -442,12 +517,12 @@ class GoogleSheetsMonitorService {
     return [];
   }
 
-  // Mulai monitoring untuk user tertentu
+  // Start monitoring for specific user
   static void _startMonitoringForUser(
     String username, {
     Duration interval = const Duration(minutes: 3),
   }) {
-    if (_monitoringTimer != null) return; // Hindari duplikasi
+    if (_monitoringTimer != null) return; // Avoid duplication
 
     void startTimer() {
       _monitoringTimer = Timer(interval, () async {
@@ -462,7 +537,7 @@ class GoogleSheetsMonitorService {
           debugPrint('Error in monitoring: $e');
         } finally {
           if (_userNotifications.isNotEmpty) {
-            startTimer(); // Restart timer setelah selesai
+            startTimer(); // Restart timer after completion
           }
         }
       });
@@ -471,7 +546,7 @@ class GoogleSheetsMonitorService {
     startTimer();
   }
 
-  // Check Transaksi dengan handling yang lebih baik
+  // Check transaction updates with better handling
   static Future<void> _checkTransactionUpdates({
     required String username,
     required List<List<dynamic>> newData,
@@ -479,7 +554,7 @@ class GoogleSheetsMonitorService {
   }) async {
     try {
       if (newData.length < 2) {
-        debugPrint('⚠️ Insufficient transaction data for $username');
+        debugPrint('Insufficient transaction data for $username');
         return;
       }
 
@@ -513,11 +588,11 @@ class GoogleSheetsMonitorService {
       ]);
 
       if (nisnIndex == -1 || kodeIndex == -1) {
-        debugPrint('⚠️ Required columns not found for transaction monitoring');
+        debugPrint('Required columns not found for transaction monitoring');
         return;
       }
 
-      // Filter transaksi user
+      // Filter user transactions
       final userTransactions = <Map<String, String>>[];
       for (int i = 1; i < newData.length; i++) {
         final row = newData[i];
@@ -544,11 +619,11 @@ class GoogleSheetsMonitorService {
       }
 
       if (userTransactions.isEmpty) {
-        debugPrint('📊 No transactions found for user: $username');
+        debugPrint('No transactions found for user: $username');
         return;
       }
 
-      // Ambil cache transaksi terakhir
+      // Get last transaction cache
       Set<String> knownTransactionIds = {};
       try {
         final cachedDataJson = _mmkv!.decodeString(cacheKey);
@@ -561,10 +636,10 @@ class GoogleSheetsMonitorService {
               .toSet();
         }
       } catch (e) {
-        debugPrint('⚠️ Failed to parse transaction cache: $e');
+        debugPrint('Failed to parse transaction cache: $e');
       }
 
-      // Cari transaksi baru
+      // Find new transactions
       final newTransactions = userTransactions
           .where(
             (tx) =>
@@ -574,7 +649,7 @@ class GoogleSheetsMonitorService {
           .toList();
 
       debugPrint(
-        '💳 Found ${newTransactions.length} new transactions for $username',
+        'Found ${newTransactions.length} new transactions for $username',
       );
 
       if (newTransactions.isNotEmpty) {
@@ -605,7 +680,7 @@ class GoogleSheetsMonitorService {
         }
       }
 
-      // Update cache dengan semua transaction IDs
+      // Update cache with all transaction IDs
       final allTransactionIds = userTransactions
           .where((tx) => tx['kode']!.isNotEmpty)
           .map((tx) => tx['kode']!)
@@ -623,13 +698,13 @@ class GoogleSheetsMonitorService {
       };
 
       _mmkv!.encodeString(cacheKey, jsonEncode(updatedCacheData));
-      debugPrint('✅ Transaction cache updated for $username');
+      debugPrint('Transaction cache updated for $username');
     } catch (e) {
-      debugPrint('❌ Error checking transaction updates: $e');
+      debugPrint('Error checking transaction updates: $e');
     }
   }
 
-  // Format currency dengan handling null safety
+  // Format currency with null safety handling
   static String _formatCurrency(String value) {
     if (value.isEmpty) return '0';
 
@@ -644,11 +719,11 @@ class GoogleSheetsMonitorService {
     }
   }
 
-  // Check perubahan untuk user tertentu dengan error handling yang lebih baik
+  // Check changes for specific user with better error handling
   static Future<void> _checkForUpdatesForUser(String username) async {
     if (_mmkv == null || username.isEmpty) return;
 
-    debugPrint('🔍 Checking updates for user: $username');
+    debugPrint('Checking updates for user: $username');
 
     for (var config in _sheetConfigs) {
       try {
@@ -657,7 +732,7 @@ class GoogleSheetsMonitorService {
         // Fetch new data
         final newData = await _fetchSheetData(config['url']!);
         if (newData.length < 2) {
-          debugPrint('⚠️ Insufficient data for ${config['name']}');
+          debugPrint('Insufficient data for ${config['name']}');
           continue;
         }
 
@@ -677,7 +752,7 @@ class GoogleSheetsMonitorService {
           );
         }
       } catch (e) {
-        debugPrint('❌ Error checking updates for ${config['name']}: $e');
+        debugPrint('Error checking updates for ${config['name']}: $e');
       }
     }
     await _checkSPPReminderForUser(username);
@@ -703,7 +778,7 @@ class GoogleSheetsMonitorService {
         };
         _mmkv!.encodeString(cacheKey, jsonEncode(cacheData));
         debugPrint(
-          '📋 Initial cache created for ${sheetConfig['name']} - $username',
+          'Initial cache created for ${sheetConfig['name']} - $username',
         );
         return;
       }
@@ -729,9 +804,7 @@ class GoogleSheetsMonitorService {
           );
 
           await _addNotificationForUser(username, notification);
-          debugPrint(
-            '🔔 Added notification for ${sheetConfig['name']} changes',
-          );
+          debugPrint('Added notification for ${sheetConfig['name']} changes');
         }
       }
 
@@ -745,11 +818,11 @@ class GoogleSheetsMonitorService {
       };
       _mmkv!.encodeString(cacheKey, jsonEncode(updatedCacheData));
     } catch (e) {
-      debugPrint('❌ Error checking regular sheet updates: $e');
+      debugPrint('Error checking regular sheet updates: $e');
     }
   }
 
-  // Mencari data user dalam sheet dengan error handling
+  // Find user data in sheet with error handling
   static Map<String, dynamic> _findUserDataInSheet(
     List<List<dynamic>> sheetData,
     String username,
@@ -768,7 +841,7 @@ class GoogleSheetsMonitorService {
       ]);
 
       if (nisnIndex == -1) {
-        debugPrint('⚠️ No NISN column found in sheet');
+        debugPrint('No NISN column found in sheet');
         return {};
       }
 
@@ -782,13 +855,13 @@ class GoogleSheetsMonitorService {
         }
       }
     } catch (e) {
-      debugPrint('❌ Error finding user data: $e');
+      debugPrint('Error finding user data: $e');
     }
 
     return {};
   }
 
-  // Helper functions yang diperbaiki
+  // Helper functions that are improved
   static int _findColumnIndex(
     List<String> headers,
     List<String> possibleNames,
@@ -865,7 +938,7 @@ class GoogleSheetsMonitorService {
     return defaultValue;
   }
 
-  // Compare user data dengan handling yang lebih baik
+  // Compare user data with better handling
   static Map<String, dynamic> _compareUserData(
     Map<String, dynamic> oldData,
     Map<String, dynamic> newData,
@@ -904,7 +977,7 @@ class GoogleSheetsMonitorService {
     return changes;
   }
 
-  // Format pesan perubahan dengan handling yang lebih baik
+  // Format change messages with better handling
   static String _formatUserChangesMessage(Map<String, dynamic> changes) {
     List<String> messages = [];
 
@@ -942,13 +1015,13 @@ class GoogleSheetsMonitorService {
     return messages.isNotEmpty ? messages.join('\n') : 'Data telah berubah';
   }
 
-  // Tambah notifikasi untuk user dengan deduplication
+  // Add notification for user with deduplication
   static Future<void> _addNotificationForUser(
     String username,
     NotificationItem notification,
   ) async {
     if (!_userNotifications.containsKey(username)) {
-      debugPrint('⚠️ No notification notifier found for user: $username');
+      debugPrint('No notification notifier found for user: $username');
       return;
     }
 
@@ -957,12 +1030,11 @@ class GoogleSheetsMonitorService {
         _userNotifications[username]!.value,
       );
 
-      // Check for duplicate notifications (same type and content within last 5 minutes)
+      // Check for duplicates
       final now = DateTime.now();
       final isDuplicate = currentNotifications.any((existing) {
         final timeDiff = now.difference(existing.timestamp).inMinutes;
-        return timeDiff <= 5 &&
-            existing.sheetName == notification.sheetName &&
+        return timeDiff <= 1 && // Avoid spam within 1 minute
             existing.title == notification.title &&
             existing.message == notification.message;
       });
@@ -970,7 +1042,6 @@ class GoogleSheetsMonitorService {
       if (!isDuplicate) {
         currentNotifications.insert(0, notification);
 
-        // Batasi jumlah notifikasi (max 100)
         if (currentNotifications.length > 100) {
           currentNotifications.removeRange(100, currentNotifications.length);
         }
@@ -978,16 +1049,23 @@ class GoogleSheetsMonitorService {
         _userNotifications[username]!.value = currentNotifications;
         await _saveUserNotifications(username);
 
-        debugPrint('✅ Added notification for $username: ${notification.title}');
+        debugPrint('Added notification for $username: ${notification.title}');
+
+        // Send local notification
+        await _showLocalNotification(
+          title: notification.title,
+          body: notification.message,
+          payload: notification.id, // Can be used for routing
+        );
       } else {
-        debugPrint('⚠️ Duplicate notification skipped for $username');
+        debugPrint('Duplicate notification skipped for $username');
       }
     } catch (e) {
-      debugPrint('❌ Error adding notification for user $username: $e');
+      debugPrint('Error adding notification for user $username: $e');
     }
   }
 
-  // Load notifikasi user dari MMKV dengan error handling
+  // Load user notifications from MMKV with error handling
   static Future<void> _loadUserNotifications(String username) async {
     if (_mmkv == null || username.isEmpty) return;
 
@@ -1002,7 +1080,7 @@ class GoogleSheetsMonitorService {
               try {
                 return NotificationItem.fromJson(Map<String, dynamic>.from(n));
               } catch (e) {
-                debugPrint('⚠️ Error parsing notification: $e');
+                debugPrint('Error parsing notification: $e');
                 return null;
               }
             })
@@ -1013,14 +1091,14 @@ class GoogleSheetsMonitorService {
         if (_userNotifications.containsKey(username)) {
           _userNotifications[username]!.value = notifications;
           debugPrint(
-            '✅ Loaded ${notifications.length} notifications for $username',
+            'Loaded ${notifications.length} notifications for $username',
           );
         }
       } else {
-        debugPrint('📋 No existing notifications found for $username');
+        debugPrint('No existing notifications found for $username');
       }
     } catch (e) {
-      debugPrint('❌ Error loading user notifications for $username: $e');
+      debugPrint('Error loading user notifications for $username: $e');
       // Reset notifications on error
       if (_userNotifications.containsKey(username)) {
         _userNotifications[username]!.value = [];
@@ -1028,7 +1106,7 @@ class GoogleSheetsMonitorService {
     }
   }
 
-  // Save notifikasi user ke MMKV dengan error handling
+  // Save user notifications to MMKV with error handling
   static Future<void> _saveUserNotifications(String username) async {
     if (_mmkv == null ||
         !_userNotifications.containsKey(username) ||
@@ -1042,18 +1120,16 @@ class GoogleSheetsMonitorService {
       if (notifications.isNotEmpty) {
         final notificationsJson = notifications.map((n) => n.toJson()).toList();
         _mmkv!.encodeString(notificationsKey, jsonEncode(notificationsJson));
-        debugPrint(
-          '💾 Saved ${notifications.length} notifications for $username',
-        );
+        debugPrint('Saved ${notifications.length} notifications for $username');
       } else {
         // Clear if empty
         if (_mmkv!.containsKey(notificationsKey)) {
           _mmkv!.removeValue(notificationsKey);
         }
-        debugPrint('🗑️ Cleared empty notifications for $username');
+        debugPrint('Cleared empty notifications for $username');
       }
     } catch (e) {
-      debugPrint('❌ Error saving user notifications for $username: $e');
+      debugPrint('Error saving user notifications for $username: $e');
     }
   }
 
@@ -1078,10 +1154,10 @@ class GoogleSheetsMonitorService {
         );
         _userNotifications[username]!.value = currentNotifications;
         await _saveUserNotifications(username);
-        debugPrint('✅ Marked notification as read: $notificationId');
+        debugPrint('Marked notification as read: $notificationId');
       }
     } catch (e) {
-      debugPrint('❌ Error marking notification as read: $e');
+      debugPrint('Error marking notification as read: $e');
     }
   }
 
@@ -1096,79 +1172,79 @@ class GoogleSheetsMonitorService {
 
       _userNotifications[username]!.value = currentNotifications;
       await _saveUserNotifications(username);
-      debugPrint('✅ Marked all notifications as read for $username');
+      debugPrint('Marked all notifications as read for $username');
     } catch (e) {
-      debugPrint('❌ Error marking all notifications as read: $e');
+      debugPrint('Error marking all notifications as read: $e');
     }
   }
 
-  // Clear semua notifikasi untuk user
+  // Clear all notifications for user
   static Future<void> clearAllNotificationsForUser(String username) async {
     if (!_userNotifications.containsKey(username) || username.isEmpty) return;
 
     try {
       _userNotifications[username]!.value = [];
       await _saveUserNotifications(username);
-      debugPrint('🗑️ Cleared all notifications for $username');
+      debugPrint('Cleared all notifications for $username');
     } catch (e) {
-      debugPrint('❌ Error clearing notifications for $username: $e');
+      debugPrint('Error clearing notifications for $username: $e');
     }
   }
 
-  // Get unread count untuk user
+  // Get unread count for user
   static int getUnreadCountForUser(String username) {
     if (!_userNotifications.containsKey(username) || username.isEmpty) return 0;
     return _userNotifications[username]!.value.where((n) => !n.isRead).length;
   }
 
-  // Get total count untuk user
+  // Get total count for user
   static int getTotalCountForUser(String username) {
     if (!_userNotifications.containsKey(username) || username.isEmpty) return 0;
     return _userNotifications[username]!.value.length;
   }
 
-  // Force check untuk user tertentu
+  // Force check for specific user
   static Future<void> forceCheckForUser(
     String username, {
     VoidCallback? onComplete,
   }) async {
     if (username.isEmpty) return;
 
-    debugPrint('🔄 Force checking updates for user: $username');
+    debugPrint('Force checking updates for user: $username');
     try {
       await _checkForUpdatesForUser(username);
-      debugPrint('✅ Force check completed for $username');
+      debugPrint('Force check completed for $username');
     } catch (e) {
-      debugPrint('❌ Error in force check for $username: $e');
+      debugPrint('Error in force check for $username: $e');
     }
     onComplete?.call();
   }
 
-  // Stop monitoring untuk user tertentu
+  // Stop monitoring for specific user
   static void stopMonitoringForUser(String username) {
     if (username.isEmpty) return;
 
     _userNotifications.remove(username);
     _userInitialized.remove(username);
 
-    debugPrint('🛑 Stopped monitoring for user: $username');
+    debugPrint('Stopped monitoring for user: $username');
 
-    // Jika tidak ada user yang dipantau, stop timer
+    // If no users being monitored, stop timer
     if (_userNotifications.isEmpty) {
       _monitoringTimer?.cancel();
       _monitoringTimer = null;
-      debugPrint('🛑 Stopped monitoring timer - no active users');
+      debugPrint('Stopped monitoring timer - no active users');
     }
   }
 
-  // Cleanup untuk user tertentu
+  // Cleanup for specific user
   static Future<void> cleanupForUser(String username) async {
     if (username.isEmpty) return;
 
     try {
       stopMonitoringForUser(username);
-      _userNotifications[username]?.dispose(); // ✅ Tambahkan ini
-      // Hapus cache sheets untuk user ini
+
+      // Remove cache sheets for this user
       if (_mmkv != null) {
         for (var config in _sheetConfigs) {
           final cacheKey = 'sheet_cache_${username}_${config['name']}';
@@ -1177,16 +1253,22 @@ class GoogleSheetsMonitorService {
           }
         }
 
-        // Hapus notifikasi
+        // Remove notifications
         final notificationsKey = 'notifications_enhanced_$username';
         if (_mmkv!.containsKey(notificationsKey)) {
           _mmkv!.removeValue(notificationsKey);
         }
+
+        // Remove SPP notification tracking
+        final sppKey = 'spp_notif_shown_$username';
+        if (_mmkv!.containsKey(sppKey)) {
+          _mmkv!.removeValue(sppKey);
+        }
       }
 
-      debugPrint('🗑️ Cleanup completed for user: $username');
+      debugPrint('Cleanup completed for user: $username');
     } catch (e) {
-      debugPrint('❌ Error during cleanup for $username: $e');
+      debugPrint('Error during cleanup for $username: $e');
     }
   }
 
@@ -1194,13 +1276,6 @@ class GoogleSheetsMonitorService {
   static bool isUserBeingMonitored(String username) {
     return _userInitialized[username] == true &&
         _userNotifications.containsKey(username);
-  }
-
-  static void updateNotificationList(
-    String username,
-    List<NotificationItem> newList,
-  ) {
-    _userNotifications[username]?.value = List.unmodifiable(newList);
   }
 
   // Get monitoring status
@@ -1219,20 +1294,23 @@ class GoogleSheetsMonitorService {
       _monitoringTimer?.cancel();
       _monitoringTimer = null;
 
+      // Dispose all ValueNotifiers
+      for (var notifier in _userNotifications.values) {
+        notifier.dispose();
+      }
       _userNotifications.clear();
       _userInitialized.clear();
 
       _isInitialized = false;
 
-      debugPrint('🛑 GoogleSheetsMonitorService disposed');
+      debugPrint('GoogleSheetsMonitorService disposed');
     } catch (e) {
-      debugPrint('❌ Error disposing GoogleSheetsMonitorService: $e');
+      debugPrint('Error disposing GoogleSheetsMonitorService: $e');
     }
   }
 }
 
-// Enhanced Notification Dialog yang terintegrasi dengan perbaikan UI
-// Enhanced Notification Dialog yang terintegrasi dengan perbaikan UI
+// Enhanced Notification Dialog that's integrated with improved UI
 class EnhancedNotificationDialog {
   static void show({
     required BuildContext context,
@@ -1242,7 +1320,7 @@ class EnhancedNotificationDialog {
     if (username.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Username tidak valid')));
+      ).showSnackBar(const SnackBar(content: Text('Username tidak valid')));
       return;
     }
 
@@ -1250,13 +1328,15 @@ class EnhancedNotificationDialog {
         GoogleSheetsMonitorService.getNotificationsForUser(username);
     if (notificationsNotifier == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Layanan notifikasi belum diinisialisasi')),
+        const SnackBar(
+          content: Text('Layanan notifikasi belum diinisialisasi'),
+        ),
       );
       return;
     }
 
-    int _visibleCount = 10;
-    final ScrollController _scrollController = ScrollController();
+    int visibleCount = 10;
+    final ScrollController scrollController = ScrollController();
 
     await showDialog(
       context: context,
@@ -1275,120 +1355,108 @@ class EnhancedNotificationDialog {
                       notifications
                           .where(
                             (n) => n.timestamp.isAfter(
-                              DateTime.now().subtract(Duration(days: 30)),
+                              DateTime.now().subtract(const Duration(days: 30)),
                             ),
                           )
                           .toList()
                         ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
                   final displayed = recentNotifications
-                      .take(_visibleCount)
+                      .take(visibleCount)
                       .toList();
 
-                  _scrollController.addListener(() {
-                    if (_scrollController.position.pixels ==
-                        _scrollController.position.maxScrollExtent) {
-                      if (_visibleCount < 15 &&
-                          _visibleCount < recentNotifications.length) {
+                  // Add scroll listener for pagination
+                  scrollController.addListener(() {
+                    if (scrollController.position.pixels ==
+                        scrollController.position.maxScrollExtent) {
+                      if (visibleCount < 15 &&
+                          visibleCount < recentNotifications.length) {
                         setState(() {
-                          _visibleCount = 15;
+                          visibleCount = 15;
                         });
                       }
                     }
                   });
 
-                  return Container(
+                  return SizedBox(
                     width: 400,
                     height: 600,
                     child: Column(
                       children: [
                         // Header
                         Container(
-                          padding: EdgeInsets.all(24),
+                          padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
                             color: Colors.blue[50],
-                            borderRadius: BorderRadius.vertical(
+                            borderRadius: const BorderRadius.vertical(
                               top: Radius.circular(16),
                             ),
                           ),
-                          child: Text(
-                            'Notifikasi',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Notifikasi',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              if (notifications.isNotEmpty)
+                                TextButton(
+                                  onPressed: () async {
+                                    await GoogleSheetsMonitorService.clearAllNotificationsForUser(
+                                      username,
+                                    );
+                                    onClearAll();
+                                  },
+                                  child: const Text('Hapus Semua'),
+                                ),
+                            ],
                           ),
                         ),
-                        Expanded(
-                          child: ListView.builder(
-                            controller: _scrollController,
-                            itemCount: displayed.length,
-                            itemBuilder: (context, index) {
-                              final n = displayed[index];
-                              return Container(
-                                margin: EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                child: ListTile(
-                                  leading: Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: n.isRead
-                                          ? Colors.grey
-                                          : _getSheetColor(n.sheetName),
-                                    ),
-                                  ),
-                                  title: Text(
-                                    n.title,
-                                    style: TextStyle(
-                                      fontWeight: n.isRead
-                                          ? FontWeight.normal
-                                          : FontWeight.bold,
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    n.message,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  trailing: Text(
-                                    _formatTimestamp(n.timestamp),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                  onTap: () async {
-                                    // Update lokal dulu
-                                    final updated = n.copyWith(isRead: true);
-                                    final list =
-                                        List<NotificationItem>.from(
-                                            notificationsNotifier.value,
-                                          )
-                                          ..removeWhere((e) => e.id == n.id)
-                                          ..insert(0, updated);
-                                    notificationsNotifier.value = list;
 
-                                    // Simpan di background
-                                    unawaited(
-                                      GoogleSheetsMonitorService.markAsReadForUser(
-                                        username,
-                                        n.id,
-                                      ),
+                        // Content
+                        Expanded(
+                          child: displayed.isEmpty
+                              ? _buildEmptyState()
+                              : ListView.builder(
+                                  controller: scrollController,
+                                  itemCount: displayed.length,
+                                  itemBuilder: (context, index) {
+                                    final notification = displayed[index];
+                                    return _buildNotificationTile(
+                                      context,
+                                      notification,
+                                      username,
+                                      notificationsNotifier,
                                     );
                                   },
                                 ),
-                              );
-                            },
-                          ),
                         ),
-                        TextButton.icon(
-                          onPressed: () => Navigator.pop(context),
-                          icon: Icon(Icons.close),
-                          label: Text("Tutup"),
+
+                        // Footer
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              if (notifications.isNotEmpty)
+                                TextButton(
+                                  onPressed: () async {
+                                    await GoogleSheetsMonitorService.markAllAsReadForUser(
+                                      username,
+                                    );
+                                  },
+                                  child: const Text('Tandai Semua Dibaca'),
+                                ),
+                              TextButton.icon(
+                                onPressed: () => Navigator.pop(context),
+                                icon: const Icon(Icons.close),
+                                label: const Text("Tutup"),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -1401,10 +1469,113 @@ class EnhancedNotificationDialog {
       },
     );
 
-    _scrollController.dispose();
+    scrollController.dispose();
   }
 
-  // Sisanya tetap sama: _buildEmptyState, _buildNotificationTile, _getSheetColor, _formatTimestamp
+  static Widget _buildEmptyState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.notifications_off, size: 64, color: Colors.grey),
+          SizedBox(height: 16),
+          Text(
+            'Belum ada notifikasi',
+            style: TextStyle(fontSize: 18, color: Colors.grey),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Notifikasi akan muncul ketika ada perubahan data',
+            style: TextStyle(color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Widget _buildNotificationTile(
+    BuildContext context,
+    NotificationItem notification,
+    String username,
+    ValueNotifier<List<NotificationItem>> notificationsNotifier,
+  ) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(
+            color: _getSheetColor(notification.sheetName),
+            width: 4,
+          ),
+        ),
+        color: notification.isRead ? Colors.grey[50] : Colors.white,
+      ),
+      child: ListTile(
+        leading: Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: notification.isRead
+                ? Colors.grey
+                : _getSheetColor(notification.sheetName),
+          ),
+        ),
+        title: Text(
+          notification.title,
+          style: TextStyle(
+            fontWeight: notification.isRead
+                ? FontWeight.normal
+                : FontWeight.bold,
+            color: notification.isRead ? Colors.grey[600] : Colors.black,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              notification.message,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: notification.isRead
+                    ? Colors.grey[500]
+                    : Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${notification.sheetName} • ${_formatTimestamp(notification.timestamp)}',
+              style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+            ),
+          ],
+        ),
+        onTap: () async {
+          if (!notification.isRead) {
+            // Update local first for immediate UI response
+            final updated = notification.copyWith(isRead: true);
+            final list =
+                List<NotificationItem>.from(notificationsNotifier.value)
+                  ..removeWhere((e) => e.id == notification.id)
+                  ..insert(
+                    notificationsNotifier.value.indexOf(notification),
+                    updated,
+                  );
+            notificationsNotifier.value = list;
+
+            // Save in background
+            unawaited(
+              GoogleSheetsMonitorService.markAsReadForUser(
+                username,
+                notification.id,
+              ),
+            );
+          }
+        },
+      ),
+    );
+  }
 
   static Color _getSheetColor(String sheetName) {
     switch (sheetName) {
@@ -1418,6 +1589,8 @@ class EnhancedNotificationDialog {
         return Colors.red[700] ?? Colors.red;
       case 'Data Absensi':
         return Colors.teal[700] ?? Colors.teal;
+      case 'Pemberitahuan SPP':
+        return Colors.amber[700] ?? Colors.amber;
       default:
         return Colors.blue[700] ?? Colors.blue;
     }
@@ -1426,6 +1599,7 @@ class EnhancedNotificationDialog {
   static String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
+
     if (difference.inSeconds < 60) {
       return 'Baru saja';
     } else if (difference.inMinutes < 60) {
