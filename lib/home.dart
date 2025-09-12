@@ -1,5 +1,4 @@
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:csv/csv.dart';
@@ -7,12 +6,10 @@ import 'package:mmkv/mmkv.dart';
 import 'package:pizab_molah/helper/loading_timer.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
-
 // Import custom components
 import 'dialogs/topup_dialog.dart';
 import 'dialogs/notification_dialog.dart';
-import 'screens/pembayaran.dart' hide CsvToListConverter;
+import 'screens/pembayaran.dart';
 import 'utils/fetcher_data.dart';
 import 'login.dart';
 import 'utils/login_preferences.dart';
@@ -54,9 +51,9 @@ class _HomeScreenState extends State<HomeScreen>
   late Animation<double> _shimmerAnimation;
 
   // Enhanced Notifications
-  ValueNotifier<List<NotificationItem>>? _enhancedNotifications;
-  int get _enhancedNotificationCount =>
-      _enhancedNotifications?.value.where((n) => !n.isRead).length ?? 0;
+  // Dihapus: ValueNotifier<List<NotificationItem>>? _enhancedNotifications;
+  // int get _enhancedNotificationCount =>
+  //     _enhancedNotifications?.value.where((n) => !n.isRead).length ?? 0;
 
   // Timers and utilities
   Timer? _dataTimer;
@@ -112,11 +109,9 @@ class _HomeScreenState extends State<HomeScreen>
     _shimmerController.stop();
     _animationController.dispose();
     _shimmerController.dispose();
-
     _httpClient.close();
     // Bersihkan timeout dialog
     LoadingTimeoutDialog.cancelTimeout();
-
     // Cleanup enhanced notifications service
     GoogleSheetsMonitorService.stopMonitoringForUser(widget.username);
     await GoogleSheetsMonitorService.cleanupForUser(widget.username);
@@ -169,27 +164,21 @@ class _HomeScreenState extends State<HomeScreen>
     try {
       _initializeAnimation();
       await _initializeMMKV();
-
       // Mulai timeout dialog sebelum loading data
       if (mounted) {
         LoadingTimeoutDialog.startTimeout(context, _handleRetryLoading);
       }
-
       // Load cached data first for immediate display
       await _loadCachedData();
-
       // Initialize enhanced notifications service
       unawaited(
         _initializeNotifications().catchError((e) {
           debugPrint('Error in unawaited _initializeNotifications: $e');
         }),
       );
-
       // Check if cache is still valid, if not fetch new data
       await _checkCacheAndRefresh();
-
       _startPolling();
-
       // Cancel timeout jika berhasil load
       LoadingTimeoutDialog.cancelTimeout();
     } catch (e) {
@@ -218,8 +207,11 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _initializeNotifications() async {
     try {
       await GoogleSheetsMonitorService.initializeForUser(widget.username);
-      _enhancedNotifications =
-          GoogleSheetsMonitorService.getNotificationsForUser(widget.username);
+      // Tidak perlu menyimpan _enhancedNotifications di sini lagi.
+      // UI akan langsung mendengarkan dari GoogleSheetsMonitorService.
+      debugPrint(
+        '✅ Enhanced notifications service initialized for user: ${widget.username}',
+      );
     } catch (e) {
       debugPrint('Error initializing notifications: $e');
     }
@@ -238,18 +230,15 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _loadCachedData() async {
     if (_mmkv == null) return;
-
     try {
       final cachedDataKey = 'santri_${widget.username}';
       final timestampKey = 'last_update_${widget.username}';
-
       final cachedData = _mmkv!.decodeString(cachedDataKey) ?? '';
       final lastUpdate = _mmkv!.decodeInt(timestampKey) ?? 0;
 
       if (cachedData.isNotEmpty) {
         final decodedData = json.decode(cachedData) as Map<String, dynamic>;
         _previousData = Map<String, dynamic>.from(decodedData);
-
         if (mounted) {
           setState(() {
             _santriData = Map<String, dynamic>.from(_previousData);
@@ -257,7 +246,6 @@ class _HomeScreenState extends State<HomeScreen>
           });
         }
         _animationController.forward();
-
         // Check cache age
         final cacheAge = DateTime.now().millisecondsSinceEpoch - lastUpdate;
         debugPrint(
@@ -269,7 +257,6 @@ class _HomeScreenState extends State<HomeScreen>
       final notificationsKey = 'notifications_${widget.username}';
       final cachedNotificationsStr =
           _mmkv!.decodeString(notificationsKey) ?? '';
-
       if (cachedNotificationsStr.isNotEmpty) {
         try {
           final cachedNotifications =
@@ -295,11 +282,9 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _checkCacheAndRefresh() async {
     if (_mmkv == null) return;
-
     final timestampKey = 'last_update_${widget.username}';
     final lastUpdate = _mmkv!.decodeInt(timestampKey) ?? 0;
     final now = DateTime.now().millisecondsSinceEpoch;
-
     // If cache is older than valid duration, fetch new data
     if (now - lastUpdate > _cacheValidDuration.inMilliseconds) {
       await _fetchSantriData(silent: _santriData.isNotEmpty);
@@ -342,14 +327,11 @@ class _HomeScreenState extends State<HomeScreen>
     for (int sourceIndex = 0; sourceIndex < _csvSources.length; sourceIndex++) {
       final source = _csvSources[sourceIndex];
       debugPrint('🔗 Trying ${source['name']}: ${source['url']}');
-
       try {
         final response = await _httpClient
             .get(Uri.parse(source['url']!), headers: _getOptimizedHeaders())
             .timeout(_requestTimeout);
-
         debugPrint('📡 Response Status: ${response.statusCode}');
-
         if (response.statusCode == 200 && response.body.isNotEmpty) {
           // Quick validation
           if (_isValidCSVContent(response.body)) {
@@ -358,10 +340,8 @@ class _HomeScreenState extends State<HomeScreen>
               debugPrint(
                 '✅ Data parsing successful for user: ${widget.username}',
               );
-
               // Cancel timeout karena berhasil
               LoadingTimeoutDialog.cancelTimeout();
-
               await _processNewData(newData);
               return;
             }
@@ -393,13 +373,10 @@ class _HomeScreenState extends State<HomeScreen>
       final fallbackData = await dataFetcher
           .fetchSantriData(widget.username)
           .timeout(const Duration(seconds: 10));
-
       if (fallbackData.isNotEmpty) {
         debugPrint('✅ Fallback data fetcher successful');
-
         // Cancel timeout karena berhasil
         LoadingTimeoutDialog.cancelTimeout();
-
         await _processNewData(fallbackData);
         return;
       }
@@ -414,7 +391,6 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _handleFetchError(dynamic error, bool silent) async {
     debugPrint('❌ Fetch error: $error');
-
     // Cancel timeout dan stop shimmer
     LoadingTimeoutDialog.cancelTimeout();
     if (_shimmerController.isAnimating) {
@@ -422,7 +398,6 @@ class _HomeScreenState extends State<HomeScreen>
     }
 
     String errorMessage = 'Gagal memuat data';
-
     if (error.toString().contains('internet') ||
         error.toString().contains('connection')) {
       errorMessage = 'Tidak ada koneksi internet';
@@ -477,12 +452,10 @@ class _HomeScreenState extends State<HomeScreen>
     try {
       // Process CSV in isolate for better performance with large data
       final csvData = const CsvToListConverter().convert(csvContent);
-
       if (csvData.isEmpty) {
         debugPrint('❌ CSV data is empty');
         return {};
       }
-
       return _parseCSVData(csvData);
     } catch (e) {
       debugPrint('❌ CSV processing error: $e');
@@ -495,7 +468,6 @@ class _HomeScreenState extends State<HomeScreen>
       final headers = csvData[0]
           .map((e) => e.toString().toLowerCase().trim().replaceAll(' ', '_'))
           .toList();
-
       debugPrint('📊 Processed headers: $headers');
 
       final nisnIndex = _findColumnIndex(headers, [
@@ -537,28 +509,21 @@ class _HomeScreenState extends State<HomeScreen>
 
   bool _isMatchingUser(String targetUsername, String csvValue) {
     if (targetUsername.isEmpty || csvValue.isEmpty) return false;
-
     final cleanTarget = targetUsername.toLowerCase().trim();
     final cleanCsv = csvValue.toLowerCase().trim();
-
     if (cleanTarget == cleanCsv) return true;
-
     final numericTarget = cleanTarget.replaceAll(RegExp(r'[^0-9]'), '');
     final numericCsv = cleanCsv.replaceAll(RegExp(r'[^0-9]'), '');
-
     if (numericTarget.isNotEmpty && numericCsv.isNotEmpty) {
       final normalizedTarget = numericTarget.replaceAll(RegExp(r'^0+'), '');
       final normalizedCsv = numericCsv.replaceAll(RegExp(r'^0+'), '');
-
       if (normalizedTarget.isNotEmpty && normalizedCsv.isNotEmpty) {
         return normalizedTarget == normalizedCsv;
       }
     }
-
     if (cleanTarget.length > 3 && cleanCsv.length > 3) {
       return cleanTarget.contains(cleanCsv) || cleanCsv.contains(cleanTarget);
     }
-
     return false;
   }
 
@@ -658,10 +623,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   String _formatSaldo(String saldo) {
     if (saldo.startsWith('Rp')) return saldo;
-
     final clean = saldo.replaceAll(RegExp(r'[^\d]'), '');
     if (clean.isEmpty) return '0';
-
     final number = int.tryParse(clean) ?? 0;
     final formatted = number.toString().replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
@@ -672,27 +635,22 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _processNewData(Map<String, dynamic> newData) async {
     final hasChanges = _checkChanges(newData);
-
     if (_shimmerController.isAnimating) {
       _shimmerController.stop();
     }
-
     if (mounted) {
       setState(() {
         _santriData = Map<String, dynamic>.from(newData);
         _isLoading = false;
         _errorMessage = '';
       });
-
       if (!_animationController.isCompleted) {
         _animationController.forward();
       }
     }
-
     if (hasChanges && mounted) {
       _showUpdateSnackBar();
     }
-
     await _saveData(newData);
   }
 
@@ -706,7 +664,6 @@ class _HomeScreenState extends State<HomeScreen>
     for (final entry in _fieldNames.entries) {
       final oldValue = _previousData[entry.key]?.toString() ?? '';
       final newValue = newData[entry.key]?.toString() ?? '';
-
       if (oldValue != newValue && oldValue.isNotEmpty) {
         changes.add('${entry.value}: $oldValue → $newValue');
       }
@@ -725,7 +682,6 @@ class _HomeScreenState extends State<HomeScreen>
 
   void _showUpdateSnackBar() {
     if (!mounted) return;
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('Data berhasil diperbarui'),
@@ -744,7 +700,6 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _saveData(Map<String, dynamic> data) async {
     if (_mmkv == null) return;
-
     try {
       final dataKey = 'santri_${widget.username}';
       final notificationsKey = 'notifications_${widget.username}';
@@ -800,13 +755,10 @@ class _HomeScreenState extends State<HomeScreen>
       debugPrint('🚪 Starting optimized logout process...');
       _dataTimer?.cancel();
       _debounceTimer?.cancel();
-
       // Bersihkan service khusus
       await GoogleSheetsMonitorService.cleanupForUser(widget.username);
-
       // Bersihkan preferensi login
       await LoginPreferences.clearAllUserData(widget.username);
-
       if (_mmkv != null) {
         final keysToRemove = [
           'user_logged_in',
@@ -823,7 +775,6 @@ class _HomeScreenState extends State<HomeScreen>
           'cache_perizinan_${widget.username}',
           'cache_transaksi_${widget.username}',
         ];
-
         // Hapus kunci yang sudah diketahui
         for (final key in keysToRemove) {
           if (_mmkv!.containsKey(key)) {
@@ -833,7 +784,6 @@ class _HomeScreenState extends State<HomeScreen>
             debugPrint('🗑️ Removed MMKV key: $key');
           }
         }
-
         // 🔥 Hapus semua kunci yang mengandung username (opsional, lebih aman)
         // Di _handleLogout()
         if (_mmkv == null) return;
@@ -847,7 +797,6 @@ class _HomeScreenState extends State<HomeScreen>
           }
         }
       }
-
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -882,7 +831,6 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _showLogoutDialog() async {
     final screenSize = MediaQuery.of(context).size;
-
     return showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1002,9 +950,9 @@ class _HomeScreenState extends State<HomeScreen>
       context: context,
       username: widget.username,
       onClearAll: () {
-        if (mounted) {
-          setState(() {});
-        }
+        // Dihapus: setState(() {});
+        // Karena UI sekarang reaktif, tidak perlu setState manual.
+        // Dialog akan menutup dan ikon notifikasi akan otomatis update.
       },
     );
   }
@@ -1014,9 +962,8 @@ class _HomeScreenState extends State<HomeScreen>
       LoadingTimeoutDialog.startTimeout(context, _handleRetryDataFetch);
     }
     await _fetchSantriData();
-    if (_enhancedNotifications != null) {
-      unawaited(GoogleSheetsMonitorService.forceCheckForUser(widget.username));
-    }
+    // Force check untuk memastikan sinkronisasi
+    unawaited(GoogleSheetsMonitorService.forceCheckForUser(widget.username));
   }
 
   void _onBottomNavTap(int index) {
@@ -1040,7 +987,6 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     super.build(context);
     final screenSize = MediaQuery.of(context).size;
-
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: SafeArea(
@@ -1091,8 +1037,36 @@ class _HomeScreenState extends State<HomeScreen>
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: _buildNotificationIcon(),
-            activeIcon: _buildNotificationIcon(active: true),
+            // DIPERBAIKI: Gunakan ValueListenableBuilder untuk ikon notifikasi
+            icon: ValueListenableBuilder<List<NotificationItem>>(
+              valueListenable:
+                  GoogleSheetsMonitorService.getNotificationsForUser(
+                    widget.username,
+                  ) ??
+                  ValueNotifier([]),
+              builder: (context, notifications, child) {
+                final unreadCount = notifications
+                    .where((n) => !n.isRead)
+                    .length;
+                return _buildNotificationIcon(unreadCount: unreadCount);
+              },
+            ),
+            activeIcon: ValueListenableBuilder<List<NotificationItem>>(
+              valueListenable:
+                  GoogleSheetsMonitorService.getNotificationsForUser(
+                    widget.username,
+                  ) ??
+                  ValueNotifier([]),
+              builder: (context, notifications, child) {
+                final unreadCount = notifications
+                    .where((n) => !n.isRead)
+                    .length;
+                return _buildNotificationIcon(
+                  unreadCount: unreadCount,
+                  active: true,
+                );
+              },
+            ),
             label: 'Notifikasi',
           ),
           const BottomNavigationBarItem(
@@ -1110,12 +1084,13 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildNotificationIcon({bool active = false}) {
+  // DIPERBAIKI: Fungsi ini sekarang menerima parameter `unreadCount`
+  Widget _buildNotificationIcon({bool active = false, int unreadCount = 0}) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
         Icon(active ? Icons.notifications_active : Icons.notifications),
-        if (_enhancedNotificationCount > 0)
+        if (unreadCount > 0)
           Positioned(
             right: -6,
             top: -6,
@@ -1127,7 +1102,7 @@ class _HomeScreenState extends State<HomeScreen>
               ),
               constraints: const BoxConstraints(minWidth: 12, minHeight: 12),
               child: Text(
-                '$_enhancedNotificationCount',
+                '$unreadCount',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 8,
@@ -1162,7 +1137,11 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                   child: CombinedHeader(
                     santriData: _santriData,
-                    notificationCount: _enhancedNotificationCount,
+                    // DIPERBAIKI: Gunakan ValueListenableBuilder untuk mengambil jumlah notifikasi
+                    notificationCount:
+                        GoogleSheetsMonitorService.getUnreadCountForUser(
+                          widget.username,
+                        ),
                     onNotificationTap: _showEnhancedNotificationDialog,
                     onLogoutTap: _showLogoutDialog,
                     saldo: _santriData['saldo'] ?? '0',
@@ -1201,7 +1180,11 @@ class _HomeScreenState extends State<HomeScreen>
       children: [
         AppBar(
           title: ValueListenableBuilder<List<NotificationItem>>(
-            valueListenable: _enhancedNotifications ?? ValueNotifier([]),
+            valueListenable:
+                GoogleSheetsMonitorService.getNotificationsForUser(
+                  widget.username,
+                ) ??
+                ValueNotifier([]),
             builder: (context, notifications, child) {
               final unreadCount = notifications.where((n) => !n.isRead).length;
               return Row(
@@ -1228,7 +1211,11 @@ class _HomeScreenState extends State<HomeScreen>
           centerTitle: false,
           actions: [
             ValueListenableBuilder<List<NotificationItem>>(
-              valueListenable: _enhancedNotifications ?? ValueNotifier([]),
+              valueListenable:
+                  GoogleSheetsMonitorService.getNotificationsForUser(
+                    widget.username,
+                  ) ??
+                  ValueNotifier([]),
               builder: (context, notifications, child) {
                 if (notifications.isNotEmpty) {
                   return TextButton(
@@ -1236,7 +1223,8 @@ class _HomeScreenState extends State<HomeScreen>
                       await GoogleSheetsMonitorService.clearAllNotificationsForUser(
                         widget.username,
                       );
-                      if (mounted) setState(() {});
+                      // Dihapus: if (mounted) setState(() {});
+                      // Tidak perlu setState, ValueListenableBuilder akan otomatis rebuild.
                     },
                     child: Text(
                       'Hapus Semua',
@@ -1255,7 +1243,11 @@ class _HomeScreenState extends State<HomeScreen>
         ),
         Expanded(
           child: ValueListenableBuilder<List<NotificationItem>>(
-            valueListenable: _enhancedNotifications ?? ValueNotifier([]),
+            valueListenable:
+                GoogleSheetsMonitorService.getNotificationsForUser(
+                  widget.username,
+                ) ??
+                ValueNotifier([]),
             builder: (context, notifications, child) {
               if (notifications.isEmpty) {
                 return _buildEmptyNotifications(screenSize);
@@ -1351,6 +1343,8 @@ class _HomeScreenState extends State<HomeScreen>
             widget.username,
             notification.id,
           );
+          // Tidak perlu setState di sini.
+          // ValueListenableBuilder akan otomatis membangun ulang item yang relevan.
         },
         child: Row(
           children: [
@@ -1438,7 +1432,6 @@ class _HomeScreenState extends State<HomeScreen>
   String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
-
     if (difference.inMinutes < 1) {
       return 'Baru saja';
     } else if (difference.inHours < 1) {

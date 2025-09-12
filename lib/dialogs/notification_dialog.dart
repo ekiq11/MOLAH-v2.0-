@@ -1,13 +1,529 @@
 // ignore_for_file: unused_element
-
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:workmanager/workmanager.dart';
 import 'package:http/http.dart' as http;
 import 'package:csv/csv.dart';
 import 'package:mmkv/mmkv.dart';
 import 'dart:convert';
 import 'dart:async';
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'dart:isolate';
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
+
+// Background task callback function - harus di top level
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    try {
+      debugPrint("Background task started: $task");
+      final username = inputData?['username'] ?? '';
+      if (username.isEmpty) {
+        return Future.value(false);
+      }
+      // Initialize MMKV in background
+      await MMKV.initialize();
+      final mmkv = MMKV.defaultMMKV();
+      // Initialize notifications in background
+      final localNotifications = FlutterLocalNotificationsPlugin();
+      const AndroidNotificationChannel channel = AndroidNotificationChannel(
+        'channel_sheets_monitor_bg',
+        'Background Monitor',
+        description: 'Background monitoring untuk perubahan data',
+        importance: Importance.high,
+      );
+      await localNotifications
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.createNotificationChannel(channel);
+      const AndroidInitializationSettings android =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
+      await localNotifications.initialize(
+        const InitializationSettings(android: android),
+      );
+      // Check for updates in background
+      await _backgroundCheckForUpdates(username, mmkv, localNotifications);
+      debugPrint("Background task completed successfully");
+      return Future.value(true);
+    } catch (e) {
+      debugPrint("Background task error: $e");
+      return Future.value(false);
+    }
+  });
+}
+
+// Background update checker
+Future<void> _backgroundCheckForUpdates(
+  String username,
+  MMKV mmkv,
+  FlutterLocalNotificationsPlugin localNotifications,
+) async {
+  const sheetConfigs = [
+    {
+      'url':
+          'https://docs.google.com/spreadsheets/d/1BZbBczH2OY8SB2_1tDpKf_B8WvOyk8TJl4esfT-dgzw/export?format=csv&gid=1307491664',
+      'name': 'Data Santri',
+    },
+    {
+      'url':
+          'https://docs.google.com/spreadsheets/d/1BZbBczH2OY8SB2_1tDpKf_B8WvOyk8TJl4esfT-dgzw/export?format=csv&gid=2071598361',
+      'name': 'Data Keuangan',
+    },
+    {
+      'url':
+          'https://docs.google.com/spreadsheets/d/1BZbBczH2OY8SB2_1tDpKf_B8WvOyk8TJl4esfT-dgzw/export?format=csv&gid=2012044980',
+      'name': 'Riwayat Transaksi',
+    },
+  ];
+  for (var config in sheetConfigs) {
+    try {
+      final cacheKey = 'sheet_cache_${username}_${config['name']}';
+      // Fetch new data
+      final newData = await _backgroundFetchSheetData(config['url']!);
+      if (newData.length < 2) continue;
+      if (config['name'] == 'Riwayat Transaksi') {
+        await _backgroundCheckTransactionUpdates(
+          username: username,
+          newData: newData,
+          cacheKey: cacheKey,
+          mmkv: mmkv,
+          localNotifications: localNotifications,
+        );
+      } else {
+        await _backgroundCheckRegularSheetUpdates(
+          username: username,
+          newData: newData,
+          cacheKey: cacheKey,
+          sheetName: config['name']!,
+          mmkv: mmkv,
+          localNotifications: localNotifications,
+        );
+      }
+    } catch (e) {
+      debugPrint('Background check error for ${config['name']}: $e');
+    }
+  }
+  // Check SPP reminder
+  await _backgroundCheckSPPReminder(username, mmkv, localNotifications);
+}
+
+Future<List<List<dynamic>>> _backgroundFetchSheetData(String url) async {
+  try {
+    final response = await http
+        .get(
+          Uri.parse(url),
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; FlutterApp/1.0)',
+            'Accept': 'text/csv,application/csv,text/plain,*/*',
+            'Cache-Control': 'no-cache',
+          },
+        )
+        .timeout(const Duration(seconds: 30));
+    if (response.statusCode == 200 && response.body.trim().isNotEmpty) {
+      return const CsvToListConverter().convert(
+        response.body,
+        shouldParseNumbers: false,
+      );
+    }
+  } catch (e) {
+    debugPrint('Background fetch error: $e');
+  }
+  return [];
+}
+
+Future<void> _backgroundCheckTransactionUpdates({
+  required String username,
+  required List<List<dynamic>> newData,
+  required String cacheKey,
+  required MMKV mmkv,
+  required FlutterLocalNotificationsPlugin localNotifications,
+}) async {
+  try {
+    if (newData.length < 2) return;
+    final headers = newData[0]
+        .map((e) => e.toString().toLowerCase().trim())
+        .toList();
+    final nisnIndex = _backgroundFindColumnIndex(headers, ['nisn']);
+    final kodeIndex = _backgroundFindColumnIndex(headers, [
+      'kode transaksi',
+      'kode_transaksi',
+    ]);
+    if (nisnIndex == -1 || kodeIndex == -1) return;
+    // Get cached transaction IDs
+    Set<String> knownTransactionIds = {};
+    try {
+      final cachedDataJson = mmkv.decodeString(cacheKey);
+      if (cachedDataJson != null && cachedDataJson.isNotEmpty) {
+        final cachedData = jsonDecode(cachedDataJson);
+        final List<dynamic> cachedTransactions =
+            cachedData['transactions'] ?? [];
+        knownTransactionIds = cachedTransactions
+            .map((e) => e.toString())
+            .toSet();
+      }
+    } catch (e) {
+      debugPrint('Error parsing cached transactions: $e');
+    }
+    // Find new transactions
+    final newTransactions = <Map<String, String>>[];
+    for (int i = 1; i < newData.length; i++) {
+      final row = newData[i];
+      if (row.length > nisnIndex &&
+          _backgroundIsMatchingUser(
+            username,
+            row[nisnIndex]?.toString() ?? '',
+          )) {
+        final kode = row.length > kodeIndex ? row[kodeIndex]?.toString() : null;
+        if (kode != null &&
+            kode.isNotEmpty &&
+            !knownTransactionIds.contains(kode)) {
+          final saldoIndex = _backgroundFindColumnIndex(headers, [
+            'sisa saldo',
+            'sisa_saldo',
+            'saldo',
+          ]);
+          final pemakaianIndex = _backgroundFindColumnIndex(headers, [
+            'pemakaian',
+            'jumlah',
+            'nominal',
+          ]);
+          newTransactions.add({
+            'kode': kode,
+            'saldo': saldoIndex >= 0 && row.length > saldoIndex
+                ? (row[saldoIndex]?.toString() ?? '0')
+                : '0',
+            'pemakaian': pemakaianIndex >= 0 && row.length > pemakaianIndex
+                ? (row[pemakaianIndex]?.toString() ?? '0')
+                : '0',
+          });
+        }
+      }
+    }
+    // Send background notifications for new transactions
+    for (var tx in newTransactions) {
+      await _sendBackgroundNotification(
+        localNotifications: localNotifications,
+        title: 'Transaksi Baru',
+        body:
+            'Sisa Saldo: Rp${_backgroundFormatCurrency(tx['saldo']!)}\nPemakaian: Rp${_backgroundFormatCurrency(tx['pemakaian']!)}', // FIXED: Removed extra quote before closing parenthesis
+        payload: 'transaction_${tx['kode']}',
+      );
+    }
+    // Update cache if there are new transactions
+    if (newTransactions.isNotEmpty) {
+      final allTransactionIds = <String>[];
+      for (int i = 1; i < newData.length; i++) {
+        final row = newData[i];
+        if (row.length > nisnIndex &&
+            _backgroundIsMatchingUser(
+              username,
+              row[nisnIndex]?.toString() ?? '',
+            )) {
+          final kode = row.length > kodeIndex
+              ? row[kodeIndex]?.toString()
+              : null;
+          if (kode != null && kode.isNotEmpty) {
+            allTransactionIds.add(kode);
+          }
+        }
+      }
+      final updatedCacheData = {
+        'url':
+            'https://docs.google.com/spreadsheets/d/1BZbBczH2OY8SB2_1tDpKf_B8WvOyk8TJl4esfT-dgzw/export?format=csv&gid=2012044980',
+        'name': 'Riwayat Transaksi',
+        'data': newData,
+        'transactions': allTransactionIds,
+        'lastUpdated': DateTime.now().toIso8601String(),
+        'username': username,
+      };
+      mmkv.encodeString(cacheKey, jsonEncode(updatedCacheData));
+    }
+  } catch (e) {
+    debugPrint('Background transaction check error: $e');
+  }
+}
+
+Future<void> _backgroundCheckRegularSheetUpdates({
+  required String username,
+  required List<List<dynamic>> newData,
+  required String cacheKey,
+  required String sheetName,
+  required MMKV mmkv,
+  required FlutterLocalNotificationsPlugin localNotifications,
+}) async {
+  try {
+    final cachedDataJson = mmkv.decodeString(cacheKey);
+    if (cachedDataJson == null || cachedDataJson.isEmpty) {
+      // Save initial cache
+      final cacheData = {
+        'name': sheetName,
+        'data': newData,
+        'lastUpdated': DateTime.now().toIso8601String(),
+        'username': username,
+      };
+      mmkv.encodeString(cacheKey, jsonEncode(cacheData));
+      return;
+    }
+    final cachedData = jsonDecode(cachedDataJson);
+    final oldData = List<List<dynamic>>.from(cachedData['data']);
+    final userOldData = _backgroundFindUserDataInSheet(oldData, username);
+    final userNewData = _backgroundFindUserDataInSheet(newData, username);
+    if (userOldData.isNotEmpty && userNewData.isNotEmpty) {
+      final changes = _backgroundCompareUserData(userOldData, userNewData);
+      if (changes.isNotEmpty) {
+        await _sendBackgroundNotification(
+          localNotifications: localNotifications,
+          title: 'Perubahan $sheetName',
+          body: _backgroundFormatChangesMessage(changes),
+          payload: '${sheetName}_${DateTime.now().millisecondsSinceEpoch}',
+        );
+      }
+    }
+    // Update cache
+    final updatedCacheData = {
+      'name': sheetName,
+      'data': newData,
+      'lastUpdated': DateTime.now().toIso8601String(),
+      'username': username,
+    };
+    mmkv.encodeString(cacheKey, jsonEncode(updatedCacheData));
+  } catch (e) {
+    debugPrint('Background regular sheet check error: $e');
+  }
+}
+
+Future<void> _backgroundCheckSPPReminder(
+  String username,
+  MMKV mmkv,
+  FlutterLocalNotificationsPlugin localNotifications,
+) async {
+  try {
+    final now = DateTime.now();
+    final day = now.day;
+    // Check if in SPP reminder period (25-31 or 1-5)
+    if (!((day >= 25) || (day <= 5))) return;
+    // Check if already shown today
+    final key = 'spp_notif_shown_$username';
+    final lastShown = mmkv.decodeString(key);
+    if (lastShown != null) {
+      final lastDate = DateTime.tryParse(lastShown);
+      if (lastDate?.year == now.year &&
+          lastDate?.month == now.month &&
+          lastDate?.day == now.day) {
+        return; // Already shown today
+      }
+    }
+    await _sendBackgroundNotification(
+      localNotifications: localNotifications,
+      title: 'Pengingat Pembayaran SPP',
+      body:
+          'Pemberitahuan Pembayaran SPP Pesantren Islam Zaid bin Tsabit paling lambat tanggal 5 setiap bulannya.',
+      payload: 'spp_reminder',
+    );
+    // Mark as shown
+    mmkv.encodeString(key, now.toIso8601String());
+  } catch (e) {
+    debugPrint('Background SPP reminder error: $e');
+  }
+}
+
+Future<void> _sendBackgroundNotification({
+  required FlutterLocalNotificationsPlugin localNotifications,
+  required String title,
+  required String body,
+  String? payload,
+}) async {
+  try {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+          'channel_sheets_monitor_bg',
+          'Background Monitor',
+          channelDescription: 'Background monitoring untuk perubahan data',
+          importance: Importance.high,
+          priority: Priority.high,
+          ticker: 'ticker',
+          visibility: NotificationVisibility.public,
+          playSound: true,
+          enableVibration: true,
+          enableLights: true,
+          icon: '@mipmap/ic_launcher',
+        );
+    const NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+    );
+    final notificationId = DateTime.now().millisecondsSinceEpoch.remainder(
+      2147483647,
+    );
+    await localNotifications.show(
+      notificationId,
+      title,
+      body,
+      platformDetails,
+      payload: payload,
+    );
+  } catch (e) {
+    debugPrint('Background notification error: $e');
+  }
+}
+
+// Background helper functions
+int _backgroundFindColumnIndex(
+  List<String> headers,
+  List<String> possibleNames,
+) {
+  for (final name in possibleNames) {
+    for (int i = 0; i < headers.length; i++) {
+      final header = headers[i].toLowerCase().trim();
+      final searchName = name.toLowerCase().trim();
+      if (header == searchName ||
+          header.contains(searchName) ||
+          searchName.contains(header)) {
+        return i;
+      }
+    }
+  }
+  return -1;
+}
+
+bool _backgroundIsMatchingUser(String targetUsername, String csvValue) {
+  if (targetUsername.isEmpty || csvValue.isEmpty) return false;
+  final cleanTarget = targetUsername.toLowerCase().trim();
+  final cleanCsv = csvValue.toLowerCase().trim();
+  if (cleanTarget == cleanCsv) return true;
+  final targetNumbers = cleanTarget.replaceAll(RegExp(r'[^0-9]'), '');
+  final csvNumbers = cleanCsv.replaceAll(RegExp(r'[^0-9]'), '');
+  return targetNumbers.isNotEmpty && targetNumbers == csvNumbers;
+}
+
+Map<String, dynamic> _backgroundFindUserDataInSheet(
+  List<List<dynamic>> sheetData,
+  String username,
+) {
+  if (sheetData.isEmpty || username.isEmpty) return {};
+  try {
+    final headers = sheetData[0]
+        .map((e) => e.toString().toLowerCase().trim())
+        .toList();
+    final nisnIndex = _backgroundFindColumnIndex(headers, [
+      'nisn',
+      'username',
+      'id',
+      'student_id',
+    ]);
+    if (nisnIndex == -1) return {};
+    for (int i = 1; i < sheetData.length; i++) {
+      final row = sheetData[i];
+      if (row.length > nisnIndex) {
+        final csvNisn = row[nisnIndex]?.toString().trim() ?? '';
+        if (_backgroundIsMatchingUser(username, csvNisn)) {
+          return {
+            'saldo': _backgroundGetFieldValue(row, headers, [
+              'saldo',
+              'balance',
+            ], '0'),
+            'status_izin': _backgroundGetFieldValue(row, headers, [
+              'status_izin',
+              'izin',
+            ], ''),
+            'jumlah_hafalan': _backgroundGetFieldValue(row, headers, [
+              'hafalan',
+              'memorization',
+            ], ''),
+            'absensi': _backgroundGetFieldValue(row, headers, [
+              'absensi',
+              'attendance',
+            ], ''),
+          };
+        }
+      }
+    }
+  } catch (e) {
+    debugPrint('Background find user data error: $e');
+  }
+  return {};
+}
+
+String _backgroundGetFieldValue(
+  List<dynamic> row,
+  List<String> headers,
+  List<String> fieldNames,
+  String defaultValue,
+) {
+  final index = _backgroundFindColumnIndex(headers, fieldNames);
+  if (index >= 0 && index < row.length) {
+    final value = row[index]?.toString().trim() ?? '';
+    return value.isNotEmpty ? value : defaultValue;
+  }
+  return defaultValue;
+}
+
+Map<String, dynamic> _backgroundCompareUserData(
+  Map<String, dynamic> oldData,
+  Map<String, dynamic> newData,
+) {
+  Map<String, dynamic> changes = {};
+  List<Map<String, dynamic>> fieldChanges = [];
+  const fieldNames = {
+    'saldo': 'Saldo',
+    'status_izin': 'Status Perizinan',
+    'jumlah_hafalan': 'Jumlah Hafalan',
+    'absensi': 'Absensi',
+  };
+  for (final entry in fieldNames.entries) {
+    final fieldKey = entry.key;
+    final fieldName = entry.value;
+    final oldValue = oldData[fieldKey]?.toString().trim() ?? '';
+    final newValue = newData[fieldKey]?.toString().trim() ?? '';
+    if (oldValue != newValue && (oldValue.isNotEmpty || newValue.isNotEmpty)) {
+      fieldChanges.add({
+        'field': fieldKey,
+        'fieldName': fieldName,
+        'oldValue': oldValue,
+        'newValue': newValue,
+      });
+    }
+  }
+  if (fieldChanges.isNotEmpty) {
+    changes['fields'] = fieldChanges;
+  }
+  return changes;
+}
+
+String _backgroundFormatChangesMessage(Map<String, dynamic> changes) {
+  List<String> messages = [];
+  if (changes.containsKey('fields')) {
+    final fieldChanges = changes['fields'] as List;
+    for (var change in fieldChanges.take(2)) {
+      final fieldName = change['fieldName'] ?? 'Field';
+      final oldValue = change['oldValue'] ?? '';
+      final newValue = change['newValue'] ?? '';
+      if (oldValue.isEmpty) {
+        messages.add('$fieldName: $newValue (ditambahkan)');
+      } else if (newValue.isEmpty) {
+        messages.add('$fieldName: dihapus');
+      } else {
+        messages.add('$fieldName: $oldValue → $newValue');
+      }
+    }
+    if (fieldChanges.length > 2) {
+      messages.add('dan ${fieldChanges.length - 2} perubahan lainnya');
+    }
+  }
+  return messages.isNotEmpty ? messages.join('\n') : 'Data telah berubah';
+}
+
+String _backgroundFormatCurrency(String value) {
+  if (value.isEmpty) return '0';
+  try {
+    final cleanValue = value.replaceAll(RegExp(r'[^\d]'), '');
+    final number = int.tryParse(cleanValue) ?? 0;
+    return number
+        .toStringAsFixed(0)
+        .replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (match) => '.');
+  } catch (e) {
+    return value;
+  }
+}
 
 // Model untuk notifikasi yang terintegrasi
 class NotificationItem {
@@ -71,47 +587,9 @@ class NotificationItem {
   }
 }
 
-// Enhanced Google Sheets Monitor Service yang terintegrasi dengan MMKV
+// Enhanced Google Sheets Monitor Service dengan background support
 class GoogleSheetsMonitorService {
   static FlutterLocalNotificationsPlugin? _localNotificationPlugin;
-
-  static Future<void> _initializeLocalNotifications() async {
-    if (_localNotificationPlugin != null) return;
-
-    _localNotificationPlugin = FlutterLocalNotificationsPlugin();
-
-    // Create notification channel explicitly
-    const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      'channel_sheets_monitor',
-      'Google Sheets Monitor',
-      description: 'Notifikasi untuk perubahan data dan pengingat SPP',
-      importance: Importance.high,
-      playSound: true,
-      enableVibration: true,
-      enableLights: true,
-    );
-
-    // Use null-aware operator to avoid null error
-    await _localNotificationPlugin
-        ?.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.createNotificationChannel(channel);
-
-    const AndroidInitializationSettings android = AndroidInitializationSettings(
-      '@mipmap/ic_launcher',
-    );
-    const DarwinInitializationSettings ios = DarwinInitializationSettings();
-
-    await _localNotificationPlugin!.initialize(
-      const InitializationSettings(android: android, iOS: ios),
-      onDidReceiveNotificationResponse: (NotificationResponse response) {
-        // Handle when notification is clicked
-        debugPrint('Notification clicked: ${response.payload}');
-      },
-    );
-  }
-
   static MMKV? _mmkv;
   static Timer? _monitoringTimer;
   static final Map<String, ValueNotifier<List<NotificationItem>>>
@@ -121,25 +599,115 @@ class GoogleSheetsMonitorService {
   static const String _sppNotificationId = 'spp_reminder_notification';
   static const String _sppSheetName = 'Pemberitahuan SPP';
 
+  // Initialize background tasks
+  static Future<void> initializeBackgroundTasks() async {
+    try {
+      await Workmanager().initialize(
+        callbackDispatcher,
+        isInDebugMode: kDebugMode,
+      );
+      debugPrint('Background tasks initialized');
+    } catch (e) {
+      debugPrint('Background task initialization error: $e');
+    }
+  }
+
+  // Start background monitoring for user
+  static Future<void> startBackgroundMonitoring(String username) async {
+    if (username.isEmpty) return;
+    try {
+      // Cancel any existing background tasks for this user
+      await Workmanager().cancelByUniqueName('monitor_$username');
+      // Register new periodic task
+      await Workmanager().registerPeriodicTask(
+        'monitor_$username',
+        'checkUpdatesTask',
+        inputData: {'username': username},
+        frequency: const Duration(minutes: 15), // Android minimum is 15 minutes
+        constraints: Constraints(
+          networkType: NetworkType.connected,
+          requiresBatteryNotLow: false,
+          requiresCharging: false,
+          requiresDeviceIdle: false,
+          requiresStorageNotLow: false,
+        ),
+      );
+      debugPrint('Background monitoring started for user: $username');
+    } catch (e) {
+      debugPrint('Error starting background monitoring for $username: $e');
+    }
+  }
+
+  // Stop background monitoring for user
+  static Future<void> stopBackgroundMonitoring(String username) async {
+    if (username.isEmpty) return;
+    try {
+      await Workmanager().cancelByUniqueName('monitor_$username');
+      debugPrint('Background monitoring stopped for user: $username');
+    } catch (e) {
+      debugPrint('Error stopping background monitoring for $username: $e');
+    }
+  }
+
+  static Future<void> _initializeLocalNotifications() async {
+    if (_localNotificationPlugin != null) return;
+    _localNotificationPlugin = FlutterLocalNotificationsPlugin();
+    // Create notification channels
+    const AndroidNotificationChannel foregroundChannel =
+        AndroidNotificationChannel(
+          'channel_sheets_monitor',
+          'Google Sheets Monitor',
+          description: 'Notifikasi untuk perubahan data dan pengingat SPP',
+          importance: Importance.high,
+          playSound: true,
+          enableVibration: true,
+          enableLights: true,
+        );
+    const AndroidNotificationChannel backgroundChannel =
+        AndroidNotificationChannel(
+          'channel_sheets_monitor_bg',
+          'Background Monitor',
+          description: 'Background monitoring untuk perubahan data',
+          importance: Importance.high,
+          playSound: true,
+          enableVibration: true,
+          enableLights: true,
+        );
+    final androidPlugin = _localNotificationPlugin
+        ?.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    await androidPlugin?.createNotificationChannel(foregroundChannel);
+    await androidPlugin?.createNotificationChannel(backgroundChannel);
+    const AndroidInitializationSettings android = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
+    const DarwinInitializationSettings ios = DarwinInitializationSettings();
+    await _localNotificationPlugin!.initialize(
+      const InitializationSettings(android: android, iOS: ios),
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        debugPrint('Notification clicked: ${response.payload}');
+        // Handle notification tap - you can add navigation logic here
+      },
+    );
+  }
+
   // Check if in SPP reminder period
   static bool _isInSPPReminderPeriod() {
     final now = DateTime.now();
     final day = now.day;
-    // Range: 25-31 of current month, or 1-5 of next month
     return (day >= 25) || (day <= 5);
   }
 
   // Check if SPP notification shown today
   static bool _hasShownSPPNotificationToday(String username) {
-    if (_mmkv == null) return true; // If MMKV not ready, don't show
+    if (_mmkv == null) return true;
     final key = 'spp_notif_shown_$username';
     final lastShown = _mmkv!.decodeString(key);
     if (lastShown == null) return false;
-
     try {
       final lastDate = DateTime.tryParse(lastShown);
       final now = DateTime.now();
-      // If already shown today
       return lastDate?.year == now.year &&
           lastDate?.month == now.month &&
           lastDate?.day == now.day;
@@ -156,23 +724,16 @@ class GoogleSheetsMonitorService {
 
   static Future<void> _checkSPPReminderForUser(String username) async {
     if (username.isEmpty || _mmkv == null) return;
-
-    // Check if in date range
     if (!_isInSPPReminderPeriod()) {
-      // If not in range, reset status so it can appear again later
       final key = 'spp_notif_shown_$username';
       if (_mmkv!.containsKey(key)) {
         _mmkv!.removeValue(key);
       }
       return;
     }
-
-    // If already shown today, skip
     if (_hasShownSPPNotificationToday(username)) {
       return;
     }
-
-    // Create notification
     final notification = NotificationItem(
       id: '${_sppNotificationId}_$username',
       title: 'Pengingat Pembayaran SPP',
@@ -183,10 +744,8 @@ class GoogleSheetsMonitorService {
       changes: {'type': 'reminder', 'category': 'spp_payment'},
       username: username,
     );
-
     await _addNotificationForUser(username, notification);
-    _markSPPNotificationShown(username); // Mark as shown
-
+    _markSPPNotificationShown(username);
     debugPrint('SPP reminder notification added for $username');
   }
 
@@ -197,30 +756,28 @@ class GoogleSheetsMonitorService {
     String? payload,
   }) async {
     try {
-      // Initialize notifications if not done
       await _initializeLocalNotifications();
-
       const AndroidNotificationDetails androidPlatformChannelSpecifics =
           AndroidNotificationDetails(
-            'channel_sheets_monitor', // channel ID
-            'Google Sheets Monitor', // channel name
+            'channel_sheets_monitor',
+            'Google Sheets Monitor',
             channelDescription:
                 'Notifikasi untuk perubahan data dan pengingat SPP',
             importance: Importance.high,
             priority: Priority.high,
             ticker: 'ticker',
             visibility: NotificationVisibility.public,
+            playSound: true,
+            enableVibration: true,
+            enableLights: true,
+            icon: '@mipmap/ic_launcher',
           );
-
       const NotificationDetails platformChannelSpecifics = NotificationDetails(
         android: androidPlatformChannelSpecifics,
       );
-
-      // Use unique ID based on timestamp
       final notificationId = DateTime.now().millisecondsSinceEpoch.remainder(
         2147483647,
       );
-
       await _localNotificationPlugin?.show(
         notificationId,
         title,
@@ -233,7 +790,7 @@ class GoogleSheetsMonitorService {
     }
   }
 
-  // Sheet configurations - matching with HomeScreen
+  // Sheet configurations
   static const List<Map<String, String>> _sheetConfigs = [
     {
       'url':
@@ -272,7 +829,7 @@ class GoogleSheetsMonitorService {
     },
   ];
 
-  // Field mapping - matching with student data in HomeScreen
+  // Field mapping
   static const Map<String, String> _fieldNames = {
     'saldo': 'Saldo',
     'status_izin': 'Status Perizinan',
@@ -290,7 +847,6 @@ class GoogleSheetsMonitorService {
   // Initialize global MMKV
   static Future<void> _initializeMMKV() async {
     if (_mmkv != null) return;
-
     try {
       await MMKV.initialize();
       _mmkv = MMKV.defaultMMKV();
@@ -308,36 +864,32 @@ class GoogleSheetsMonitorService {
       debugPrint('Username is empty, cannot initialize monitoring');
       return;
     }
-
     try {
-      // Initialize MMKV first
+      // Initialize background tasks first
+      await initializeBackgroundTasks();
+      // Initialize MMKV
       await _initializeMMKV();
-
       // Initialize notifications
       await _initializeLocalNotifications();
-
       // Skip if already initialized for this user
       if (_userInitialized[username] == true) {
         debugPrint('Already initialized for user: $username');
         return;
       }
-
       // Create notifier for this user if not exists
       if (!_userNotifications.containsKey(username)) {
         _userNotifications[username] = ValueNotifier<List<NotificationItem>>(
           [],
         );
       }
-
       // Load existing notifications first
       await _loadUserNotifications(username);
-
       // Load initial cache
       await _loadInitialCacheForUser(username);
-
-      // Start monitoring
+      // Start foreground monitoring
       _startMonitoringForUser(username);
-
+      // Start background monitoring
+      await startBackgroundMonitoring(username);
       _userInitialized[username] = true;
       debugPrint('GoogleSheetsMonitorService initialized for user: $username');
     } catch (e) {
@@ -358,23 +910,17 @@ class GoogleSheetsMonitorService {
   // Load initial cache for specific user with better error handling
   static Future<void> _loadInitialCacheForUser(String username) async {
     if (_mmkv == null || username.isEmpty) return;
-
     for (var config in _sheetConfigs) {
       try {
         final cacheKey = 'sheet_cache_${username}_${config['name']}';
         final existingCache = _mmkv!.decodeString(cacheKey);
-
         if (existingCache == null || existingCache.isEmpty) {
           debugPrint('Loading initial cache for ${config['name']} - $username');
-
-          // Fetch data with extra timeout
           final data = await _fetchSheetData(config['url']!, retryCount: 3);
           if (data.isEmpty) {
             debugPrint('No data received for ${config['name']}');
             continue;
           }
-
-          // Filter data only for specific user (optional, for efficiency)
           List<List<dynamic>> userData = data;
           if (config['name'] == 'Riwayat Transaksi') {
             userData = data.where((row) {
@@ -388,17 +934,13 @@ class GoogleSheetsMonitorService {
               return _isMatchingUser(username, csvNisn);
             }).toList();
           }
-
-          // Prepare cache data
           final cacheData = <String, dynamic>{
             'url': config['url'],
             'name': config['name'],
-            'data': userData, // Use filtered data
+            'data': userData,
             'lastUpdated': DateTime.now().toIso8601String(),
             'username': username,
           };
-
-          // Extract transactions only if needed
           if (config['name'] == 'Riwayat Transaksi') {
             final userTransactionIds = _extractUserTransactionIds(
               userData,
@@ -409,8 +951,6 @@ class GoogleSheetsMonitorService {
               'Found ${userTransactionIds.length} existing transactions for $username',
             );
           }
-
-          // Save to MMKV with error handling
           final encoded = jsonEncode(cacheData);
           _mmkv!.encodeString(cacheKey, encoded);
           debugPrint('Initial cache saved for ${config['name']} - $username');
@@ -431,7 +971,6 @@ class GoogleSheetsMonitorService {
     String username,
   ) {
     if (data.length < 2) return [];
-
     try {
       final headers = data[0]
           .map((e) => e.toString().toLowerCase().trim())
@@ -441,9 +980,7 @@ class GoogleSheetsMonitorService {
         'kode transaksi',
         'kode_transaksi',
       ]);
-
       if (nisnIndex == -1 || kodeIndex == -1) return [];
-
       final userTransactionIds = <String>[];
       for (int i = 1; i < data.length; i++) {
         final row = data[i];
@@ -481,22 +1018,17 @@ class GoogleSheetsMonitorService {
               },
             )
             .timeout(const Duration(seconds: 30));
-
         if (response.statusCode == 200) {
           if (response.body.trim().isEmpty) {
             throw Exception('Empty response body');
           }
-
           final List<List<dynamic>> rows = const CsvToListConverter().convert(
             response.body,
-            shouldParseNumbers:
-                false, // Keep as strings to avoid parsing issues
+            shouldParseNumbers: false,
           );
-
           if (rows.isEmpty) {
             throw Exception('No data rows found');
           }
-
           return rows;
         } else {
           throw Exception(
@@ -510,7 +1042,6 @@ class GoogleSheetsMonitorService {
             'Failed to fetch data after $retryCount attempts: $e',
           );
         }
-        // Wait before retry
         await Future.delayed(Duration(seconds: attempt * 2));
       }
     }
@@ -523,7 +1054,6 @@ class GoogleSheetsMonitorService {
     Duration interval = const Duration(minutes: 3),
   }) {
     if (_monitoringTimer != null) return; // Avoid duplication
-
     void startTimer() {
       _monitoringTimer = Timer(interval, () async {
         try {
@@ -557,7 +1087,6 @@ class GoogleSheetsMonitorService {
         debugPrint('Insufficient transaction data for $username');
         return;
       }
-
       final headers = newData[0]
           .map((e) => e.toString().toLowerCase().trim())
           .toList();
@@ -586,12 +1115,10 @@ class GoogleSheetsMonitorService {
         'waktu',
         'tanggal',
       ]);
-
       if (nisnIndex == -1 || kodeIndex == -1) {
         debugPrint('Required columns not found for transaction monitoring');
         return;
       }
-
       // Filter user transactions
       final userTransactions = <Map<String, String>>[];
       for (int i = 1; i < newData.length; i++) {
@@ -617,12 +1144,10 @@ class GoogleSheetsMonitorService {
           });
         }
       }
-
       if (userTransactions.isEmpty) {
         debugPrint('No transactions found for user: $username');
         return;
       }
-
       // Get last transaction cache
       Set<String> knownTransactionIds = {};
       try {
@@ -638,7 +1163,6 @@ class GoogleSheetsMonitorService {
       } catch (e) {
         debugPrint('Failed to parse transaction cache: $e');
       }
-
       // Find new transactions
       final newTransactions = userTransactions
           .where(
@@ -647,46 +1171,58 @@ class GoogleSheetsMonitorService {
                 !knownTransactionIds.contains(tx['kode']),
           )
           .toList();
-
       debugPrint(
         'Found ${newTransactions.length} new transactions for $username',
       );
-
       if (newTransactions.isNotEmpty) {
         for (var tx in newTransactions) {
           final kode = tx['kode']!;
-          final nominal = tx['pemakaian']!;
-          final saldo = tx['saldo']!;
+          final nominalStr = tx['pemakaian']!; // Contoh: "Rp50.000"
+          final saldoAwalStr = tx['saldo']!; // Contoh: "Rp150.000"
           final waktu = tx['waktu']!;
+
+          // Bersihkan string dari 'Rp' dan titik ribuan, lalu ubah ke integer
+          int cleanNominal =
+              int.tryParse(nominalStr.replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+          int cleanSaldoAwal =
+              int.tryParse(saldoAwalStr.replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+
+          // Hitung sisa saldo
+          int sisaSaldo = cleanSaldoAwal - cleanNominal;
+
+          // Format kembali ke format mata uang
+          String formattedSisaSaldo = _formatCurrency(sisaSaldo.toString());
 
           final notification = NotificationItem(
             id: 'trans_${kode}_${username}_${DateTime.now().millisecondsSinceEpoch}',
             title: 'Transaksi Baru',
             message:
-                'Pemakaian: Rp${_formatCurrency(nominal)}\nSisa Saldo: Rp${_formatCurrency(saldo)}\nWaktu: $waktu',
+                'Saldo Awal: Rp${_formatCurrency(cleanSaldoAwal.toString())}\n'
+                'Pemakaian: Rp${_formatCurrency(cleanNominal.toString())}\n'
+                'Sisa Saldo: $formattedSisaSaldo\n' // ✅ Baris baru yang ditambahkan
+                'Waktu: $waktu',
             sheetName: 'Riwayat Transaksi',
             timestamp: DateTime.now(),
             changes: {
               'type': 'transaction',
-              'amount': nominal,
-              'balance': saldo,
+              'amount': nominalStr,
+              'balance': saldoAwalStr,
+              'remaining_balance':
+                  formattedSisaSaldo, // ✅ Tambahkan ke data perubahan
               'time': waktu,
               'code': kode,
             },
             username: username,
           );
-
           await _addNotificationForUser(username, notification);
         }
       }
-
       // Update cache with all transaction IDs
       final allTransactionIds = userTransactions
           .where((tx) => tx['kode']!.isNotEmpty)
           .map((tx) => tx['kode']!)
           .toSet()
           .toList();
-
       final updatedCacheData = {
         'url':
             'https://docs.google.com/spreadsheets/d/1BZbBczH2OY8SB2_1tDpKf_B8WvOyk8TJl4esfT-dgzw/export?format=csv&gid=2012044980',
@@ -696,7 +1232,6 @@ class GoogleSheetsMonitorService {
         'lastUpdated': DateTime.now().toIso8601String(),
         'username': username,
       };
-
       _mmkv!.encodeString(cacheKey, jsonEncode(updatedCacheData));
       debugPrint('Transaction cache updated for $username');
     } catch (e) {
@@ -707,7 +1242,6 @@ class GoogleSheetsMonitorService {
   // Format currency with null safety handling
   static String _formatCurrency(String value) {
     if (value.isEmpty) return '0';
-
     try {
       final cleanValue = value.replaceAll(RegExp(r'[^\d]'), '');
       final number = int.tryParse(cleanValue) ?? 0;
@@ -722,20 +1256,16 @@ class GoogleSheetsMonitorService {
   // Check changes for specific user with better error handling
   static Future<void> _checkForUpdatesForUser(String username) async {
     if (_mmkv == null || username.isEmpty) return;
-
     debugPrint('Checking updates for user: $username');
-
     for (var config in _sheetConfigs) {
       try {
         final cacheKey = 'sheet_cache_${username}_${config['name']}';
-
         // Fetch new data
         final newData = await _fetchSheetData(config['url']!);
         if (newData.length < 2) {
           debugPrint('Insufficient data for ${config['name']}');
           continue;
         }
-
         if (config['name'] == 'Riwayat Transaksi') {
           await _checkTransactionUpdates(
             username: username,
@@ -782,16 +1312,12 @@ class GoogleSheetsMonitorService {
         );
         return;
       }
-
       final cachedData = jsonDecode(cachedDataJson);
       final oldData = List<List<dynamic>>.from(cachedData['data']);
-
       final userOldData = _findUserDataInSheet(oldData, username);
       final userNewData = _findUserDataInSheet(newData, username);
-
       if (userOldData.isNotEmpty && userNewData.isNotEmpty) {
         final changes = _compareUserData(userOldData, userNewData);
-
         if (changes.isNotEmpty) {
           final notification = NotificationItem(
             id: '${sheetConfig['name']}_${DateTime.now().millisecondsSinceEpoch}_$username',
@@ -802,12 +1328,10 @@ class GoogleSheetsMonitorService {
             changes: changes,
             username: username,
           );
-
           await _addNotificationForUser(username, notification);
           debugPrint('Added notification for ${sheetConfig['name']} changes');
         }
       }
-
       // Update cache
       final updatedCacheData = {
         'url': sheetConfig['url'],
@@ -828,7 +1352,6 @@ class GoogleSheetsMonitorService {
     String username,
   ) {
     if (sheetData.isEmpty || username.isEmpty) return {};
-
     try {
       final headers = sheetData[0]
           .map((e) => e.toString().toLowerCase().trim())
@@ -839,12 +1362,10 @@ class GoogleSheetsMonitorService {
         'id',
         'student_id',
       ]);
-
       if (nisnIndex == -1) {
         debugPrint('No NISN column found in sheet');
         return {};
       }
-
       for (int i = 1; i < sheetData.length; i++) {
         final row = sheetData[i];
         if (row.length > nisnIndex) {
@@ -857,11 +1378,10 @@ class GoogleSheetsMonitorService {
     } catch (e) {
       debugPrint('Error finding user data: $e');
     }
-
     return {};
   }
 
-  // Helper functions that are improved
+  // Helper functions
   static int _findColumnIndex(
     List<String> headers,
     List<String> possibleNames,
@@ -882,17 +1402,11 @@ class GoogleSheetsMonitorService {
 
   static bool _isMatchingUser(String targetUsername, String csvValue) {
     if (targetUsername.isEmpty || csvValue.isEmpty) return false;
-
     final cleanTarget = targetUsername.toLowerCase().trim();
     final cleanCsv = csvValue.toLowerCase().trim();
-
-    // Exact match
     if (cleanTarget == cleanCsv) return true;
-
-    // Numeric match (extract numbers only)
     final targetNumbers = cleanTarget.replaceAll(RegExp(r'[^0-9]'), '');
     final csvNumbers = cleanCsv.replaceAll(RegExp(r'[^0-9]'), '');
-
     return targetNumbers.isNotEmpty && targetNumbers == csvNumbers;
   }
 
@@ -945,18 +1459,12 @@ class GoogleSheetsMonitorService {
   ) {
     Map<String, dynamic> changes = {};
     List<Map<String, dynamic>> fieldChanges = [];
-
     for (final entry in _fieldNames.entries) {
       final fieldKey = entry.key;
       final fieldName = entry.value;
-
       final oldValue = oldData[fieldKey]?.toString().trim() ?? '';
       final newValue = newData[fieldKey]?.toString().trim() ?? '';
-
-      // Skip if both values are empty or exactly the same
       if (oldValue == newValue) continue;
-
-      // Only consider significant changes
       if (oldValue.isNotEmpty || newValue.isNotEmpty) {
         fieldChanges.add({
           'field': fieldKey,
@@ -969,27 +1477,22 @@ class GoogleSheetsMonitorService {
         });
       }
     }
-
     if (fieldChanges.isNotEmpty) {
       changes['fields'] = fieldChanges;
     }
-
     return changes;
   }
 
   // Format change messages with better handling
   static String _formatUserChangesMessage(Map<String, dynamic> changes) {
     List<String> messages = [];
-
     if (changes.containsKey('fields')) {
       final fieldChanges = changes['fields'] as List;
-
       for (var change in fieldChanges.take(3)) {
         final fieldName = change['fieldName'] ?? 'Field';
         final oldValue = change['oldValue'] ?? '';
         final newValue = change['newValue'] ?? '';
         final changeType = change['changeType'] ?? 'modified';
-
         switch (changeType) {
           case 'added':
             messages.add('$fieldName: $newValue (ditambahkan)');
@@ -1001,7 +1504,6 @@ class GoogleSheetsMonitorService {
             messages.add('$fieldName: $oldValue → $newValue');
         }
       }
-
       if (fieldChanges.length > 3) {
         messages.add('dan ${fieldChanges.length - 3} perubahan lainnya');
       }
@@ -1011,7 +1513,6 @@ class GoogleSheetsMonitorService {
       final balance = changes['balance'] ?? '0';
       return 'Pemakaian: Rp${_formatCurrency(amount)} • Sisa: Rp${_formatCurrency(balance)}';
     }
-
     return messages.isNotEmpty ? messages.join('\n') : 'Data telah berubah';
   }
 
@@ -1024,38 +1525,31 @@ class GoogleSheetsMonitorService {
       debugPrint('No notification notifier found for user: $username');
       return;
     }
-
     try {
       final currentNotifications = List<NotificationItem>.from(
         _userNotifications[username]!.value,
       );
-
       // Check for duplicates
       final now = DateTime.now();
       final isDuplicate = currentNotifications.any((existing) {
         final timeDiff = now.difference(existing.timestamp).inMinutes;
-        return timeDiff <= 1 && // Avoid spam within 1 minute
+        return timeDiff <= 1 &&
             existing.title == notification.title &&
             existing.message == notification.message;
       });
-
       if (!isDuplicate) {
         currentNotifications.insert(0, notification);
-
         if (currentNotifications.length > 100) {
           currentNotifications.removeRange(100, currentNotifications.length);
         }
-
         _userNotifications[username]!.value = currentNotifications;
         await _saveUserNotifications(username);
-
         debugPrint('Added notification for $username: ${notification.title}');
-
         // Send local notification
         await _showLocalNotification(
           title: notification.title,
           body: notification.message,
-          payload: notification.id, // Can be used for routing
+          payload: notification.id,
         );
       } else {
         debugPrint('Duplicate notification skipped for $username');
@@ -1068,11 +1562,9 @@ class GoogleSheetsMonitorService {
   // Load user notifications from MMKV with error handling
   static Future<void> _loadUserNotifications(String username) async {
     if (_mmkv == null || username.isEmpty) return;
-
     try {
       final notificationsKey = 'notifications_enhanced_$username';
       final notificationsJson = _mmkv!.decodeString(notificationsKey);
-
       if (notificationsJson != null && notificationsJson.isNotEmpty) {
         final notificationsList = jsonDecode(notificationsJson) as List;
         final notifications = notificationsList
@@ -1087,7 +1579,6 @@ class GoogleSheetsMonitorService {
             .where((n) => n != null)
             .cast<NotificationItem>()
             .toList();
-
         if (_userNotifications.containsKey(username)) {
           _userNotifications[username]!.value = notifications;
           debugPrint(
@@ -1099,7 +1590,6 @@ class GoogleSheetsMonitorService {
       }
     } catch (e) {
       debugPrint('Error loading user notifications for $username: $e');
-      // Reset notifications on error
       if (_userNotifications.containsKey(username)) {
         _userNotifications[username]!.value = [];
       }
@@ -1112,17 +1602,14 @@ class GoogleSheetsMonitorService {
         !_userNotifications.containsKey(username) ||
         username.isEmpty)
       return;
-
     try {
       final notificationsKey = 'notifications_enhanced_$username';
       final notifications = _userNotifications[username]!.value;
-
       if (notifications.isNotEmpty) {
         final notificationsJson = notifications.map((n) => n.toJson()).toList();
         _mmkv!.encodeString(notificationsKey, jsonEncode(notificationsJson));
         debugPrint('Saved ${notifications.length} notifications for $username');
       } else {
-        // Clear if empty
         if (_mmkv!.containsKey(notificationsKey)) {
           _mmkv!.removeValue(notificationsKey);
         }
@@ -1139,7 +1626,6 @@ class GoogleSheetsMonitorService {
     String notificationId,
   ) async {
     if (!_userNotifications.containsKey(username) || username.isEmpty) return;
-
     try {
       final currentNotifications = List<NotificationItem>.from(
         _userNotifications[username]!.value,
@@ -1147,7 +1633,6 @@ class GoogleSheetsMonitorService {
       final index = currentNotifications.indexWhere(
         (n) => n.id == notificationId,
       );
-
       if (index != -1) {
         currentNotifications[index] = currentNotifications[index].copyWith(
           isRead: true,
@@ -1164,12 +1649,10 @@ class GoogleSheetsMonitorService {
   // Mark all notifications as read
   static Future<void> markAllAsReadForUser(String username) async {
     if (!_userNotifications.containsKey(username) || username.isEmpty) return;
-
     try {
       final currentNotifications = _userNotifications[username]!.value
           .map((n) => n.copyWith(isRead: true))
           .toList();
-
       _userNotifications[username]!.value = currentNotifications;
       await _saveUserNotifications(username);
       debugPrint('Marked all notifications as read for $username');
@@ -1181,7 +1664,6 @@ class GoogleSheetsMonitorService {
   // Clear all notifications for user
   static Future<void> clearAllNotificationsForUser(String username) async {
     if (!_userNotifications.containsKey(username) || username.isEmpty) return;
-
     try {
       _userNotifications[username]!.value = [];
       await _saveUserNotifications(username);
@@ -1209,7 +1691,6 @@ class GoogleSheetsMonitorService {
     VoidCallback? onComplete,
   }) async {
     if (username.isEmpty) return;
-
     debugPrint('Force checking updates for user: $username');
     try {
       await _checkForUpdatesForUser(username);
@@ -1223,13 +1704,9 @@ class GoogleSheetsMonitorService {
   // Stop monitoring for specific user
   static void stopMonitoringForUser(String username) {
     if (username.isEmpty) return;
-
     _userNotifications.remove(username);
     _userInitialized.remove(username);
-
     debugPrint('Stopped monitoring for user: $username');
-
-    // If no users being monitored, stop timer
     if (_userNotifications.isEmpty) {
       _monitoringTimer?.cancel();
       _monitoringTimer = null;
@@ -1240,10 +1717,10 @@ class GoogleSheetsMonitorService {
   // Cleanup for specific user
   static Future<void> cleanupForUser(String username) async {
     if (username.isEmpty) return;
-
     try {
       stopMonitoringForUser(username);
-
+      // Stop background monitoring
+      await stopBackgroundMonitoring(username);
       // Remove cache sheets for this user
       if (_mmkv != null) {
         for (var config in _sheetConfigs) {
@@ -1252,20 +1729,17 @@ class GoogleSheetsMonitorService {
             _mmkv!.removeValue(cacheKey);
           }
         }
-
         // Remove notifications
         final notificationsKey = 'notifications_enhanced_$username';
         if (_mmkv!.containsKey(notificationsKey)) {
           _mmkv!.removeValue(notificationsKey);
         }
-
         // Remove SPP notification tracking
         final sppKey = 'spp_notif_shown_$username';
         if (_mmkv!.containsKey(sppKey)) {
           _mmkv!.removeValue(sppKey);
         }
       }
-
       debugPrint('Cleanup completed for user: $username');
     } catch (e) {
       debugPrint('Error during cleanup for $username: $e');
@@ -1293,16 +1767,15 @@ class GoogleSheetsMonitorService {
     try {
       _monitoringTimer?.cancel();
       _monitoringTimer = null;
-
+      // Stop all background tasks
+      await Workmanager().cancelAll();
       // Dispose all ValueNotifiers
       for (var notifier in _userNotifications.values) {
         notifier.dispose();
       }
       _userNotifications.clear();
       _userInitialized.clear();
-
       _isInitialized = false;
-
       debugPrint('GoogleSheetsMonitorService disposed');
     } catch (e) {
       debugPrint('Error disposing GoogleSheetsMonitorService: $e');
@@ -1310,7 +1783,7 @@ class GoogleSheetsMonitorService {
   }
 }
 
-// Enhanced Notification Dialog that's integrated with improved UI
+// Enhanced Notification Dialog
 class EnhancedNotificationDialog {
   static void show({
     required BuildContext context,
@@ -1323,7 +1796,6 @@ class EnhancedNotificationDialog {
       ).showSnackBar(const SnackBar(content: Text('Username tidak valid')));
       return;
     }
-
     final notificationsNotifier =
         GoogleSheetsMonitorService.getNotificationsForUser(username);
     if (notificationsNotifier == null) {
@@ -1334,10 +1806,8 @@ class EnhancedNotificationDialog {
       );
       return;
     }
-
     int visibleCount = 10;
     final ScrollController scrollController = ScrollController();
-
     await showDialog(
       context: context,
       builder: (context) {
@@ -1350,7 +1820,6 @@ class EnhancedNotificationDialog {
               child: ValueListenableBuilder<List<NotificationItem>>(
                 valueListenable: notificationsNotifier,
                 builder: (context, notifications, _) {
-                  // Filter & sort
                   final recentNotifications =
                       notifications
                           .where(
@@ -1360,12 +1829,9 @@ class EnhancedNotificationDialog {
                           )
                           .toList()
                         ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-
                   final displayed = recentNotifications
                       .take(visibleCount)
                       .toList();
-
-                  // Add scroll listener for pagination
                   scrollController.addListener(() {
                     if (scrollController.position.pixels ==
                         scrollController.position.maxScrollExtent) {
@@ -1377,7 +1843,6 @@ class EnhancedNotificationDialog {
                       }
                     }
                   });
-
                   return SizedBox(
                     width: 400,
                     height: 600,
@@ -1415,7 +1880,6 @@ class EnhancedNotificationDialog {
                             ],
                           ),
                         ),
-
                         // Content
                         Expanded(
                           child: displayed.isEmpty
@@ -1434,7 +1898,6 @@ class EnhancedNotificationDialog {
                                   },
                                 ),
                         ),
-
                         // Footer
                         Padding(
                           padding: const EdgeInsets.all(16.0),
@@ -1468,7 +1931,6 @@ class EnhancedNotificationDialog {
         );
       },
     );
-
     scrollController.dispose();
   }
 
@@ -1553,7 +2015,6 @@ class EnhancedNotificationDialog {
         ),
         onTap: () async {
           if (!notification.isRead) {
-            // Update local first for immediate UI response
             final updated = notification.copyWith(isRead: true);
             final list =
                 List<NotificationItem>.from(notificationsNotifier.value)
@@ -1563,8 +2024,6 @@ class EnhancedNotificationDialog {
                     updated,
                   );
             notificationsNotifier.value = list;
-
-            // Save in background
             unawaited(
               GoogleSheetsMonitorService.markAsReadForUser(
                 username,
@@ -1599,7 +2058,6 @@ class EnhancedNotificationDialog {
   static String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
-
     if (difference.inSeconds < 60) {
       return 'Baru saja';
     } else if (difference.inMinutes < 60) {
@@ -1612,4 +2070,11 @@ class EnhancedNotificationDialog {
       return '${timestamp.day}/${timestamp.month}/${timestamp.year}';
     }
   }
+}
+
+// Helper untuk mengatasi unawaited
+void unawaited(Future<void> future) {
+  future.catchError((error) {
+    debugPrint('Unawaited future error: $error');
+  });
 }

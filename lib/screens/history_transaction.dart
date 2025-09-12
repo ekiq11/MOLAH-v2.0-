@@ -530,95 +530,61 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
         '📋 Transaction $i: ${t.tanggal} ${t.waktu} -> ${dateTime.toString()}',
       );
     }
-
+    print('--- DEBUG: First 3 Transactions After Sorting ---');
+    for (int i = 0; i < transactions.length && i < 3; i++) {
+      final t = transactions[i];
+      print('  $i: ${t.tanggal} ${t.waktu} | ${t.kodeTransaksi}');
+    }
+    print('--- END DEBUG ---');
     return transactions;
   }
 
   // Perbaiki fungsi _parseDateTime untuk parsing yang lebih akurat
   DateTime _parseDateTime(String dateStr, String timeStr) {
     try {
+      // Bersihkan string
       final cleanDate = dateStr.trim();
       final cleanTime = timeStr.trim();
 
-      DateTime baseDate = DateTime.now();
-
-      // Parse tanggal (dd/MM/yyyy, dd-MM-yyyy, atau yyyy-MM-dd)
-      if (cleanDate.contains('/')) {
-        final parts = cleanDate.split('/');
-        if (parts.length == 3) {
-          final day = int.tryParse(parts[0]) ?? 1;
-          final month = int.tryParse(parts[1]) ?? 1;
-          int year = int.tryParse(parts[2]) ?? DateTime.now().year;
-
-          // Handle 2-digit year
-          if (year < 100) {
-            year = year < 50 ? 2000 + year : 1900 + year;
-          }
-
-          baseDate = DateTime(year, month, day);
-        }
-      } else if (cleanDate.contains('-')) {
-        final parts = cleanDate.split('-');
-        if (parts.length == 3) {
-          if (parts[0].length == 4) {
-            // Format: yyyy-MM-dd
-            final year = int.tryParse(parts[0]) ?? DateTime.now().year;
-            final month = int.tryParse(parts[1]) ?? 1;
-            final day = int.tryParse(parts[2]) ?? 1;
-            baseDate = DateTime(year, month, day);
-          } else {
-            // Format: dd-MM-yyyy
-            final day = int.tryParse(parts[0]) ?? 1;
-            final month = int.tryParse(parts[1]) ?? 1;
-            int year = int.tryParse(parts[2]) ?? DateTime.now().year;
-            if (year < 100) {
-              year = year < 50 ? 2000 + year : 1900 + year;
-            }
-            baseDate = DateTime(year, month, day);
-          }
-        }
+      // Asumsikan format tanggal adalah dd/MM/yyyy
+      List<String> dateParts = cleanDate.split('/');
+      if (dateParts.length != 3) {
+        // Jika bukan dd/MM/yyyy, coba dd-MM-yyyy
+        dateParts = cleanDate.split('-');
+      }
+      if (dateParts.length != 3) {
+        throw FormatException('Invalid date format');
       }
 
-      // Parse waktu (format: HH.MM.SS atau HH:MM:SS)
-      int hour = 0, minute = 0, second = 0;
+      final day = int.tryParse(dateParts[0]) ?? 1;
+      final month = int.tryParse(dateParts[1]) ?? 1;
+      int year = int.tryParse(dateParts[2]) ?? DateTime.now().year;
 
-      if (cleanTime.isNotEmpty) {
-        List<String> timeParts = [];
-
-        if (cleanTime.contains('.')) {
-          timeParts = cleanTime.split('.');
-        } else if (cleanTime.contains(':')) {
-          timeParts = cleanTime.split(':');
-        }
-
-        if (timeParts.isNotEmpty && timeParts.length >= 2) {
-          hour = int.tryParse(timeParts[0].trim()) ?? 0;
-          minute = int.tryParse(timeParts[1].trim()) ?? 0;
-          if (timeParts.length > 2) {
-            second = int.tryParse(timeParts[2].trim()) ?? 0;
-          }
-        }
-
-        // Validasi rentang waktu
-        hour = hour.clamp(0, 23);
-        minute = minute.clamp(0, 59);
-        second = second.clamp(0, 59);
+      // Handle 2-digit year (misal, 24 -> 2024)
+      if (year < 100) {
+        year = 2000 + year; // Asumsikan tahun 2000-an
       }
 
-      final result = DateTime(
-        baseDate.year,
-        baseDate.month,
-        baseDate.day,
-        hour,
-        minute,
-        second,
-      );
+      // Asumsikan format waktu adalah HH.MM.SS atau HH:MM:SS
+      List<String> timeParts = cleanTime.split('.');
+      if (timeParts.length != 3) {
+        timeParts = cleanTime.split(':');
+      }
+      if (timeParts.length < 2) {
+        throw FormatException('Invalid time format');
+      }
 
+      final hour = int.tryParse(timeParts[0]) ?? 0;
+      final minute = int.tryParse(timeParts[1]) ?? 0;
+      final second = timeParts.length > 2 ? int.tryParse(timeParts[2]) ?? 0 : 0;
+
+      final result = DateTime(year, month, day, hour, minute, second);
       print('🔧 Parsed: "$dateStr $timeStr" -> ${result.toString()}');
       return result;
     } catch (e) {
       print('❌ Error parsing datetime: $dateStr $timeStr - $e');
-      return DateTime.now();
+      // Jika parsing gagal, kembalikan tanggal jauh di masa lalu agar transaksi yang error muncul di paling bawah.
+      return DateTime(1970);
     }
   }
 
