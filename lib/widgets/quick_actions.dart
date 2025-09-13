@@ -16,49 +16,50 @@ class QuickActions extends StatelessWidget {
     final screenSize = MediaQuery.of(context).size;
     final bool isSmallScreen = screenSize.width < 360;
     final bool isLargeScreen = screenSize.width > 600;
-    void navigateToEkskulPayment(
-      BuildContext context,
-      String nisn,
-      String studentName,
-    ) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => EkskulPaymentScreen(nisn: nisn),
-        ),
-      );
-    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4.0),
-          child: Text(
-            'Semua Riwayat',
-            style: TextStyle(
-              fontSize: isSmallScreen ? 16 : (isLargeScreen ? 20 : 18),
-              fontWeight: FontWeight.w700,
-              color: Colors.grey[800],
-            ),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: Colors.blue[600],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              SizedBox(width: 12),
+              Text(
+                'Semua Riwayat',
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 16 : (isLargeScreen ? 20 : 18),
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey[800],
+                ),
+              ),
+            ],
           ),
         ),
-        SizedBox(height: isSmallScreen ? 12 : 16),
+        SizedBox(height: isSmallScreen ? 16 : 20),
         LayoutBuilder(
           builder: (context, constraints) {
             // Menentukan tinggi card berdasarkan ukuran layar
             final cardHeight = isSmallScreen
-                ? 95.0
-                : (isLargeScreen ? 130.0 : 110.0);
+                ? 105.0
+                : (isLargeScreen ? 140.0 : 120.0);
             final cardWidth = isSmallScreen
-                ? 85.0
-                : (isLargeScreen ? 120.0 : 100.0);
+                ? 90.0
+                : (isLargeScreen ? 125.0 : 105.0);
             final iconSize = isSmallScreen
-                ? 18.0
-                : (isLargeScreen ? 26.0 : 22.0);
+                ? 20.0
+                : (isLargeScreen ? 28.0 : 24.0);
             final iconContainerSize = isSmallScreen
-                ? 36.0
-                : (isLargeScreen ? 50.0 : 42.0);
+                ? 40.0
+                : (isLargeScreen ? 54.0 : 46.0);
 
             return SizedBox(
               height: cardHeight,
@@ -66,12 +67,12 @@ class QuickActions extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 physics: BouncingScrollPhysics(),
                 children: [
-                  SizedBox(width: 4), // Spasi awal
+                  SizedBox(width: 6), // Spasi awal
                   _buildActionCard(
                     context: context,
                     icon: Icons.history_rounded,
                     title: 'RIWAYAT\nSETORAN',
-                    color: Colors.blue[700]!,
+                    color: Colors.blue[600]!,
                     cardWidth: cardWidth,
                     cardHeight: cardHeight,
                     iconSize: iconSize,
@@ -91,7 +92,7 @@ class QuickActions extends StatelessWidget {
                     context: context,
                     icon: Icons.star_outline_rounded,
                     title: 'RIWAYAT\nPOIN',
-                    color: Colors.orange[700]!,
+                    color: Colors.orange[600]!,
                     cardWidth: cardWidth,
                     cardHeight: cardHeight,
                     iconSize: iconSize,
@@ -112,7 +113,7 @@ class QuickActions extends StatelessWidget {
                     context: context,
                     icon: Icons.receipt_long_rounded,
                     title: 'SPP\nSANTRI',
-                    color: Colors.green[700]!,
+                    color: Colors.green[600]!,
                     cardWidth: cardWidth,
                     cardHeight: cardHeight,
                     iconSize: iconSize,
@@ -133,7 +134,7 @@ class QuickActions extends StatelessWidget {
                     context: context,
                     icon: Icons.sports_rounded,
                     title: 'EKSKUL\nSANTRI',
-                    color: Colors.purple[700]!,
+                    color: Colors.purple[600]!,
                     cardWidth: cardWidth,
                     cardHeight: cardHeight,
                     iconSize: iconSize,
@@ -149,12 +150,11 @@ class QuickActions extends StatelessWidget {
                       );
                     },
                   ),
-                  SizedBox(width: 4), // Spasi akhir
                   _buildActionCard(
                     context: context,
                     icon: Icons.account_balance_wallet_rounded,
                     title: 'RIWAYAT\nTRANSAKSI',
-                    color: Colors.red[700]!,
+                    color: Colors.red[600]!,
                     cardWidth: cardWidth,
                     cardHeight: cardHeight,
                     iconSize: iconSize,
@@ -174,6 +174,7 @@ class QuickActions extends StatelessWidget {
                       );
                     },
                   ),
+                  SizedBox(width: 6), // Spasi akhir
                 ],
               ),
             );
@@ -206,18 +207,28 @@ class QuickActions extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
+          borderRadius: BorderRadius.circular(18),
+          splashColor: color.withOpacity(0.1),
+          highlightColor: color.withOpacity(0.05),
+          child: AnimatedContainer(
+            duration: Duration(milliseconds: 200),
+            padding: EdgeInsets.all(isSmallScreen ? 10 : 14),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: color.withOpacity(0.3), width: 1.5),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.15),
-                  spreadRadius: 1,
+                  color: color.withOpacity(0.08),
+                  spreadRadius: 0,
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
+                ),
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.05),
+                  spreadRadius: 0,
                   blurRadius: 8,
-                  offset: Offset(0, 3),
+                  offset: Offset(0, 2),
                 ),
               ],
             ),
@@ -228,20 +239,29 @@ class QuickActions extends StatelessWidget {
                   width: iconContainerSize,
                   height: iconContainerSize,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    gradient: LinearGradient(
+                      colors: [
+                        color.withOpacity(0.15),
+                        color.withOpacity(0.08),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                     shape: BoxShape.circle,
+                    border: Border.all(color: color.withOpacity(0.2), width: 1),
                   ),
                   child: Icon(icon, color: color, size: iconSize),
                 ),
-                SizedBox(height: isSmallScreen ? 6 : 10),
+                SizedBox(height: isSmallScreen ? 8 : 12),
                 Text(
                   title,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: fontSize,
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey[800],
-                    height: 1.2,
+                    color: Colors.grey[700],
+                    height: 1.1,
+                    letterSpacing: 0.2,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,

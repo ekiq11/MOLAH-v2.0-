@@ -1159,9 +1159,9 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
               children: [
                 const SizedBox(height: 2),
                 Text(
-                  'NISN: ${santriData!.nisn}',
+                  '${santriData!.nama}',
                   style: TextStyle(
-                    fontSize: isSmallScreen ? 16 : 18,
+                    fontSize: isSmallScreen ? 14 : 16,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                     height: 1.1,
@@ -1171,60 +1171,73 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  santriData!.nama,
+                  'NISN :' + santriData!.nisn,
                   style: TextStyle(
                     fontSize: isSmallScreen ? 14 : 16,
                     color: Colors.white.withOpacity(0.9),
-                    fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  santriData!.status,
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 12 : 13,
-                    color: Colors.white.withOpacity(0.8),
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        santriData!.status,
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 12 : 13,
+                          color: Colors.white.withOpacity(0.8),
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    SizedBox(width: 4),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 8 : 12,
+                        vertical: isSmallScreen ? 4 : 6,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: santriData!.lunasBulanKe >= 12
+                              ? [
+                                  const Color(0xFF10B981).withOpacity(0.3),
+                                  const Color(0xFF059669).withOpacity(0.2),
+                                ]
+                              : [
+                                  const Color(0xFFFBBF24).withOpacity(0.3),
+                                  const Color(0xFFF59E0B).withOpacity(0.2),
+                                ],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: santriData!.lunasBulanKe >= 12
+                              ? const Color(0xFF10B981).withOpacity(0.5)
+                              : const Color(0xFFFBBF24).withOpacity(0.5),
+                        ),
+                      ),
+                      child: Text(
+                        santriData!.lunasBulanKe >= 12
+                            ? 'LUNAS'
+                            : 'BELUM LUNAS',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: isSmallScreen ? 10 : 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
-            ),
-          ),
-          Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: isSmallScreen ? 8 : 12,
-              vertical: isSmallScreen ? 4 : 6,
-            ),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: santriData!.lunasBulanKe >= 12
-                    ? [
-                        const Color(0xFF10B981).withOpacity(0.3),
-                        const Color(0xFF059669).withOpacity(0.2),
-                      ]
-                    : [
-                        const Color(0xFFFBBF24).withOpacity(0.3),
-                        const Color(0xFFF59E0B).withOpacity(0.2),
-                      ],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: santriData!.lunasBulanKe >= 12
-                    ? const Color(0xFF10B981).withOpacity(0.5)
-                    : const Color(0xFFFBBF24).withOpacity(0.5),
-              ),
-            ),
-            child: Text(
-              santriData!.lunasBulanKe >= 12 ? 'LUNAS' : 'BELUM LUNAS',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: isSmallScreen ? 10 : 11,
-                fontWeight: FontWeight.w700,
-              ),
             ),
           ),
         ],

@@ -719,7 +719,7 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
                   _paymentData['nama'] ?? 'Nama tidak ditemukan',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -754,25 +754,46 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
                           ),
                         ),
                       ),
+                      SizedBox(width: 4),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: status['status'] == "BELUM LUNAS"
+                              ? const Color(0xFFF59E0B).withOpacity(0.2)
+                              : status['status'] == "LUNAS"
+                              ? const Color(0xFF059669).withOpacity(0.2)
+                              : Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: status['status'] == "BELUM LUNAS"
+                                ? const Color(0xFFFBBF24).withOpacity(0.3)
+                                : status['status'] == "LUNAS"
+                                ? const Color(0xFF10B981).withOpacity(0.3)
+                                : Colors.white.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          status['status'],
+                          style: TextStyle(
+                            color: status['status'] == "BELUM LUNAS"
+                                ? const Color(0xFFF59E0B)
+                                : status['status'] == "LUNAS"
+                                ? const Color(0xFF10B981)
+                                : Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ],
               ],
             ),
-          ),
-          Column(
-            children: [
-              Icon(status['icon'], color: Colors.white, size: 24),
-              SizedBox(height: 4),
-              Text(
-                status['status'],
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
           ),
         ],
       ),

@@ -272,14 +272,6 @@ class _PaymentPageState extends State<PaymentPage>
     return 'Rp ${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
   }
 
-  String _getSelectedMonth() {
-    if (_selectedPaymentType == 'SPP') {
-      return _sppData?['nextMonth'] ?? 'N/A';
-    } else {
-      return _ekskulData?['nextMonth'] ?? 'N/A';
-    }
-  }
-
   void _showSuccessDialog() {
     showDialog(
       context: context,
@@ -819,7 +811,7 @@ class _PaymentPageState extends State<PaymentPage>
                   widget.studentName,
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: isSmallScreen ? 18 : 20,
+                    fontSize: isSmallScreen ? 16 : 18,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 0.5,
                   ),
@@ -827,11 +819,6 @@ class _PaymentPageState extends State<PaymentPage>
                 SizedBox(height: isSmallScreen ? 4 : 6),
                 Row(
                   children: [
-                    Icon(
-                      Icons.badge_rounded,
-                      color: Colors.white.withOpacity(0.9),
-                      size: isSmallScreen ? 14 : 16,
-                    ),
                     SizedBox(width: isSmallScreen ? 4 : 6),
                     Text(
                       'NISN: ${widget.username}',

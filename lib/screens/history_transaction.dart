@@ -30,19 +30,24 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
   Map<String, dynamic> _summaryData = {};
   List<TransactionItem> _allTransactions = [];
   List<TransactionItem> _displayedTransactions = [];
+  List<TopUpItem> _allTopUps = [];
+  List<TopUpItem> _displayedTopUps = [];
   bool _isLoadingSummary = true;
   bool _isLoadingTransactions = true;
+  bool _isLoadingTopUps = true;
   bool _isLoadingMore = false;
   String _errorMessage = '';
 
+  // Tab states
+  int _selectedTabIndex = 0; // 0 = Aktivitas Transaksi, 1 = Riwayat Top Up
+
   // Pagination
   final int _itemsPerPage = 10;
-  int _currentPage = 0;
-  bool _hasMoreData = true;
+  int _currentTransactionPage = 0;
+  int _currentTopUpPage = 0;
+  bool _hasMoreTransactionData = true;
+  bool _hasMoreTopUpData = true;
   final ScrollController _scrollController = ScrollController();
-
-  // CSV URLs
-  // Di bagian atas class _TransactionHistoryPageState
 
   // CSV URLs
   static const String _summaryUrl =
@@ -51,6 +56,8 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
       'https://docs.google.com/spreadsheets/d/1BZbBczH2OY8SB2_1tDpKf_B8WvOyk8TJl4esfT-dgzw/export?format=csv&gid=2012044980';
   static const String _topUpUrl =
       'https://docs.google.com/spreadsheets/d/1BZbBczH2OY8SB2_1tDpKf_B8WvOyk8TJl4esfT-dgzw/export?format=csv&gid=919906307';
+  static const String _topUpHistoryUrl =
+      'https://docs.google.com/spreadsheets/d/1BZbBczH2OY8SB2_1tDpKf_B8WvOyk8TJl4esfT-dgzw/export?format=csv&gid=995828092';
 
   // Tambahkan variabel untuk menyimpan top-up
   Map<String, int> _topUpData = {};
@@ -87,8 +94,12 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
           _scrollController.position.maxScrollExtent - 200) {
-        if (!_isLoadingMore && _hasMoreData) {
-          _loadMoreTransactions();
+        if (!_isLoadingMore) {
+          if (_selectedTabIndex == 0 && _hasMoreTransactionData) {
+            _loadMoreTransactions();
+          } else if (_selectedTabIndex == 1 && _hasMoreTopUpData) {
+            _loadMoreTopUps();
+          }
         }
       }
     });
@@ -99,7 +110,173 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
       _loadSummaryData(),
       _loadTransactionData(),
       _loadTopUpData(),
+      _loadTopUpHistoryData(),
     ]);
+  }
+
+  Future<void> _loadTopUpHistoryData() async {
+    try {
+      print('🔍 Loading top-up history data...');
+
+      final response = await http
+          .get(
+            Uri.parse(_topUpHistoryUrl),
+            headers: {
+              'User-Agent':
+                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              'Accept': 'text/csv,application/csv,text/plain,*/*',
+            },
+          )
+          .timeout(const Duration(seconds: 20));
+
+      print('📡 Top-up history response status: ${response.statusCode}');
+
+      if (response.statusCode == 200 && response.body.isNotEmpty) {
+        final csvData = const CsvToListConverter().convert(response.body);
+        print('📊 Top-up history CSV parsed: ${csvData.length} rows');
+
+        if (csvData.isNotEmpty) {
+          final topUps = _parseTopUpHistoryData(csvData);
+
+          if (mounted) {
+            setState(() {
+              _allTopUps = topUps;
+              _displayedTopUps = topUps.take(_itemsPerPage).toList();
+              _hasMoreTopUpData = topUps.length > _itemsPerPage;
+              _isLoadingTopUps = false;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      print('❌ Top-up history load error: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingTopUps = false;
+        });
+      }
+    }
+  }
+
+  List<TopUpItem> _parseTopUpHistoryData(List<List<dynamic>> csvData) {
+    if (csvData.isEmpty) {
+      print('❌ Top-up history CSV is empty');
+      return [];
+    }
+    List<TopUpItem> topUps = [];
+    // Get headers
+    final headers = csvData[0]
+        .map((e) => e.toString().toLowerCase().trim())
+        .toList();
+    print('📊 Top-up history headers: $headers');
+
+    // Find column indices (KOLOM A = index 0, KOLOM B = index 1, KOLOM D = index 3, KOLOM E = index 4, KOLOM I = index 8)
+    int waktuIndex = 0; // KOLOM A
+    int tanggalIndex = 1; // KOLOM B
+    int kodeTransaksiIndex = 3; // KOLOM D ← ✅ SUDAH DITAMBAHKAN!
+    int nisnIndex = 4; // KOLOM E
+    int topUpIndex = 8; // KOLOM I
+
+    print(
+      '📍 Top-up history column indices: Waktu=$waktuIndex, Tanggal=$tanggalIndex, KodeTransaksi=$kodeTransaksiIndex, NISN=$nisnIndex, TopUp=$topUpIndex',
+    );
+
+    // Parse top-ups
+    for (int i = 1; i < csvData.length; i++) {
+      final row = csvData[i];
+      if (row.length < 9) {
+        print('⚠️ Top-up row $i has insufficient columns: ${row.length}');
+        continue;
+      }
+      final csvNisn = row[nisnIndex].toString().trim();
+      if (csvNisn.isEmpty) {
+        print('⚠️ Top-up row $i has empty NISN');
+        continue;
+      }
+      print('🔍 Top-up row $i: NISN="$csvNisn", Target="${widget.nisn}"');
+      if (_isMatchingNisn(widget.nisn, csvNisn)) {
+        print('✅ Top-up match found at row $i');
+        try {
+          final waktu = row[waktuIndex].toString().trim();
+          final tanggal = row[tanggalIndex].toString().trim();
+          final topUpStr = row[topUpIndex].toString().trim();
+          final topUpValue =
+              int.tryParse(topUpStr.replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+
+          if (topUpValue > 0) {
+            // ✅ KODE TRANSAKSI DIAMBIL DARI KOLOM D (index 3)
+            final topUp = TopUpItem(
+              waktu: waktu,
+              tanggal: tanggal,
+              kodeTransaksi: row[kodeTransaksiIndex]
+                  .toString()
+                  .trim(), // ✅ INI YANG DIUBAH!
+              nisn: csvNisn,
+              nama: widget.studentName,
+              topUpAmount: _formatCurrency(topUpValue.toString()),
+            );
+            topUps.add(topUp);
+            print(
+              '💚 Added top-up: ${topUp.tanggal} ${topUp.waktu} - ${topUp.topUpAmount} (Kode: ${topUp.kodeTransaksi})',
+            );
+          }
+        } catch (e) {
+          print('❌ Error parsing top-up row $i: $e');
+        }
+      }
+    }
+
+    print('💚 Total top-ups found: ${topUps.length}');
+    // Sort by date/time descending
+    topUps.sort((a, b) {
+      try {
+        final aDate = _parseDateTime(a.tanggal, a.waktu);
+        final bDate = _parseDateTime(b.tanggal, b.waktu);
+        return bDate.compareTo(aDate);
+      } catch (e) {
+        print('❌ Error sorting top-ups: $e');
+        final aDateTimeStr = '${a.tanggal} ${a.waktu}';
+        final bDateTimeStr = '${b.tanggal} ${b.waktu}';
+        return bDateTimeStr.compareTo(aDateTimeStr);
+      }
+    });
+    return topUps;
+  }
+
+  Future<void> _loadMoreTopUps() async {
+    if (_isLoadingMore || !_hasMoreTopUpData) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    final startIndex = (_currentTopUpPage + 1) * _itemsPerPage;
+    final endIndex = startIndex + _itemsPerPage;
+
+    if (startIndex < _allTopUps.length) {
+      final newTopUps = _allTopUps.sublist(
+        startIndex,
+        endIndex > _allTopUps.length ? _allTopUps.length : endIndex,
+      );
+
+      if (mounted) {
+        setState(() {
+          _displayedTopUps.addAll(newTopUps);
+          _currentTopUpPage++;
+          _hasMoreTopUpData = endIndex < _allTopUps.length;
+          _isLoadingMore = false;
+        });
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          _hasMoreTopUpData = false;
+          _isLoadingMore = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadTopUpData() async {
@@ -193,11 +370,6 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
       print('📄 Summary response length: ${response.body.length}');
 
       if (response.statusCode == 200 && response.body.isNotEmpty) {
-        // Debug: print first 500 characters
-        print(
-          '📄 Summary CSV preview: ${response.body.substring(0, response.body.length > 500 ? 500 : response.body.length)}',
-        );
-
         final csvData = const CsvToListConverter().convert(response.body);
         print('📊 Summary CSV parsed: ${csvData.length} rows');
 
@@ -243,11 +415,6 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
       print('📄 Transaction response length: ${response.body.length}');
 
       if (response.statusCode == 200 && response.body.isNotEmpty) {
-        // Debug: print first 500 characters
-        print(
-          '📄 Transaction CSV preview: ${response.body.substring(0, response.body.length > 500 ? 500 : response.body.length)}',
-        );
-
         final csvData = const CsvToListConverter().convert(response.body);
         print('📊 Transaction CSV parsed: ${csvData.length} rows');
 
@@ -264,7 +431,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
               _displayedTransactions = transactions
                   .take(_itemsPerPage)
                   .toList();
-              _hasMoreData = transactions.length > _itemsPerPage;
+              _hasMoreTransactionData = transactions.length > _itemsPerPage;
               _isLoadingTransactions = false;
             });
 
@@ -286,15 +453,15 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
   }
 
   Future<void> _loadMoreTransactions() async {
-    if (_isLoadingMore || !_hasMoreData) return;
+    if (_isLoadingMore || !_hasMoreTransactionData) return;
 
     setState(() {
       _isLoadingMore = true;
     });
 
-    await Future.delayed(const Duration(milliseconds: 500)); // Simulate loading
+    await Future.delayed(const Duration(milliseconds: 500));
 
-    final startIndex = (_currentPage + 1) * _itemsPerPage;
+    final startIndex = (_currentTransactionPage + 1) * _itemsPerPage;
     final endIndex = startIndex + _itemsPerPage;
 
     if (startIndex < _allTransactions.length) {
@@ -306,15 +473,15 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
       if (mounted) {
         setState(() {
           _displayedTransactions.addAll(newTransactions);
-          _currentPage++;
-          _hasMoreData = endIndex < _allTransactions.length;
+          _currentTransactionPage++;
+          _hasMoreTransactionData = endIndex < _allTransactions.length;
           _isLoadingMore = false;
         });
       }
     } else {
       if (mounted) {
         setState(() {
-          _hasMoreData = false;
+          _hasMoreTransactionData = false;
           _isLoadingMore = false;
         });
       }
@@ -522,20 +689,6 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
 
     print('🔄 Transactions sorted by datetime (newest first)');
 
-    // Debug: print first few transactions to verify sorting
-    for (int i = 0; i < transactions.length && i < 5; i++) {
-      final t = transactions[i];
-      final dateTime = _parseDateTime(t.tanggal, t.waktu);
-      print(
-        '📋 Transaction $i: ${t.tanggal} ${t.waktu} -> ${dateTime.toString()}',
-      );
-    }
-    print('--- DEBUG: First 3 Transactions After Sorting ---');
-    for (int i = 0; i < transactions.length && i < 3; i++) {
-      final t = transactions[i];
-      print('  $i: ${t.tanggal} ${t.waktu} | ${t.kodeTransaksi}');
-    }
-    print('--- END DEBUG ---');
     return transactions;
   }
 
@@ -676,10 +829,15 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
           setState(() {
             _isLoadingSummary = true;
             _isLoadingTransactions = true;
-            _currentPage = 0;
+            _isLoadingTopUps = true;
+            _currentTransactionPage = 0;
+            _currentTopUpPage = 0;
             _displayedTransactions.clear();
+            _displayedTopUps.clear();
             _allTransactions.clear();
-            _hasMoreData = true;
+            _allTopUps.clear();
+            _hasMoreTransactionData = true;
+            _hasMoreTopUpData = true;
             _errorMessage = '';
           });
           _shimmerController.repeat();
@@ -722,24 +880,143 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
               _isLoadingSummary ? _buildSummaryShimmer() : _buildSummaryCard(),
               const SizedBox(height: 20),
 
-              // Transaction List Header
-              Text(
-                'Aktivitas Transaksi (${_allTransactions.length} transaksi)',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[800],
-                ),
-              ),
+              // Tab Selection
+              _buildTabSelector(),
               const SizedBox(height: 12),
 
-              // Transaction List
-              _isLoadingTransactions
-                  ? _buildTransactionListShimmer()
-                  : _buildTransactionList(),
+              // Content based on selected tab
+              if (_selectedTabIndex == 0) ...[
+                // Transaction List Header
+                Text(
+                  'Aktivitas Transaksi (${_allTransactions.length} transaksi)',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Transaction List
+                _isLoadingTransactions
+                    ? _buildTransactionListShimmer()
+                    : _buildTransactionList(),
+              ] else ...[
+                // Top Up List Header
+                Text(
+                  'Riwayat Top Up (${_allTopUps.length} top up)',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Top Up List
+                _isLoadingTopUps
+                    ? _buildTransactionListShimmer()
+                    : _buildTopUpList(),
+              ],
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTabSelector() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedTabIndex = 0;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: _selectedTabIndex == 0
+                      ? Colors.red[400]
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.receipt_long,
+                      size: 18,
+                      color: _selectedTabIndex == 0
+                          ? Colors.white
+                          : Colors.grey[600],
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Aktivitas Transaksi',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: _selectedTabIndex == 0
+                            ? Colors.white
+                            : Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedTabIndex = 1;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: _selectedTabIndex == 1
+                      ? Colors.green[400]
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.add_circle,
+                      size: 18,
+                      color: _selectedTabIndex == 1
+                          ? Colors.white
+                          : Colors.grey[600],
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Riwayat Top Up',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: _selectedTabIndex == 1
+                            ? Colors.white
+                            : Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -866,7 +1143,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
 
   Widget _buildTransactionList() {
     if (_displayedTransactions.isEmpty && _allTransactions.isEmpty) {
-      return _buildEmptyState();
+      return _buildEmptyState('Belum ada transaksi', Icons.receipt_long);
     }
 
     return Column(
@@ -880,15 +1157,48 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
             return _buildTransactionItem(_displayedTransactions[index]);
           },
         ),
-        if (_isLoadingMore) ...[
+        if (_isLoadingMore && _selectedTabIndex == 0) ...[
           const SizedBox(height: 16),
           _buildLoadMoreShimmer(),
         ],
-        if (!_hasMoreData && _displayedTransactions.isNotEmpty) ...[
+        if (!_hasMoreTransactionData && _displayedTransactions.isNotEmpty) ...[
           const SizedBox(height: 20),
           Center(
             child: Text(
               'Semua transaksi telah ditampilkan',
+              style: TextStyle(color: Colors.grey[500], fontSize: 14),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildTopUpList() {
+    if (_displayedTopUps.isEmpty && _allTopUps.isEmpty) {
+      return _buildEmptyState('Belum ada riwayat top up', Icons.add_circle);
+    }
+
+    return Column(
+      children: [
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _displayedTopUps.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            return _buildTopUpItem(_displayedTopUps[index]);
+          },
+        ),
+        if (_isLoadingMore && _selectedTabIndex == 1) ...[
+          const SizedBox(height: 16),
+          _buildLoadMoreShimmer(),
+        ],
+        if (!_hasMoreTopUpData && _displayedTopUps.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          Center(
+            child: Text(
+              'Semua riwayat top up telah ditampilkan',
               style: TextStyle(color: Colors.grey[500], fontSize: 14),
             ),
           ),
@@ -980,16 +1290,84 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildTopUpItem(TopUpItem topUp) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        // border: Border.all(color: Colors.green[200]!, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.green.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.green[50],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.add_circle, color: Colors.green[600], size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Top Up Saldo',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                    Text(
+                      topUp.topUpAmount,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.green[600],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${topUp.waktu}',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+                Text(
+                  'Kode: ${topUp.kodeTransaksi}',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(String message, IconData icon) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(40),
       child: Column(
         children: [
-          Icon(Icons.receipt_long, size: 64, color: Colors.grey[400]),
+          Icon(icon, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
-            'Belum ada transaksi',
+            message,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -998,7 +1376,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
           ),
           const SizedBox(height: 8),
           Text(
-            'Riwayat transaksi akan muncul di sini\nNISN: ${widget.nisn}',
+            '${message == 'Belum ada transaksi' ? 'Riwayat transaksi' : 'Riwayat top up'} akan muncul di sini\nNISN: ${widget.nisn}',
             style: TextStyle(fontSize: 14, color: Colors.grey[500]),
             textAlign: TextAlign.center,
           ),
@@ -1242,6 +1620,60 @@ class TransactionItem {
       nama: map['nama']?.toString() ?? '',
       sisaSaldo: map['sisaSaldo']?.toString() ?? '',
       pemakaian: map['pemakaian']?.toString() ?? '',
+    );
+  }
+}
+
+// Top Up data model
+// Top Up data model
+class TopUpItem {
+  final String waktu;
+  final String tanggal;
+  final String kodeTransaksi; // 👈 TAMBAHKAN INI
+  final String nisn;
+  final String nama;
+  final String topUpAmount;
+
+  TopUpItem({
+    required this.waktu,
+    required this.tanggal,
+    required this.kodeTransaksi, // 👈 TAMBAHKAN INI
+    required this.nisn,
+    required this.nama,
+    required this.topUpAmount,
+  });
+
+  @override
+  String toString() {
+    return 'TopUpItem(waktu: $waktu, tanggal: $tanggal, nisn: $nisn, nama: $nama, topUpAmount: $topUpAmount)';
+  }
+
+  // Helper method to get formatted date time
+  String get formattedDateTime {
+    return '$tanggal $waktu';
+  }
+
+  // Convert to Map for easy JSON serialization
+  Map<String, dynamic> toMap() {
+    return {
+      'waktu': waktu,
+      'tanggal': tanggal,
+      'kodeTransaksi': kodeTransaksi,
+      'nisn': nisn,
+      'nama': nama,
+      'topUpAmount': topUpAmount,
+    };
+  }
+
+  // Create from Map for easy JSON deserialization
+  factory TopUpItem.fromMap(Map<String, dynamic> map) {
+    return TopUpItem(
+      waktu: map['waktu']?.toString() ?? '',
+      tanggal: map['tanggal']?.toString() ?? '',
+      kodeTransaksi: map['kodeTransaksi']?.toString() ?? '',
+      nisn: map['nisn']?.toString() ?? '',
+      nama: map['nama']?.toString() ?? '',
+      topUpAmount: map['topUpAmount']?.toString() ?? '',
     );
   }
 }

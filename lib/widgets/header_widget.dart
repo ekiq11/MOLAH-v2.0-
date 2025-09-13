@@ -41,8 +41,8 @@ class CombinedHeader extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Color(0xFFE53E3E),
-                Color(0xFFE53E3E).withOpacity(0.9),
+                Color(0xFFDC2626),
+                Color(0xFFDC2626).withOpacity(0.9),
                 Color(0xFFE53E3E).withOpacity(0.8),
               ],
               stops: [0.0, 0.5, 1.0],

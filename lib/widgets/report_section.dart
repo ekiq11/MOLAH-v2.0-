@@ -61,13 +61,26 @@ class ReportSection extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 4.0),
-          child: Text(
-            'Laporan Santri',
-            style: TextStyle(
-              fontSize: isSmallScreen ? 16 : (isLargeScreen ? 20 : 18),
-              fontWeight: FontWeight.w700,
-              color: Colors.grey[800],
-            ),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: Colors.red[600],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              SizedBox(width: 12),
+              Text(
+                'Laporan Santri',
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 16 : (isLargeScreen ? 20 : 18),
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey[800],
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 16),
