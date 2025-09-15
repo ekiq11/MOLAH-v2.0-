@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:mmkv/mmkv.dart';
@@ -79,6 +81,10 @@ class AppWrapper extends StatefulWidget {
 }
 
 class _AppWrapperState extends State<AppWrapper> {
+  bool _isCheckingUpdate = true; // Flag untuk mengecek apakah sedang cek update
+  bool _canProceed =
+      false; // Flag untuk mengizinkan lanjut ke halaman berikutnya
+
   @override
   void initState() {
     super.initState();
@@ -90,6 +96,50 @@ class _AppWrapperState extends State<AppWrapper> {
 
   @override
   Widget build(BuildContext context) {
+    // Tampilkan loading atau splash screen sampai pengecekan update selesai
+    if (_isCheckingUpdate || !_canProceed) {
+      return Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.red, Colors.redAccent],
+            ),
+          ),
+          child: const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Logo atau branding app
+                Icon(Icons.mobile_friendly, size: 80, color: Colors.white),
+                SizedBox(height: 20),
+                Text(
+                  'MOLAH',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 40),
+                // Loading indicator
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+                SizedBox(height: 20),
+                Text(
+                  'Memeriksa pembaruan...',
+                  style: TextStyle(fontSize: 16, color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Jika sudah bisa lanjut, tampilkan SplashScreen
     return SplashScreen();
   }
 
@@ -112,10 +162,12 @@ class _AppWrapperState extends State<AppWrapper> {
 
         if (updateInfo.updateAvailability ==
             UpdateAvailability.updateAvailable) {
-          // Jika update tersedia, tampilkan dialog
-          _showUpdateDialog(updateInfo);
+          // Jika update tersedia, tampilkan dialog dan jangan lanjut
+          await _showUpdateDialog(updateInfo);
         } else {
           developer.log('✅ App is up to date');
+          // App sudah terbaru, bisa lanjut
+          _allowToProceed();
         }
       } else if (Platform.isIOS) {
         // Untuk iOS, bisa gunakan alternatif seperti cek versi dari server
@@ -126,43 +178,70 @@ class _AppWrapperState extends State<AppWrapper> {
       }
     } catch (e) {
       developer.log('❌ Error checking for updates: $e');
+      // Jika error saat cek update, tetap lanjutkan app
+      _allowToProceed();
     }
   }
 
-  // Dialog untuk menampilkan opsi update
-  void _showUpdateDialog(AppUpdateInfo updateInfo) {
-    showDialog(
+  // Fungsi untuk mengizinkan lanjut ke halaman berikutnya
+  void _allowToProceed() {
+    if (mounted) {
+      setState(() {
+        _isCheckingUpdate = false;
+        _canProceed = true;
+      });
+    }
+  }
+
+  // Dialog untuk menampilkan opsi update (dengan await untuk blocking)
+  Future<void> _showUpdateDialog(AppUpdateInfo updateInfo) async {
+    await showDialog(
       context: context,
       barrierDismissible: false, // User harus memilih
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Update Tersedia'),
-          content: const Text(
-            'Versi terbaru aplikasi MOLAH sudah tersedia. '
-            'Untuk mendapatkan fitur terbaru dan perbaikan bug, '
-            'silakan update aplikasi Anda.',
+        return WillPopScope(
+          onWillPop: () async => false, // Mencegah back button
+          child: AlertDialog(
+            title: const Text('Update Diperlukan'),
+            content: const Text(
+              'Versi terbaru aplikasi MOLAH sudah tersedia. '
+              'Untuk mendapatkan fitur terbaru dan perbaikan bug, '
+              'silakan update aplikasi Anda terlebih dahulu.',
+            ),
+            actions: [
+              // Tombol "Update Sekarang" (mandatory)
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.of(context).pop();
+                  await _performUpdate(updateInfo);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Update Sekarang'),
+              ),
+              // Tombol "Keluar" sebagai alternatif jika user tidak mau update
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _exitApp();
+                },
+                child: const Text('Keluar'),
+              ),
+            ],
           ),
-          actions: [
-            // Tombol "Nanti"
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                developer.log('📱 User chose to update later');
-              },
-              child: const Text('Nanti'),
-            ),
-            // Tombol "Update Sekarang"
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-                await _performUpdate(updateInfo);
-              },
-              child: const Text('Update Sekarang'),
-            ),
-          ],
         );
       },
     );
+  }
+
+  // Fungsi untuk keluar dari aplikasi
+  void _exitApp() {
+    developer.log('📱 User chose to exit app instead of updating');
+    // Di sini bisa tambahkan cleanup jika diperlukan
+    // SystemNavigator.pop() untuk Android
+    // exit(0) untuk force exit (import dart:io)
   }
 
   // Melakukan update
@@ -173,7 +252,11 @@ class _AppWrapperState extends State<AppWrapper> {
       if (updateInfo.immediateUpdateAllowed) {
         // Update langsung (user akan diarahkan ke Play Store)
         await InAppUpdate.performImmediateUpdate();
+        // Setelah update immediate, app akan restart otomatis
       } else if (updateInfo.flexibleUpdateAllowed) {
+        // Tampilkan progress dialog untuk flexible update
+        _showUpdateProgressDialog();
+
         // Update fleksibel (download di background)
         await InAppUpdate.startFlexibleUpdate();
 
@@ -181,39 +264,111 @@ class _AppWrapperState extends State<AppWrapper> {
         InAppUpdate.completeFlexibleUpdate()
             .then((_) {
               developer.log('✅ Flexible update completed');
-              _showUpdateCompletedSnackbar();
+              Navigator.of(context).pop(); // Tutup progress dialog
+              _showUpdateCompletedDialog();
             })
             .catchError((error) {
               developer.log('❌ Flexible update failed: $error');
+              Navigator.of(context).pop(); // Tutup progress dialog
+              _showUpdateFailedDialog();
             });
+      } else {
+        // Jika tidak ada opsi update yang tersedia, tampilkan error
+        _showUpdateFailedDialog();
       }
     } catch (e) {
       developer.log('❌ Update failed: $e');
-      _showUpdateFailedSnackbar();
+      _showUpdateFailedDialog();
     }
   }
 
-  // Snackbar untuk update berhasil
-  void _showUpdateCompletedSnackbar() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Update berhasil didownload. Restart aplikasi untuk menerapkan update.',
-        ),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 5),
-      ),
+  // Dialog progress update
+  void _showUpdateProgressDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return WillPopScope(
+          onWillPop: () async => false,
+          child: const AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Mengunduh update...'),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  // Snackbar untuk update gagal
-  void _showUpdateFailedSnackbar() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Update gagal. Silakan coba lagi nanti.'),
-        backgroundColor: Colors.red,
-        duration: Duration(seconds: 3),
-      ),
+  // Dialog untuk update berhasil
+  void _showUpdateCompletedDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return WillPopScope(
+          onWillPop: () async => false,
+          child: AlertDialog(
+            title: const Text('Update Berhasil'),
+            content: const Text(
+              'Update berhasil didownload. Aplikasi akan restart untuk menerapkan update.',
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  // Restart aplikasi atau tutup aplikasi
+                  Navigator.of(context).pop();
+                  // InAppUpdate.completeFlexibleUpdate() sudah dipanggil sebelumnya
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Dialog untuk update gagal
+  void _showUpdateFailedDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return WillPopScope(
+          onWillPop: () async => false,
+          child: AlertDialog(
+            title: const Text('Update Gagal'),
+            content: const Text(
+              'Update gagal diunduh. Anda bisa mencoba lagi nanti atau '
+              'update manual melalui Play Store.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  // Coba update lagi
+                  checkForUpdate();
+                },
+                child: const Text('Coba Lagi'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  // Lanjutkan tanpa update (tidak direkomendasikan)
+                  _allowToProceed();
+                },
+                child: const Text('Lanjutkan'),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -233,38 +388,51 @@ class _AppWrapperState extends State<AppWrapper> {
       // final latestVersion = json.decode(response.body)['latest_version'];
 
       // if (isVersionNewer(currentVersion, latestVersion)) {
-      //   _showIOSUpdateDialog();
+      //   await _showIOSUpdateDialog();
+      // } else {
+      //   _allowToProceed();
       // }
+
+      // Untuk sementara, langsung izinkan lanjut
+      _allowToProceed();
     } catch (e) {
       developer.log('❌ iOS version check failed: $e');
+      _allowToProceed();
     }
   }
 
   // Dialog update untuk iOS
-  void _showIOSUpdateDialog() {
-    showDialog(
+  Future<void> _showIOSUpdateDialog() async {
+    await showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Update Tersedia'),
-          content: const Text(
-            'Versi terbaru aplikasi MOLAH sudah tersedia di App Store. '
-            'Silakan update aplikasi untuk mendapatkan fitur terbaru.',
+        return WillPopScope(
+          onWillPop: () async => false,
+          child: AlertDialog(
+            title: const Text('Update Tersedia'),
+            content: const Text(
+              'Versi terbaru aplikasi MOLAH sudah tersedia di App Store. '
+              'Silakan update aplikasi untuk mendapatkan fitur terbaru.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _exitApp();
+                },
+                child: const Text('Keluar'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  // TODO: Buka App Store
+                  // launch('https://apps.apple.com/app/your-app-id');
+                },
+                child: const Text('Buka App Store'),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Nanti'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // TODO: Buka App Store
-                // launch('https://apps.apple.com/app/your-app-id');
-              },
-              child: const Text('Buka App Store'),
-            ),
-          ],
         );
       },
     );

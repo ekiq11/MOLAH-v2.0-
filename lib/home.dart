@@ -1,11 +1,17 @@
 import 'dart:math';
+import 'dart:math' as developer;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:csv/csv.dart';
 import 'package:mmkv/mmkv.dart';
 import 'package:pizab_molah/helper/loading_timer.dart';
 import 'dart:async';
 import 'dart:convert';
+
+// --- TAMBAHKAN IMPOR INI UNTUK connectivity_plus 7.0.0 ---
+import 'package:connectivity_plus/connectivity_plus.dart';
+
 // Import custom components
 import 'dialogs/topup_dialog.dart';
 import 'dialogs/notification_dialog.dart';
@@ -21,7 +27,6 @@ import 'widgets/header_widget.dart';
 class HomeScreen extends StatefulWidget {
   final String username;
   const HomeScreen({super.key, required this.username});
-
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -50,16 +55,17 @@ class _HomeScreenState extends State<HomeScreen>
   late Animation<double> _fadeAnimation;
   late Animation<double> _shimmerAnimation;
 
-  // Enhanced Notifications
-  // Dihapus: ValueNotifier<List<NotificationItem>>? _enhancedNotifications;
-  // int get _enhancedNotificationCount =>
-  //     _enhancedNotifications?.value.where((n) => !n.isRead).length ?? 0;
-
   // Timers and utilities
   Timer? _dataTimer;
   Timer? _debounceTimer;
   MMKV? _mmkv;
   final _httpClient = http.Client();
+
+  // --- TAMBAHAN BARU UNTUK connectivity_plus ^7.0.0 ---
+  final Connectivity _connectivity = Connectivity();
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  bool _isNetworkAvailable =
+      false; // True jika ada setidaknya satu koneksi selain none
 
   // Constants - Optimized for better performance
   static const Duration _pollingInterval = Duration(
@@ -68,6 +74,9 @@ class _HomeScreenState extends State<HomeScreen>
   static const Duration _requestTimeout = Duration(
     seconds: 12,
   ); // Reduced from 20 seconds
+  static const Duration _headRequestTimeout = Duration(
+    seconds: 5,
+  ); // <-- Baru: Timeout cepat untuk cek aksesibilitas
   static const Duration _cacheValidDuration = Duration(
     minutes: 2,
   ); // Cache validity
@@ -98,6 +107,12 @@ class _HomeScreenState extends State<HomeScreen>
     WidgetsBinding.instance.addObserver(this);
     _initializeAnimation();
     _initializeApp();
+
+    // --- TAMBAHAN BARU: Inisialisasi Connectivity Plus v7.0.0 ---
+    initConnectivity(); // Cek status awal
+    _connectivitySubscription = _connectivity.onConnectivityChanged.listen(
+      _updateConnectionStatus,
+    );
   }
 
   @override
@@ -110,11 +125,13 @@ class _HomeScreenState extends State<HomeScreen>
     _animationController.dispose();
     _shimmerController.dispose();
     _httpClient.close();
-    // Bersihkan timeout dialog
     LoadingTimeoutDialog.cancelTimeout();
-    // Cleanup enhanced notifications service
     GoogleSheetsMonitorService.stopMonitoringForUser(widget.username);
     await GoogleSheetsMonitorService.cleanupForUser(widget.username);
+
+    // --- TAMBAHAN BARU: Batalkan subscription connectivity ---
+    _connectivitySubscription?.cancel();
+
     super.dispose();
     debugPrint('✅ _HomeScreenState disposed successfully');
   }
@@ -134,12 +151,10 @@ class _HomeScreenState extends State<HomeScreen>
       duration: const Duration(milliseconds: 400), // Reduced from 600ms
       vsync: this,
     );
-
     _shimmerController = AnimationController(
       duration: const Duration(milliseconds: 1200), // Reduced from 1500ms
       vsync: this,
     );
-
     _slideAnimation =
         Tween<Offset>(
           begin: const Offset(0.0, 0.2), // Reduced from 0.3
@@ -150,11 +165,9 @@ class _HomeScreenState extends State<HomeScreen>
             curve: Curves.easeOutQuart, // Changed from easeOutCubic
           ),
         );
-
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
-
     _shimmerAnimation = Tween<double>(begin: -1.0, end: 1.0).animate(
       CurvedAnimation(parent: _shimmerController, curve: Curves.easeInOut),
     );
@@ -207,8 +220,6 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _initializeNotifications() async {
     try {
       await GoogleSheetsMonitorService.initializeForUser(widget.username);
-      // Tidak perlu menyimpan _enhancedNotifications di sini lagi.
-      // UI akan langsung mendengarkan dari GoogleSheetsMonitorService.
       debugPrint(
         '✅ Enhanced notifications service initialized for user: ${widget.username}',
       );
@@ -235,7 +246,6 @@ class _HomeScreenState extends State<HomeScreen>
       final timestampKey = 'last_update_${widget.username}';
       final cachedData = _mmkv!.decodeString(cachedDataKey) ?? '';
       final lastUpdate = _mmkv!.decodeInt(timestampKey) ?? 0;
-
       if (cachedData.isNotEmpty) {
         final decodedData = json.decode(cachedData) as Map<String, dynamic>;
         _previousData = Map<String, dynamic>.from(decodedData);
@@ -252,7 +262,6 @@ class _HomeScreenState extends State<HomeScreen>
           'Cache age: ${Duration(milliseconds: cacheAge).inMinutes} minutes',
         );
       }
-
       // Load notifications
       final notificationsKey = 'notifications_${widget.username}';
       final cachedNotificationsStr =
@@ -268,7 +277,6 @@ class _HomeScreenState extends State<HomeScreen>
           debugPrint('Error parsing cached notifications: $e');
         }
       }
-
       if (_santriData.isEmpty && _isLoading) {
         _shimmerController.repeat();
       }
@@ -309,6 +317,18 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _performDataFetch({bool silent = false}) async {
+    // --- TAMBAHAN BARU: Cek koneksi sebelum mulai fetch ---
+    if (!_isNetworkAvailable) {
+      if (!silent && mounted) {
+        _showNoInternetNotification();
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Tidak ada koneksi internet';
+        });
+      }
+      return;
+    }
+
     // Start timeout untuk operasi fetch data jika tidak silent
     if (!silent && mounted) {
       LoadingTimeoutDialog.startTimeout(context, _handleRetryDataFetch);
@@ -322,8 +342,49 @@ class _HomeScreenState extends State<HomeScreen>
       '🌐 Starting optimized data fetch for username: ${widget.username}',
     );
 
-    // Quick connectivity check with reduced timeout
-    // Try CSV sources with improved error handling
+    // --- TAMBAHAN BARU: Validasi aksesibilitas setiap sumber CSV sebelum GET ---
+    bool anySourceAccessible = false;
+    for (final source in _csvSources) {
+      final url = source['url']!;
+      debugPrint('🔗 Checking accessibility of: $url');
+      try {
+        // Gunakan HEAD request untuk mengecek apakah URL bisa diakses (tidak download isi)
+        final headResponse = await _httpClient
+            .head(Uri.parse(url))
+            .timeout(
+              _headRequestTimeout,
+            ); // Timeout sangat cepat untuk cek akses
+        if (headResponse.statusCode >= 200 && headResponse.statusCode < 400) {
+          debugPrint(
+            '✅ URL accessible: $url (Status: ${headResponse.statusCode})',
+          );
+          anySourceAccessible = true;
+          break; // Jika satu bisa, kita lanjutkan ke proses GET
+        } else {
+          debugPrint(
+            '⚠️ URL not accessible: $url (Status: ${headResponse.statusCode})',
+          );
+        }
+      } catch (e) {
+        debugPrint('❌ Head request failed for $url: $e');
+        // Jika gagal, lanjut ke sumber berikutnya
+      }
+    }
+
+    if (!anySourceAccessible) {
+      // Semua sumber tidak bisa diakses
+      if (!silent && mounted) {
+        LoadingTimeoutDialog.cancelTimeout();
+        setState(() {
+          _isLoading = false;
+          _errorMessage =
+              'Gagal mengakses sumber data. Silakan cek kembali koneksi atau hubungi admin.';
+        });
+      }
+      return;
+    }
+
+    // Jika sumber bisa diakses, lanjutkan dengan GET request
     for (int sourceIndex = 0; sourceIndex < _csvSources.length; sourceIndex++) {
       final source = _csvSources[sourceIndex];
       debugPrint('🔗 Trying ${source['name']}: ${source['url']}');
@@ -383,7 +444,6 @@ class _HomeScreenState extends State<HomeScreen>
     } catch (fallbackError) {
       debugPrint('❌ Fallback fetch error: $fallbackError');
     }
-
     // Cancel timeout sebelum handle error
     LoadingTimeoutDialog.cancelTimeout();
     await _handleFetchError('Semua sumber data gagal diakses', silent);
@@ -402,7 +462,11 @@ class _HomeScreenState extends State<HomeScreen>
         error.toString().contains('connection')) {
       errorMessage = 'Tidak ada koneksi internet';
     } else if (error.toString().contains('timeout')) {
-      errorMessage = 'Koneksi timeout, coba lagi nanti';
+      errorMessage = 'Koneksi lambat atau timeout, coba lagi nanti';
+      // --- TAMBAHAN BARU: Tampilkan notifikasi koneksi lambat ---
+      if (!silent && mounted) {
+        _showSlowConnectionNotification();
+      }
     } else if (error.toString().contains('400')) {
       errorMessage = 'Server sedang bermasalah';
     }
@@ -469,7 +533,6 @@ class _HomeScreenState extends State<HomeScreen>
           .map((e) => e.toString().toLowerCase().trim().replaceAll(' ', '_'))
           .toList();
       debugPrint('📊 Processed headers: $headers');
-
       final nisnIndex = _findColumnIndex(headers, [
         'nisn',
         'no_induk',
@@ -481,12 +544,10 @@ class _HomeScreenState extends State<HomeScreen>
         'user_id',
         'santri_id',
       ]);
-
       if (nisnIndex == -1) {
         debugPrint('❌ NISN column not found in headers: $headers');
         return {};
       }
-
       // Optimize search by checking rows more efficiently
       for (int i = 1; i < csvData.length; i++) {
         final row = csvData[i];
@@ -498,7 +559,6 @@ class _HomeScreenState extends State<HomeScreen>
           }
         }
       }
-
       debugPrint('❌ No matching user found for: ${widget.username}');
       return {};
     } catch (e) {
@@ -659,7 +719,6 @@ class _HomeScreenState extends State<HomeScreen>
       _previousData = Map<String, dynamic>.from(newData);
       return false;
     }
-
     List<String> changes = [];
     for (final entry in _fieldNames.entries) {
       final oldValue = _previousData[entry.key]?.toString() ?? '';
@@ -668,7 +727,6 @@ class _HomeScreenState extends State<HomeScreen>
         changes.add('${entry.value}: $oldValue → $newValue');
       }
     }
-
     if (changes.isNotEmpty) {
       _notifications.addAll(changes);
       if (_notifications.length > 20) {
@@ -704,7 +762,6 @@ class _HomeScreenState extends State<HomeScreen>
       final dataKey = 'santri_${widget.username}';
       final notificationsKey = 'notifications_${widget.username}';
       final timestampKey = 'last_update_${widget.username}';
-
       await Future.wait([
         Future(() => _mmkv!.encodeString(dataKey, json.encode(data))),
         Future(
@@ -720,7 +777,6 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
       ]);
-
       debugPrint('✅ Data saved to MMKV successfully');
     } catch (e) {
       debugPrint('❌ Error saving data to MMKV: $e');
@@ -785,7 +841,6 @@ class _HomeScreenState extends State<HomeScreen>
           }
         }
         // 🔥 Hapus semua kunci yang mengandung username (opsional, lebih aman)
-        // Di _handleLogout()
         if (_mmkv == null) return;
         final allKeys = _mmkv!.allKeys;
         for (final key in allKeys) {
@@ -1815,5 +1870,74 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildStudentInfo() {
     return StudentInfo(santriData: _santriData);
+  }
+
+  // --- TAMBAHAN BARU: Method untuk pemberitahuan ---
+  Future<void> initConnectivity() async {
+    try {
+      final results = await _connectivity.checkConnectivity();
+      _updateConnectionStatus(results);
+    } on PlatformException catch (e) {
+      print('❌ Failed to check connectivity status: $e');
+    }
+  }
+
+  void _updateConnectionStatus(List<ConnectivityResult> results) {
+    setState(() {
+      // Jika ada setidaknya satu koneksi yang bukan "none", maka kita anggap tersambung
+      _isNetworkAvailable = results.any(
+        (result) => result != ConnectivityResult.none,
+      );
+    });
+
+    if (!_isNetworkAvailable && _isLoading) {
+      _showNoInternetNotification();
+    }
+  }
+
+  void _showNoInternetNotification() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.warning_amber, color: Colors.orange),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Tidak ada koneksi internet. Mohon periksa kembali koneksi Anda.',
+                style: TextStyle(color: Colors.orange[800]),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.orange[100],
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 5),
+      ),
+    );
+  }
+
+  void _showSlowConnectionNotification() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.hourglass_empty_outlined, color: Colors.blue),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Koneksi lambat. Sedang mencoba mengambil data... Harap tunggu beberapa detik.',
+                style: TextStyle(color: Colors.blue[800]),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.blue[100],
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 8),
+      ),
+    );
   }
 }
