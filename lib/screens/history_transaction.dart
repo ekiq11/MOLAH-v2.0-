@@ -39,14 +39,12 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
   String _errorMessage = '';
 
   // Tab states
-  int _selectedTabIndex = 0; // 0 = Aktivitas Transaksi, 1 = Riwayat Top Up
+  int _selectedTabIndex = 0;
 
-  // Pagination
+  // Pagination - OPTIMIZED: Ambil semua data sekali, tapi tampilkan bertahap
   final int _itemsPerPage = 10;
   int _currentTransactionPage = 0;
   int _currentTopUpPage = 0;
-  bool _hasMoreTransactionData = true;
-  bool _hasMoreTopUpData = true;
   final ScrollController _scrollController = ScrollController();
 
   // CSV URLs
@@ -59,7 +57,6 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
   static const String _topUpHistoryUrl =
       'https://docs.google.com/spreadsheets/d/1BZbBczH2OY8SB2_1tDpKf_B8WvOyk8TJl4esfT-dgzw/export?format=csv&gid=995828092';
 
-  // Tambahkan variabel untuk menyimpan top-up
   Map<String, int> _topUpData = {};
 
   @override
@@ -92,12 +89,13 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
 
   void _setupScrollListener() {
     _scrollController.addListener(() {
+      // Trigger load more ketika user scroll mendekati bottom (200px dari bawah)
       if (_scrollController.position.pixels >=
           _scrollController.position.maxScrollExtent - 200) {
         if (!_isLoadingMore) {
-          if (_selectedTabIndex == 0 && _hasMoreTransactionData) {
+          if (_selectedTabIndex == 0) {
             _loadMoreTransactions();
-          } else if (_selectedTabIndex == 1 && _hasMoreTopUpData) {
+          } else if (_selectedTabIndex == 1) {
             _loadMoreTopUps();
           }
         }
@@ -106,10 +104,11 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
   }
 
   Future<void> _loadData() async {
+    // Load semua data sekali, tapi parsing dan display bertahap
     await Future.wait([
       _loadSummaryData(),
-      _loadTransactionData(),
       _loadTopUpData(),
+      _loadTransactionData(),
       _loadTopUpHistoryData(),
     ]);
   }
@@ -136,15 +135,18 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
         print('📊 Top-up history CSV parsed: ${csvData.length} rows');
 
         if (csvData.isNotEmpty) {
-          final topUps = _parseTopUpHistoryData(csvData);
+          // Parse SEMUA data top-up
+          final allTopUps = _parseTopUpHistoryData(csvData);
 
           if (mounted) {
             setState(() {
-              _allTopUps = topUps;
-              _displayedTopUps = topUps.take(_itemsPerPage).toList();
-              _hasMoreTopUpData = topUps.length > _itemsPerPage;
+              _allTopUps = allTopUps;
+              // Tampilkan hanya 10 item pertama
+              _displayedTopUps = allTopUps.take(_itemsPerPage).toList();
+              _currentTopUpPage = 0;
               _isLoadingTopUps = false;
             });
+            print('✅ Loaded ${allTopUps.length} top-ups, displaying ${_displayedTopUps.length}');
           }
         }
       }
@@ -163,39 +165,33 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
       print('❌ Top-up history CSV is empty');
       return [];
     }
+    
     List<TopUpItem> topUps = [];
-    // Get headers
     final headers = csvData[0]
         .map((e) => e.toString().toLowerCase().trim())
         .toList();
     print('📊 Top-up history headers: $headers');
 
-    // Find column indices (KOLOM A = index 0, KOLOM B = index 1, KOLOM D = index 3, KOLOM E = index 4, KOLOM I = index 8)
-    int waktuIndex = 0; // KOLOM A
-    int tanggalIndex = 1; // KOLOM B
-    int kodeTransaksiIndex = 3; // KOLOM D ← ✅ SUDAH DITAMBAHKAN!
-    int nisnIndex = 4; // KOLOM E
-    int topUpIndex = 8; // KOLOM I
+    // Column indices
+    int waktuIndex = 0;
+    int tanggalIndex = 1;
+    int kodeTransaksiIndex = 3;
+    int nisnIndex = 4;
+    int topUpIndex = 8;
 
     print(
       '📍 Top-up history column indices: Waktu=$waktuIndex, Tanggal=$tanggalIndex, KodeTransaksi=$kodeTransaksiIndex, NISN=$nisnIndex, TopUp=$topUpIndex',
     );
 
-    // Parse top-ups
+    // Parse semua top-ups untuk NISN ini
     for (int i = 1; i < csvData.length; i++) {
       final row = csvData[i];
-      if (row.length < 9) {
-        print('⚠️ Top-up row $i has insufficient columns: ${row.length}');
-        continue;
-      }
+      if (row.length < 9) continue;
+      
       final csvNisn = row[nisnIndex].toString().trim();
-      if (csvNisn.isEmpty) {
-        print('⚠️ Top-up row $i has empty NISN');
-        continue;
-      }
-      print('🔍 Top-up row $i: NISN="$csvNisn", Target="${widget.nisn}"');
+      if (csvNisn.isEmpty) continue;
+
       if (_isMatchingNisn(widget.nisn, csvNisn)) {
-        print('✅ Top-up match found at row $i');
         try {
           final waktu = row[waktuIndex].toString().trim();
           final tanggal = row[tanggalIndex].toString().trim();
@@ -204,21 +200,15 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
               int.tryParse(topUpStr.replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
 
           if (topUpValue > 0) {
-            // ✅ KODE TRANSAKSI DIAMBIL DARI KOLOM D (index 3)
             final topUp = TopUpItem(
               waktu: waktu,
               tanggal: tanggal,
-              kodeTransaksi: row[kodeTransaksiIndex]
-                  .toString()
-                  .trim(), // ✅ INI YANG DIUBAH!
+              kodeTransaksi: row[kodeTransaksiIndex].toString().trim(),
               nisn: csvNisn,
               nama: widget.studentName,
               topUpAmount: _formatCurrency(topUpValue.toString()),
             );
             topUps.add(topUp);
-            print(
-              '💚 Added top-up: ${topUp.tanggal} ${topUp.waktu} - ${topUp.topUpAmount} (Kode: ${topUp.kodeTransaksi})',
-            );
           }
         } catch (e) {
           print('❌ Error parsing top-up row $i: $e');
@@ -227,6 +217,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     }
 
     print('💚 Total top-ups found: ${topUps.length}');
+    
     // Sort by date/time descending
     topUps.sort((a, b) {
       try {
@@ -234,49 +225,46 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
         final bDate = _parseDateTime(b.tanggal, b.waktu);
         return bDate.compareTo(aDate);
       } catch (e) {
-        print('❌ Error sorting top-ups: $e');
         final aDateTimeStr = '${a.tanggal} ${a.waktu}';
         final bDateTimeStr = '${b.tanggal} ${b.waktu}';
         return bDateTimeStr.compareTo(aDateTimeStr);
       }
     });
+    
     return topUps;
   }
 
-  Future<void> _loadMoreTopUps() async {
-    if (_isLoadingMore || !_hasMoreTopUpData) return;
+  // OPTIMIZED: Load more top-ups dari memory, tidak request server lagi
+  void _loadMoreTopUps() {
+    if (_isLoadingMore) return;
+
+    final startIndex = (_currentTopUpPage + 1) * _itemsPerPage;
+    
+    // Cek apakah masih ada data yang belum ditampilkan
+    if (startIndex >= _allTopUps.length) {
+      print('✅ All top-ups already displayed');
+      return;
+    }
 
     setState(() {
       _isLoadingMore = true;
     });
 
-    await Future.delayed(const Duration(milliseconds: 500));
+    // Simulasi delay untuk UX (opsional)
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
 
-    final startIndex = (_currentTopUpPage + 1) * _itemsPerPage;
-    final endIndex = startIndex + _itemsPerPage;
+      final endIndex = (startIndex + _itemsPerPage).clamp(0, _allTopUps.length);
+      final newTopUps = _allTopUps.sublist(startIndex, endIndex);
 
-    if (startIndex < _allTopUps.length) {
-      final newTopUps = _allTopUps.sublist(
-        startIndex,
-        endIndex > _allTopUps.length ? _allTopUps.length : endIndex,
-      );
-
-      if (mounted) {
-        setState(() {
-          _displayedTopUps.addAll(newTopUps);
-          _currentTopUpPage++;
-          _hasMoreTopUpData = endIndex < _allTopUps.length;
-          _isLoadingMore = false;
-        });
-      }
-    } else {
-      if (mounted) {
-        setState(() {
-          _hasMoreTopUpData = false;
-          _isLoadingMore = false;
-        });
-      }
-    }
+      setState(() {
+        _displayedTopUps.addAll(newTopUps);
+        _currentTopUpPage++;
+        _isLoadingMore = false;
+      });
+      
+      print('📄 Loaded more top-ups: ${newTopUps.length} items (total displayed: ${_displayedTopUps.length}/${_allTopUps.length})');
+    });
   }
 
   Future<void> _loadTopUpData() async {
@@ -306,7 +294,6 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
       }
     } catch (e) {
       print('❌ Top-up load error: $e');
-      // Tetap lanjutkan, karena ini opsional
     }
   }
 
@@ -330,7 +317,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     }
 
     if (nisnIndex == -1 || topUpIndex == -1) {
-      print('❌ Top-up columns not found: nisn=$nisnIndex, topUp=$topUpIndex');
+      print('❌ Top-up columns not found');
       return;
     }
 
@@ -346,7 +333,6 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
 
       if (nisn.isNotEmpty) {
         _topUpData[nisn] = topUpValue;
-        print('📥 Top-up data: $nisn -> Rp$topUpValue');
       }
     }
   }
@@ -367,14 +353,12 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
           .timeout(const Duration(seconds: 20));
 
       print('📡 Summary response status: ${response.statusCode}');
-      print('📄 Summary response length: ${response.body.length}');
 
       if (response.statusCode == 200 && response.body.isNotEmpty) {
         final csvData = const CsvToListConverter().convert(response.body);
         print('📊 Summary CSV parsed: ${csvData.length} rows');
 
         if (csvData.isNotEmpty) {
-          print('📊 Summary headers: ${csvData[0]}');
           final summary = _parseSummaryData(csvData);
 
           if (mounted) {
@@ -412,28 +396,29 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
           .timeout(const Duration(seconds: 20));
 
       print('📡 Transaction response status: ${response.statusCode}');
-      print('📄 Transaction response length: ${response.body.length}');
 
       if (response.statusCode == 200 && response.body.isNotEmpty) {
         final csvData = const CsvToListConverter().convert(response.body);
         print('📊 Transaction CSV parsed: ${csvData.length} rows');
 
         if (csvData.isNotEmpty) {
-          print('📊 Transaction headers: ${csvData[0]}');
-          final transactions = _parseTransactionData(csvData);
+          // Parse SEMUA transaksi
+          final allTransactions = _parseTransactionData(csvData);
           print(
-            '📋 Found ${transactions.length} transactions for NISN: ${widget.nisn}',
+            '📋 Found ${allTransactions.length} transactions for NISN: ${widget.nisn}',
           );
 
           if (mounted) {
             setState(() {
-              _allTransactions = transactions;
-              _displayedTransactions = transactions
+              _allTransactions = allTransactions;
+              // Tampilkan hanya 10 item pertama
+              _displayedTransactions = allTransactions
                   .take(_itemsPerPage)
                   .toList();
-              _hasMoreTransactionData = transactions.length > _itemsPerPage;
+              _currentTransactionPage = 0;
               _isLoadingTransactions = false;
             });
+            print('✅ Loaded ${allTransactions.length} transactions, displaying ${_displayedTransactions.length}');
 
             if (!_isLoadingSummary) {
               _shimmerController.stop();
@@ -452,40 +437,37 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     }
   }
 
-  Future<void> _loadMoreTransactions() async {
-    if (_isLoadingMore || !_hasMoreTransactionData) return;
+  // OPTIMIZED: Load more transactions dari memory, tidak request server lagi
+  void _loadMoreTransactions() {
+    if (_isLoadingMore) return;
+
+    final startIndex = (_currentTransactionPage + 1) * _itemsPerPage;
+    
+    // Cek apakah masih ada data yang belum ditampilkan
+    if (startIndex >= _allTransactions.length) {
+      print('✅ All transactions already displayed');
+      return;
+    }
 
     setState(() {
       _isLoadingMore = true;
     });
 
-    await Future.delayed(const Duration(milliseconds: 500));
+    // Simulasi delay untuk UX (opsional)
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
 
-    final startIndex = (_currentTransactionPage + 1) * _itemsPerPage;
-    final endIndex = startIndex + _itemsPerPage;
+      final endIndex = (startIndex + _itemsPerPage).clamp(0, _allTransactions.length);
+      final newTransactions = _allTransactions.sublist(startIndex, endIndex);
 
-    if (startIndex < _allTransactions.length) {
-      final newTransactions = _allTransactions.sublist(
-        startIndex,
-        endIndex > _allTransactions.length ? _allTransactions.length : endIndex,
-      );
-
-      if (mounted) {
-        setState(() {
-          _displayedTransactions.addAll(newTransactions);
-          _currentTransactionPage++;
-          _hasMoreTransactionData = endIndex < _allTransactions.length;
-          _isLoadingMore = false;
-        });
-      }
-    } else {
-      if (mounted) {
-        setState(() {
-          _hasMoreTransactionData = false;
-          _isLoadingMore = false;
-        });
-      }
-    }
+      setState(() {
+        _displayedTransactions.addAll(newTransactions);
+        _currentTransactionPage++;
+        _isLoadingMore = false;
+      });
+      
+      print('📄 Loaded more transactions: ${newTransactions.length} items (total displayed: ${_displayedTransactions.length}/${_allTransactions.length})');
+    });
   }
 
   Map<String, dynamic> _parseSummaryData(List<List<dynamic>> csvData) {
@@ -497,7 +479,6 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     final headers = csvData[0]
         .map((e) => e.toString().toLowerCase().trim().replaceAll(' ', '_'))
         .toList();
-    print('📊 Summary headers processed: $headers');
 
     int nisnIndex = -1;
     int namaIndex = -1;
@@ -519,42 +500,29 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     if (totalMasukIndex == -1) totalMasukIndex = 2;
     if (totalKeluarIndex == -1) totalKeluarIndex = 3;
 
-    print(
-      '📍 Summary indices: NISN=$nisnIndex, Nama=$namaIndex, Masuk=$totalMasukIndex, Keluar=$totalKeluarIndex',
-    );
-
     for (int i = 1; i < csvData.length; i++) {
       final row = csvData[i];
       if (row.length <= nisnIndex) continue;
 
       final csvNisn = row[nisnIndex].toString().trim();
-      print('🔍 Checking summary row $i: "$csvNisn" vs "${widget.nisn}"');
 
       if (_isMatchingNisn(widget.nisn, csvNisn)) {
-        print('✅ Match found in summary data at row $i');
-
         final nama = row.length > namaIndex
             ? row[namaIndex].toString().trim()
             : widget.studentName;
 
-        // Ambil total masuk dari CSV (tanpa Rp)
         String masukStr = row.length > totalMasukIndex
             ? row[totalMasukIndex].toString().replaceAll(RegExp(r'[^\d]'), '')
             : '0';
         int totalMasuk = int.tryParse(masukStr) ?? 0;
 
-        // Ambil top-up dari sheet top-up
         int topUp = _topUpData[csvNisn] ?? 0;
         int finalMasuk = totalMasuk + topUp;
 
-        // Ambil total keluar
         String keluarStr = row.length > totalKeluarIndex
             ? row[totalKeluarIndex].toString().replaceAll(RegExp(r'[^\d]'), '')
             : '0';
         int totalKeluar = int.tryParse(keluarStr) ?? 0;
-
-        print('💰 Total Masuk: $totalMasuk + Top-up: $topUp = $finalMasuk');
-        print('💸 Total Keluar: $totalKeluar');
 
         return {
           'nisn': csvNisn,
@@ -565,7 +533,6 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
       }
     }
 
-    print('❌ No matching NISN found in summary data');
     return _getDefaultSummary();
   }
 
@@ -574,9 +541,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     return {
       'nisn': widget.nisn,
       'nama': widget.studentName,
-      'total_masuk': _formatCurrency(
-        topUp.toString(),
-      ), // Jika tidak ditemukan, minimal top-up
+      'total_masuk': _formatCurrency(topUp.toString()),
       'total_keluar': 'Rp0',
     };
   }
@@ -589,51 +554,34 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
 
     List<TransactionItem> transactions = [];
 
-    // Get headers
     final headers = csvData[0]
         .map((e) => e.toString().toLowerCase().trim())
         .toList();
-    print('📊 Transaction headers: $headers');
 
-    // Find NISN column index - it should be column 3 based on your example
     int nisnIndex = -1;
     for (int i = 0; i < headers.length; i++) {
       final header = headers[i];
       if (header.contains('nisn') || i == 3) {
-        // Column 3 based on your example
         nisnIndex = i;
         break;
       }
     }
 
     if (nisnIndex == -1) {
-      nisnIndex = 3; // Default to column 3 as per your example
+      nisnIndex = 3;
     }
 
-    print('📍 Transaction NISN column index: $nisnIndex');
-
-    // Parse transactions
     for (int i = 1; i < csvData.length; i++) {
       final row = csvData[i];
-      if (row.length < 6) {
-        print('⚠️ Row $i has insufficient columns: ${row.length}');
-        continue;
-      }
+      if (row.length < 6) continue;
 
       final csvNisn = row.length > nisnIndex
           ? row[nisnIndex].toString().trim()
           : '';
 
-      if (csvNisn.isEmpty) {
-        print('⚠️ Row $i has empty NISN');
-        continue;
-      }
-
-      print('🔍 Transaction row $i: NISN="$csvNisn", Target="${widget.nisn}"');
+      if (csvNisn.isEmpty) continue;
 
       if (_isMatchingNisn(widget.nisn, csvNisn)) {
-        print('✅ Transaction match found at row $i');
-
         try {
           final transaction = TransactionItem(
             waktu: row.length > 0 ? row[0].toString().trim() : '',
@@ -653,56 +601,35 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
           );
 
           transactions.add(transaction);
-          print(
-            '📋 Added transaction: ${transaction.tanggal} ${transaction.waktu}',
-          );
         } catch (e) {
           print('❌ Error parsing transaction row $i: $e');
         }
       }
     }
 
-    print('📋 Total transactions found: ${transactions.length}');
-
-    // Sort by date/time descending (most recent first)
+    // Sort by date/time descending
     transactions.sort((a, b) {
       try {
         final aDate = _parseDateTime(a.tanggal, a.waktu);
         final bDate = _parseDateTime(b.tanggal, b.waktu);
-
-        // Sort descending (newest first) - bDate dibandingkan dengan aDate
-        final comparison = bDate.compareTo(aDate);
-
-        print(
-          '🔄 Comparing: ${a.tanggal} ${a.waktu} (${aDate.toString()}) vs ${b.tanggal} ${b.waktu} (${bDate.toString()}) = $comparison',
-        );
-
-        return comparison;
+        return bDate.compareTo(aDate);
       } catch (e) {
-        print('❌ Error sorting transactions: $e');
-        // Fallback: try to sort by string comparison of date/time
         final aDateTimeStr = '${a.tanggal} ${a.waktu}';
         final bDateTimeStr = '${b.tanggal} ${b.waktu}';
         return bDateTimeStr.compareTo(aDateTimeStr);
       }
     });
 
-    print('🔄 Transactions sorted by datetime (newest first)');
-
     return transactions;
   }
 
-  // Perbaiki fungsi _parseDateTime untuk parsing yang lebih akurat
   DateTime _parseDateTime(String dateStr, String timeStr) {
     try {
-      // Bersihkan string
       final cleanDate = dateStr.trim();
       final cleanTime = timeStr.trim();
 
-      // Asumsikan format tanggal adalah dd/MM/yyyy
       List<String> dateParts = cleanDate.split('/');
       if (dateParts.length != 3) {
-        // Jika bukan dd/MM/yyyy, coba dd-MM-yyyy
         dateParts = cleanDate.split('-');
       }
       if (dateParts.length != 3) {
@@ -713,12 +640,10 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
       final month = int.tryParse(dateParts[1]) ?? 1;
       int year = int.tryParse(dateParts[2]) ?? DateTime.now().year;
 
-      // Handle 2-digit year (misal, 24 -> 2024)
       if (year < 100) {
-        year = 2000 + year; // Asumsikan tahun 2000-an
+        year = 2000 + year;
       }
 
-      // Asumsikan format waktu adalah HH.MM.SS atau HH:MM:SS
       List<String> timeParts = cleanTime.split('.');
       if (timeParts.length != 3) {
         timeParts = cleanTime.split(':');
@@ -731,12 +656,8 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
       final minute = int.tryParse(timeParts[1]) ?? 0;
       final second = timeParts.length > 2 ? int.tryParse(timeParts[2]) ?? 0 : 0;
 
-      final result = DateTime(year, month, day, hour, minute, second);
-      print('🔧 Parsed: "$dateStr $timeStr" -> ${result.toString()}');
-      return result;
+      return DateTime(year, month, day, hour, minute, second);
     } catch (e) {
-      print('❌ Error parsing datetime: $dateStr $timeStr - $e');
-      // Jika parsing gagal, kembalikan tanggal jauh di masa lalu agar transaksi yang error muncul di paling bawah.
       return DateTime(1970);
     }
   }
@@ -747,45 +668,30 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     final cleanTarget = targetNisn.toLowerCase().trim();
     final cleanCsv = csvNisn.toLowerCase().trim();
 
-    print('🔍 Matching: "$cleanTarget" vs "$cleanCsv"');
+    if (cleanTarget == cleanCsv) return true;
 
-    // Exact match
-    if (cleanTarget == cleanCsv) {
-      print('✅ Exact match found');
-      return true;
-    }
-
-    // Remove all non-numeric characters and compare
     final numericTarget = cleanTarget.replaceAll(RegExp(r'[^0-9]'), '');
     final numericCsv = cleanCsv.replaceAll(RegExp(r'[^0-9]'), '');
 
     if (numericTarget.isNotEmpty && numericCsv.isNotEmpty) {
-      if (numericTarget == numericCsv) {
-        print('✅ Numeric match found');
-        return true;
-      }
+      if (numericTarget == numericCsv) return true;
 
-      // Try removing leading zeros
       final normalizedTarget = numericTarget.replaceAll(RegExp(r'^0+'), '');
       final normalizedCsv = numericCsv.replaceAll(RegExp(r'^0+'), '');
 
       if (normalizedTarget.isNotEmpty &&
           normalizedCsv.isNotEmpty &&
           normalizedTarget == normalizedCsv) {
-        print('✅ Normalized numeric match found');
         return true;
       }
     }
 
-    // Contains check for longer strings
     if (cleanTarget.length > 3 && cleanCsv.length > 3) {
       if (cleanTarget.contains(cleanCsv) || cleanCsv.contains(cleanTarget)) {
-        print('✅ Contains match found');
         return true;
       }
     }
 
-    print('❌ No match found');
     return false;
   }
 
@@ -812,7 +718,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: Text(
-          'Riwayat Transaksi',
+          'Transaksi',
           style: TextStyle(
             color: Colors.grey[800],
             fontWeight: FontWeight.w600,
@@ -836,8 +742,6 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
             _displayedTopUps.clear();
             _allTransactions.clear();
             _allTopUps.clear();
-            _hasMoreTransactionData = true;
-            _hasMoreTopUpData = true;
             _errorMessage = '';
           });
           _shimmerController.repeat();
@@ -850,7 +754,6 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Error message
               if (_errorMessage.isNotEmpty) ...[
                 Container(
                   width: double.infinity,
@@ -876,19 +779,15 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                 ),
               ],
 
-              // Summary Section
               _isLoadingSummary ? _buildSummaryShimmer() : _buildSummaryCard(),
               const SizedBox(height: 20),
 
-              // Tab Selection
               _buildTabSelector(),
               const SizedBox(height: 12),
 
-              // Content based on selected tab
               if (_selectedTabIndex == 0) ...[
-                // Transaction List Header
                 Text(
-                  'Aktivitas Transaksi (${_allTransactions.length} transaksi)',
+                  'Transaksi (${_displayedTransactions.length} dari ${_allTransactions.length})',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -897,14 +796,12 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                 ),
                 const SizedBox(height: 12),
 
-                // Transaction List
                 _isLoadingTransactions
                     ? _buildTransactionListShimmer()
                     : _buildTransactionList(),
               ] else ...[
-                // Top Up List Header
                 Text(
-                  'Riwayat Top Up (${_allTopUps.length} top up)',
+                  'Top Up (${_displayedTopUps.length} dari ${_allTopUps.length})',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -913,7 +810,6 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                 ),
                 const SizedBox(height: 12),
 
-                // Top Up List
                 _isLoadingTopUps
                     ? _buildTransactionListShimmer()
                     : _buildTopUpList(),
@@ -961,7 +857,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Aktivitas Transaksi',
+                      'Transaksi',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
@@ -1002,7 +898,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Riwayat Top Up',
+                      'Top Up',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
@@ -1027,7 +923,11 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.red[400]!, Colors.red[600]!],
+          colors: [
+            Color(0xFFDC2626),
+            Color(0xFFB91C1C),
+            Color(0xFF991B1B),
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -1161,7 +1061,18 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
           const SizedBox(height: 16),
           _buildLoadMoreShimmer(),
         ],
-        if (!_hasMoreTransactionData && _displayedTransactions.isNotEmpty) ...[
+        if (_displayedTransactions.length < _allTransactions.length &&
+            !_isLoadingMore) ...[
+          const SizedBox(height: 16),
+          Center(
+            child: Text(
+              'Scroll ke bawah untuk melihat lebih banyak',
+              style: TextStyle(color: Colors.grey[500], fontSize: 12),
+            ),
+          ),
+        ],
+        if (_displayedTransactions.length >= _allTransactions.length &&
+            _displayedTransactions.isNotEmpty) ...[
           const SizedBox(height: 20),
           Center(
             child: Text(
@@ -1194,7 +1105,17 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
           const SizedBox(height: 16),
           _buildLoadMoreShimmer(),
         ],
-        if (!_hasMoreTopUpData && _displayedTopUps.isNotEmpty) ...[
+        if (_displayedTopUps.length < _allTopUps.length && !_isLoadingMore) ...[
+          const SizedBox(height: 16),
+          Center(
+            child: Text(
+              'Scroll ke bawah untuk melihat lebih banyak',
+              style: TextStyle(color: Colors.grey[500], fontSize: 12),
+            ),
+          ),
+        ],
+        if (_displayedTopUps.length >= _allTopUps.length &&
+            _displayedTopUps.isNotEmpty) ...[
           const SizedBox(height: 20),
           Center(
             child: Text(
@@ -1278,7 +1199,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                 if (transaction.kodeTransaksi.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(
-                    'Kode: ${transaction.kodeTransaksi}',
+                    'Keterangan: ${transaction.kodeTransaksi}',
                     style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                   ),
                 ],
@@ -1296,7 +1217,6 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        // border: Border.all(color: Colors.green[200]!, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.green.withOpacity(0.1),
@@ -1347,7 +1267,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
                 Text(
-                  'Kode: ${topUp.kodeTransaksi}',
+                  'Keterangan: ${topUp.kodeTransaksi}',
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
@@ -1385,7 +1305,6 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     );
   }
 
-  // Shimmer Effects
   Widget _buildShimmerContainer({
     required double width,
     required double height,
@@ -1545,7 +1464,6 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
   }
 }
 
-// Transaction data model
 class TransactionItem {
   final String waktu;
   final String tanggal;
@@ -1567,12 +1485,6 @@ class TransactionItem {
     required this.pemakaian,
   });
 
-  @override
-  String toString() {
-    return 'TransactionItem(waktu: $waktu, tanggal: $tanggal, kodeTransaksi: $kodeTransaksi, nisn: $nisn, nama: $nama, sisaSaldo: $sisaSaldo, pemakaian: $pemakaian)';
-  }
-
-  // Helper method to check if this is an expense transaction
   bool get isExpense {
     final pemakaianValue = pemakaian.replaceAll(RegExp(r'[^\d]'), '');
     return pemakaianValue.isNotEmpty &&
@@ -1580,22 +1492,18 @@ class TransactionItem {
         int.parse(pemakaianValue) > 0;
   }
 
-  // Helper method to get the transaction amount
   String get transactionAmount {
     return isExpense ? pemakaian : sisaSaldo;
   }
 
-  // Helper method to get formatted transaction type
   String get transactionType {
     return isExpense ? 'Pengeluaran' : 'Pemasukan';
   }
 
-  // Helper method to get formatted date time
   String get formattedDateTime {
     return '$tanggal $waktu';
   }
 
-  // Convert to Map for easy JSON serialization
   Map<String, dynamic> toMap() {
     return {
       'waktu': waktu,
@@ -1609,7 +1517,6 @@ class TransactionItem {
     };
   }
 
-  // Create from Map for easy JSON deserialization
   factory TransactionItem.fromMap(Map<String, dynamic> map) {
     return TransactionItem(
       waktu: map['waktu']?.toString() ?? '',
@@ -1624,12 +1531,10 @@ class TransactionItem {
   }
 }
 
-// Top Up data model
-// Top Up data model
 class TopUpItem {
   final String waktu;
   final String tanggal;
-  final String kodeTransaksi; // 👈 TAMBAHKAN INI
+  final String kodeTransaksi;
   final String nisn;
   final String nama;
   final String topUpAmount;
@@ -1637,23 +1542,16 @@ class TopUpItem {
   TopUpItem({
     required this.waktu,
     required this.tanggal,
-    required this.kodeTransaksi, // 👈 TAMBAHKAN INI
+    required this.kodeTransaksi,
     required this.nisn,
     required this.nama,
     required this.topUpAmount,
   });
 
-  @override
-  String toString() {
-    return 'TopUpItem(waktu: $waktu, tanggal: $tanggal, nisn: $nisn, nama: $nama, topUpAmount: $topUpAmount)';
-  }
-
-  // Helper method to get formatted date time
   String get formattedDateTime {
     return '$tanggal $waktu';
   }
 
-  // Convert to Map for easy JSON serialization
   Map<String, dynamic> toMap() {
     return {
       'waktu': waktu,
@@ -1665,7 +1563,6 @@ class TopUpItem {
     };
   }
 
-  // Create from Map for easy JSON deserialization
   factory TopUpItem.fromMap(Map<String, dynamic> map) {
     return TopUpItem(
       waktu: map['waktu']?.toString() ?? '',

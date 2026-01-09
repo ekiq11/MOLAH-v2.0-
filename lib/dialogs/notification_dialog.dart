@@ -1811,124 +1811,466 @@ class EnhancedNotificationDialog {
     await showDialog(
       context: context,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+       return StatefulBuilder(
+  builder: (context, setState) {
+    // ✅ TAMBAHAN: Responsive sizing saja
+    final screenSize = MediaQuery.of(context).size;
+    final dialogWidth = screenSize.width > 600 ? 450.0 : screenSize.width * 0.9;
+    final dialogHeight = screenSize.height > 700 ? 650.0 : screenSize.height * 0.8;
+    
+   return Dialog(
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(24),
+  ),
+  elevation: 0,
+  backgroundColor: Colors.transparent,
+  child: ValueListenableBuilder<List<NotificationItem>>(
+    valueListenable: notificationsNotifier,
+    builder: (context, notifications, _) {
+      final recentNotifications = notifications
+          .where(
+            (n) => n.timestamp.isAfter(
+              DateTime.now().subtract(const Duration(days: 30)),
+            ),
+          )
+          .toList()
+        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      
+      final displayed = recentNotifications.take(visibleCount).toList();
+      
+      scrollController.addListener(() {
+        if (scrollController.position.pixels ==
+            scrollController.position.maxScrollExtent) {
+          if (visibleCount < 15 &&
+              visibleCount < recentNotifications.length) {
+            setState(() {
+              visibleCount = 15;
+            });
+          }
+        }
+      });
+      
+      return Container(
+        width: dialogWidth,
+        height: dialogHeight,
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.9,
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFDC2626).withOpacity(0.15),
+              blurRadius: 30,
+              offset: const Offset(0, 10),
+            ),
+            BoxShadow(
+              color: const Color(0xFF991B1B).withOpacity(0.1),
+              blurRadius: 60,
+              offset: const Offset(0, 20),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFFDC2626),
+                    Color(0xFFB91C1C),
+                    Color(0xFF991B1B),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(24),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFDC2626).withOpacity(0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: ValueListenableBuilder<List<NotificationItem>>(
-                valueListenable: notificationsNotifier,
-                builder: (context, notifications, _) {
-                  final recentNotifications =
-                      notifications
-                          .where(
-                            (n) => n.timestamp.isAfter(
-                              DateTime.now().subtract(const Duration(days: 30)),
-                            ),
-                          )
-                          .toList()
-                        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-                  final displayed = recentNotifications
-                      .take(visibleCount)
-                      .toList();
-                  scrollController.addListener(() {
-                    if (scrollController.position.pixels ==
-                        scrollController.position.maxScrollExtent) {
-                      if (visibleCount < 15 &&
-                          visibleCount < recentNotifications.length) {
-                        setState(() {
-                          visibleCount = 15;
-                        });
-                      }
-                    }
-                  });
-                  return SizedBox(
-                    width: 400,
-                    height: 600,
-                    child: Column(
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 2,
+                      ),
+                    ),
+                    child: Stack(
                       children: [
-                        // Header
-                        Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: Colors.blue[50],
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(16),
+                        const Icon(
+                          Icons.notifications_active_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                        if (notifications.isNotEmpty)
+                          Positioned(
+                            right: -2,
+                            top: -2,
+                            child: Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF2F2),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                              ),
                             ),
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Notifikasi',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              if (notifications.isNotEmpty)
-                                TextButton(
-                                  onPressed: () async {
-                                    await GoogleSheetsMonitorService.clearAllNotificationsForUser(
-                                      username,
-                                    );
-                                    onClearAll();
-                                  },
-                                  child: const Text('Hapus Semua'),
-                                ),
-                            ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Notifikasi',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
-                        // Content
-                        Expanded(
-                          child: displayed.isEmpty
-                              ? _buildEmptyState()
-                              : ListView.builder(
-                                  controller: scrollController,
-                                  itemCount: displayed.length,
-                                  itemBuilder: (context, index) {
-                                    final notification = displayed[index];
-                                    return _buildNotificationTile(
-                                      context,
-                                      notification,
-                                      username,
-                                      notificationsNotifier,
-                                    );
-                                  },
-                                ),
-                        ),
-                        // Footer
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              if (notifications.isNotEmpty)
+                        if (notifications.isNotEmpty)
+                          Container(
+                            margin: const EdgeInsets.only(top: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.25),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '${recentNotifications.length} notifikasi',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.white.withOpacity(0.95),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (notifications.isNotEmpty)
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: IconButton(
+                        onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              title: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFEE2E2),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Icon(
+                                      Icons.delete_sweep,
+                                      color: Color(0xFFDC2626),
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Text('Hapus Semua?'),
+                                ],
+                              ),
+                              content: const Text(
+                                'Apakah Anda yakin ingin menghapus semua notifikasi?',
+                              ),
+                              actions: [
                                 TextButton(
-                                  onPressed: () async {
-                                    await GoogleSheetsMonitorService.markAllAsReadForUser(
-                                      username,
-                                    );
-                                  },
-                                  child: const Text('Tandai Semua Dibaca'),
+                                  onPressed: () => Navigator.pop(context, false),
+                                  child: const Text('Batal'),
                                 ),
-                              TextButton.icon(
-                                onPressed: () => Navigator.pop(context),
-                                icon: const Icon(Icons.close),
-                                label: const Text("Tutup"),
+                                ElevatedButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFDC2626),
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  child: const Text('Hapus'),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          if (confirm == true) {
+                            await GoogleSheetsMonitorService
+                                .clearAllNotificationsForUser(username);
+                            onClearAll();
+                          }
+                        },
+                        icon: const Icon(Icons.delete_sweep, color: Colors.white),
+                        tooltip: 'Hapus Semua',
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            // Content
+            Expanded(
+              child: displayed.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(32),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  const Color(0xFFFEE2E2),
+                                  const Color(0xFFFEE2E2).withOpacity(0.5),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFDC2626).withOpacity(0.1),
+                                  blurRadius: 20,
+                                  spreadRadius: 5,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.notifications_none,
+                              size: 80,
+                              color: Color(0xFFDC2626),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Tidak ada notifikasi',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Notifikasi Anda akan muncul di sini',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.separated(
+                      controller: scrollController,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: displayed.length,
+                      separatorBuilder: (context, index) => Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: Colors.grey[200],
+                      ),
+                      itemBuilder: (context, index) {
+                        final notification = displayed[index];
+                        return _buildNotificationTile(
+                          context,
+                          notification,
+                          username,
+                          notificationsNotifier,
+                        );
+                      },
+                    ),
+            ),
+
+            // Footer
+            Container(
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                border: Border(
+                  top: BorderSide(color: Colors.grey[200]!),
+                ),
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(24),
+                ),
+              ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  if (constraints.maxWidth < 350) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (notifications.isNotEmpty)
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [
+                                  Color(0xFFFEE2E2),
+                                  Color(0xFFFECDD3),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                await GoogleSheetsMonitorService
+                                    .markAllAsReadForUser(username);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                foregroundColor: const Color(0xFFB91C1C),
+                                elevation: 0,
+                                shadowColor: Colors.transparent,
+                              ),
+                              icon: const Icon(Icons.done_all, size: 18),
+                              label: const Text('Tandai Semua Dibaca'),
+                            ),
+                          ),
+                        if (notifications.isNotEmpty) const SizedBox(height: 8),
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [
+                                Color(0xFFDC2626),
+                                Color(0xFFB91C1C),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFDC2626).withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
                               ),
                             ],
+                          ),
+                          child: ElevatedButton.icon(
+                            onPressed: () => Navigator.pop(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shadowColor: Colors.transparent,
+                            ),
+                            icon: const Icon(Icons.close, size: 18),
+                            label: const Text('Tutup'),
                           ),
                         ),
                       ],
-                    ),
+                    );
+                  }
+
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      if (notifications.isNotEmpty)
+                        Flexible(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [
+                                  Color(0xFFFEE2E2),
+                                  Color(0xFFFECDD3),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                await GoogleSheetsMonitorService
+                                    .markAllAsReadForUser(username);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                foregroundColor: const Color(0xFFB91C1C),
+                                elevation: 0,
+                                shadowColor: Colors.transparent,
+                              ),
+                              icon: const Icon(Icons.done_all, size: 18),
+                              label: const Text('Tandai Dibaca'),
+                            ),
+                          ),
+                        ),
+                      if (notifications.isEmpty) const Spacer(),
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color(0xFFDC2626),
+                              Color(0xFFB91C1C),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFDC2626).withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton.icon(
+                          onPressed: () => Navigator.pop(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shadowColor: Colors.transparent,
+                          ),
+                          icon: const Icon(Icons.close, size: 18),
+                          label: const Text('Tutup'),
+                        ),
+                      ),
+                    ],
                   );
                 },
               ),
-            );
-          },
-        );
+            ),
+          ],
+        ),
+      );
+    },
+  ),
+);
+  },
+);
       },
     );
     scrollController.dispose();

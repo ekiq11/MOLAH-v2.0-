@@ -412,6 +412,8 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
     });
   }
 
+
+
   // Method untuk navigasi ke halaman invoice
   void _navigateToInvoice(int monthIndex, String monthName) {
     HapticFeedback.lightImpact();
@@ -689,7 +691,9 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Colors.red[400]!, Colors.red[600]!],
+          colors: [    Color(0xFFDC2626),
+                Color(0xFFB91C1C),
+                Color(0xFF991B1B),],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
@@ -1651,7 +1655,6 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
     );
   }
 }
-
 // KELAS INVOICE SCREEN TERPISAH
 class EkskulInvoiceScreen extends StatefulWidget {
   final Map<String, dynamic> paymentData;
@@ -1923,7 +1926,7 @@ $currentDate
         elevation: 1,
         actions: [
           IconButton(
-            icon: Icon(Icons.copy_all_rounded, size: isSmallScreen ? 20 : 24),
+            icon: Icon(Icons.download, size: isSmallScreen ? 20 : 24),
             onPressed: _isGenerating ? null : _downloadInvoice,
             tooltip: 'Download',
           ),
@@ -1964,10 +1967,10 @@ $currentDate
 
     // Calculate responsive sizes
     final invoiceWidth = screenSize.width - (isSmallScreen ? 24 : 32);
-    final headerFontSize = isSmallScreen ? 16.0 : 18.0;
-    final titleFontSize = isSmallScreen ? 14.0 : 16.0;
-    final bodyFontSize = isSmallScreen ? 12.0 : 14.0;
-    final smallFontSize = isSmallScreen ? 10.0 : 12.0;
+    final headerFontSize = isSmallScreen ? 14.0 : 18.0;
+    final titleFontSize = isSmallScreen ? 13.0 : 16.0;
+    final bodyFontSize = isSmallScreen ? 11.0 : 14.0;
+    final smallFontSize = isSmallScreen ? 9.0 : 12.0;
 
     return Container(
       width: invoiceWidth,
@@ -1989,7 +1992,7 @@ $currentDate
           // Header
           Container(
             width: double.infinity,
-            padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+            padding: EdgeInsets.all(isSmallScreen ? 14 : 20),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -2006,28 +2009,36 @@ $currentDate
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Pesantren Islam Zaid bin Tsabit',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: headerFontSize,
-                            fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Pesantren Islam Zaid bin Tsabit',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: headerFontSize,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Sistem Pembayaran Ekstrakurikuler',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: smallFontSize,
+                          SizedBox(height: 4),
+                          Text(
+                            'Sistem Pembayaran Ekstrakurikuler',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: smallFontSize,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
+                    SizedBox(width: 8),
                     Container(
                       padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
                       decoration: BoxDecoration(
@@ -2037,16 +2048,16 @@ $currentDate
                       child: Icon(
                         Icons.receipt_long,
                         color: Colors.white,
-                        size: isSmallScreen ? 20 : 24,
+                        size: isSmallScreen ? 18 : 24,
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: 16),
+                SizedBox(height: 12),
                 Container(
                   padding: EdgeInsets.symmetric(
-                    horizontal: isSmallScreen ? 10 : 12,
-                    vertical: isSmallScreen ? 6 : 8,
+                    horizontal: isSmallScreen ? 8 : 12,
+                    vertical: isSmallScreen ? 5 : 8,
                   ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
@@ -2058,7 +2069,7 @@ $currentDate
                       color: Colors.white,
                       fontSize: titleFontSize,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
@@ -2068,61 +2079,74 @@ $currentDate
 
           // Invoice Details
           Padding(
-            padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+            padding: EdgeInsets.all(isSmallScreen ? 14 : 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Invoice Info
+                // Invoice Info - FIXED: Wrap dengan Flexible/Expanded
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'No. Invoice',
-                          style: TextStyle(
-                            fontSize: smallFontSize,
-                            color: Colors.grey[600],
+                    Flexible(
+                      flex: 1,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'No. Invoice',
+                            style: TextStyle(
+                              fontSize: smallFontSize,
+                              color: Colors.grey[600],
+                            ),
                           ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          invoiceNumber,
-                          style: TextStyle(
-                            fontSize: bodyFontSize,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[800],
-                            fontFamily: 'monospace',
+                          SizedBox(height: 2),
+                          Text(
+                            invoiceNumber,
+                            style: TextStyle(
+                              fontSize: bodyFontSize,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[800],
+                              fontFamily: 'monospace',
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          'Tanggal',
-                          style: TextStyle(
-                            fontSize: smallFontSize,
-                            color: Colors.grey[600],
+                    SizedBox(width: 8),
+                    Flexible(
+                      flex: 1,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            'Tanggal',
+                            style: TextStyle(
+                              fontSize: smallFontSize,
+                              color: Colors.grey[600],
+                            ),
                           ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          _formatDate(currentDate),
-                          style: TextStyle(
-                            fontSize: bodyFontSize,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[800],
+                          SizedBox(height: 2),
+                          Text(
+                            _formatDate(currentDate),
+                            style: TextStyle(
+                              fontSize: bodyFontSize,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[800],
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
 
-                Divider(height: 32, thickness: 1, color: Colors.grey[300]),
+                Divider(height: 28, thickness: 1, color: Colors.grey[300]),
 
                 // Student Information
                 _buildInfoSection(
@@ -2157,7 +2181,7 @@ $currentDate
                   isSmallScreen,
                 ),
 
-                SizedBox(height: 20),
+                SizedBox(height: 16),
 
                 // Payment Details
                 _buildInfoSection(
@@ -2180,12 +2204,12 @@ $currentDate
                   isSmallScreen,
                 ),
 
-                SizedBox(height: 20),
+                SizedBox(height: 16),
 
                 // Payment Amount - Highlighted
                 Container(
                   width: double.infinity,
-                  padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                  padding: EdgeInsets.all(isSmallScreen ? 14 : 20),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
@@ -2199,15 +2223,21 @@ $currentDate
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Text(
-                            'TOTAL PEMBAYARAN',
-                            style: TextStyle(
-                              fontSize: titleFontSize,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green[700],
+                          Flexible(
+                            child: Text(
+                              'TOTAL PEMBAYARAN',
+                              style: TextStyle(
+                                fontSize: titleFontSize,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green[700],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          SizedBox(width: 8),
                           Container(
                             padding: EdgeInsets.symmetric(
                               horizontal: isSmallScreen ? 8 : 10,
@@ -2228,16 +2258,21 @@ $currentDate
                           ),
                         ],
                       ),
-                      SizedBox(height: 12),
+                      SizedBox(height: 10),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
-                            _formatCurrency(iuranPerBulan),
-                            style: TextStyle(
-                              fontSize: isSmallScreen ? 24 : 28,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green[700],
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                _formatCurrency(iuranPerBulan),
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 22 : 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green[700],
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -2246,7 +2281,7 @@ $currentDate
                   ),
                 ),
 
-                SizedBox(height: 20),
+                SizedBox(height: 16),
 
                 // Payment Method (Simulated)
                 _buildInfoSection(
@@ -2269,12 +2304,12 @@ $currentDate
                   isSmallScreen,
                 ),
 
-                SizedBox(height: 24),
+                SizedBox(height: 20),
 
                 // Footer
                 Container(
                   width: double.infinity,
-                  padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                  padding: EdgeInsets.all(isSmallScreen ? 10 : 16),
                   decoration: BoxDecoration(
                     color: Colors.grey[50],
                     borderRadius: BorderRadius.circular(10),
@@ -2288,21 +2323,25 @@ $currentDate
                           Icon(
                             Icons.verified,
                             color: Colors.green[600],
-                            size: isSmallScreen ? 16 : 18,
+                            size: isSmallScreen ? 14 : 18,
                           ),
                           SizedBox(width: 6),
-                          Text(
-                            'PEMBAYARAN TERVERIFIKASI',
-                            style: TextStyle(
-                              fontSize: smallFontSize,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green[700],
-                              letterSpacing: 0.5,
+                          Flexible(
+                            child: Text(
+                              'PEMBAYARAN TERVERIFIKASI',
+                              style: TextStyle(
+                                fontSize: smallFontSize,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green[700],
+                                letterSpacing: 0.3,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
-                      SizedBox(height: 8),
+                      SizedBox(height: 6),
                       Text(
                         'Invoice ini adalah bukti sah pembayaran ekstrakurikuler',
                         style: TextStyle(
@@ -2310,8 +2349,10 @@ $currentDate
                           color: Colors.grey[600],
                         ),
                         textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      SizedBox(height: 4),
+                      SizedBox(height: 3),
                       Text(
                         'Simpan bukti ini untuk keperluan administrasi',
                         style: TextStyle(
@@ -2319,12 +2360,14 @@ $currentDate
                           color: Colors.grey[500],
                         ),
                         textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
 
-                SizedBox(height: 16),
+                SizedBox(height: 12),
               ],
             ),
           ),
@@ -2364,12 +2407,12 @@ $currentDate
     double smallFontSize,
   ) {
     return Padding(
-      padding: EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.only(bottom: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 100,
+            width: 80,
             child: Text(
               label,
               style: TextStyle(
@@ -2390,6 +2433,8 @@ $currentDate
                 fontWeight: FontWeight.w600,
                 color: Colors.grey[800],
               ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -2397,11 +2442,9 @@ $currentDate
     );
   }
 
-  // Perbaiki widget _buildActionButtons
   Widget _buildActionButtons(bool isSmallScreen) {
     return Column(
       children: [
-        // Baris pertama - tombol utama
         Row(
           children: [
             Expanded(
@@ -2426,7 +2469,7 @@ $currentDate
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green[600],
                   foregroundColor: Colors.white,
-                  elevation: 0, // <-- hilangkan shadow
+                  elevation: 0,
                   padding: EdgeInsets.symmetric(
                     vertical: isSmallScreen ? 12 : 16,
                   ),
@@ -2436,7 +2479,6 @@ $currentDate
                 ),
               ),
             ),
-
             SizedBox(width: 12),
             Expanded(
               child: OutlinedButton.icon(

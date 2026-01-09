@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:csv/csv.dart';
+import 'package:pizab_molah/screens/progreshafalan.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
@@ -1473,7 +1474,7 @@ class _HafalanHistoryPageState extends State<HafalanHistoryPage> {
                               ),
                               SizedBox(width: 8),
                               Text(
-                                'Menampilkan ${_displayedData.length} dari ${_allData.length} setoran',
+                                '${_displayedData.length} dari ${_allData.length} setoran',
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
@@ -1537,6 +1538,25 @@ class _HafalanHistoryPageState extends State<HafalanHistoryPage> {
           ),
         ],
       ),
+       floatingActionButton: _allData.isNotEmpty
+        ? FloatingActionButton.extended(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => HafalanProgressPage(
+                    nisn: widget.nisn,
+                    namaSantri: _currentNamaSantri,
+                    hafalanList: _allData,
+                  ),
+                ),
+              );
+            },
+            icon: Icon(Icons.insert_chart, color: Colors.white,),
+            label: Text('Lihat Grafik Hafalan', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
+            backgroundColor: Colors.teal[600],
+          )
+        : null,
     );
   }
 }

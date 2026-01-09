@@ -1107,7 +1107,9 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFE53E3E), Color(0xFFE53E3E), Color(0xFFE53E3E)],
+          colors: [    Color(0xFFDC2626),
+                Color(0xFFB91C1C),
+                Color(0xFF991B1B),],
           stops: [0.0, 0.6, 1.0],
         ),
         borderRadius: BorderRadius.circular(20),
@@ -1601,8 +1603,7 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
     );
   }
 }
-
-// KELAS SPP INVOICE SCREEN TERPISAH// KELAS SPP INVOICE SCREEN TERPISAH
+// KELAS SPP INVOICE SCREEN TERPISAH
 class SPPInvoiceScreen extends StatefulWidget {
   final SantriData santriData;
   final String monthName;
@@ -1975,27 +1976,33 @@ $currentDate
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Pesantren Islam Zaid bin Tsabit',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: headerFontSize,
-                            fontWeight: FontWeight.bold,
+                    // FIX: Wrap text column in Flexible/Expanded
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Pesantren Islam Zaid bin Tsabit',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: headerFontSize,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Sistem Pembayaran SPP',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: smallFontSize,
+                          SizedBox(height: 4),
+                          Text(
+                            'Sistem Pembayaran SPP',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: smallFontSize,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
+                    SizedBox(width: 8),
                     Container(
                       padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
                       decoration: BoxDecoration(
@@ -2011,46 +2018,59 @@ $currentDate
                   ],
                 ),
                 SizedBox(height: 16),
+                // FIX: Wrap both containers in Flexible
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isSmallScreen ? 10 : 12,
-                        vertical: isSmallScreen ? 6 : 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        isPaid ? 'BUKTI PEMBAYARAN SPP' : 'TAGIHAN SPP',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: titleFontSize,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
+                    Flexible(
+                      flex: 3,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 10 : 12,
+                          vertical: isSmallScreen ? 6 : 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          isPaid ? 'BUKTI PEMBAYARAN SPP' : 'TAGIHAN SPP',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: titleFontSize,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isSmallScreen ? 8 : 12,
-                        vertical: isSmallScreen ? 4 : 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
+                    SizedBox(width: 8),
+                    Flexible(
+                      flex: 2,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 8 : 12,
+                          vertical: isSmallScreen ? 4 : 6,
                         ),
-                      ),
-                      child: Text(
-                        isPaid ? 'LUNAS' : 'BELUM LUNAS',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: smallFontSize,
-                          fontWeight: FontWeight.w700,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Text(
+                          isPaid ? 'LUNAS' : 'BELUM LUNAS',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: smallFontSize,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ),
@@ -2066,52 +2086,61 @@ $currentDate
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Invoice Info
+                // Invoice Info - FIX: Add Flexible to children
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'No. Invoice',
-                          style: TextStyle(
-                            fontSize: smallFontSize,
-                            color: Colors.grey[600],
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'No. Invoice',
+                            style: TextStyle(
+                              fontSize: smallFontSize,
+                              color: Colors.grey[600],
+                            ),
                           ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          _generateInvoiceId(),
-                          style: TextStyle(
-                            fontSize: bodyFontSize,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[800],
-                            fontFamily: 'monospace',
+                          SizedBox(height: 2),
+                          Text(
+                            _generateInvoiceId(),
+                            style: TextStyle(
+                              fontSize: bodyFontSize,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[800],
+                              fontFamily: 'monospace',
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          'Tanggal',
-                          style: TextStyle(
-                            fontSize: smallFontSize,
-                            color: Colors.grey[600],
+                    SizedBox(width: 16),
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            'Tanggal',
+                            style: TextStyle(
+                              fontSize: smallFontSize,
+                              color: Colors.grey[600],
+                            ),
                           ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          _formatDate(currentDate),
-                          style: TextStyle(
-                            fontSize: bodyFontSize,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[800],
+                          SizedBox(height: 2),
+                          Text(
+                            _formatDate(currentDate),
+                            style: TextStyle(
+                              fontSize: bodyFontSize,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[800],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -2207,36 +2236,49 @@ $currentDate
                   ),
                   child: Column(
                     children: [
+                      // FIX: Add Flexible to Row children
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'TOTAL PEMBAYARAN',
-                            style: TextStyle(
-                              fontSize: titleFontSize,
-                              fontWeight: FontWeight.bold,
-                              color: isPaid
-                                  ? Colors.green[700]
-                                  : Colors.orange[700],
+                          Flexible(
+                            flex: 3,
+                            child: Text(
+                              'TOTAL PEMBAYARAN',
+                              style: TextStyle(
+                                fontSize: titleFontSize,
+                                fontWeight: FontWeight.bold,
+                                color: isPaid
+                                    ? Colors.green[700]
+                                    : Colors.orange[700],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: isSmallScreen ? 8 : 10,
-                              vertical: isSmallScreen ? 4 : 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isPaid
-                                  ? Colors.green[600]
-                                  : Colors.orange[600],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              isPaid ? 'LUNAS' : 'BELUM LUNAS',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: smallFontSize,
-                                fontWeight: FontWeight.bold,
+                          SizedBox(width: 8),
+                          Flexible(
+                            flex: 2,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isSmallScreen ? 8 : 10,
+                                vertical: isSmallScreen ? 4 : 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isPaid
+                                    ? Colors.green[600]
+                                    : Colors.orange[600],
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                isPaid ? 'LUNAS' : 'BELUM LUNAS',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: smallFontSize,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ),
@@ -2246,16 +2288,21 @@ $currentDate
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
-                            _formatCurrency(
-                              widget.santriData.monthlyFee.toInt().toString(),
-                            ),
-                            style: TextStyle(
-                              fontSize: isSmallScreen ? 24 : 28,
-                              fontWeight: FontWeight.bold,
-                              color: isPaid
-                                  ? Colors.green[700]
-                                  : Colors.orange[700],
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                _formatCurrency(
+                                  widget.santriData.monthlyFee.toInt().toString(),
+                                ),
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 24 : 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: isPaid
+                                      ? Colors.green[700]
+                                      : Colors.orange[700],
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -2306,15 +2353,18 @@ $currentDate
                             size: isSmallScreen ? 16 : 18,
                           ),
                           SizedBox(width: 6),
-                          Text(
-                            isPaid
-                                ? 'BUKTI PEMBAYARAN'
-                                : 'INFORMASI PEMBAYARAN',
-                            style: TextStyle(
-                              fontSize: smallFontSize,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF4F46E5),
-                              letterSpacing: 0.5,
+                          Flexible(
+                            child: Text(
+                              isPaid
+                                  ? 'BUKTI PEMBAYARAN'
+                                  : 'INFORMASI PEMBAYARAN',
+                              style: TextStyle(
+                                fontSize: smallFontSize,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF4F46E5),
+                                letterSpacing: 0.5,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
                           ),
                         ],
@@ -2357,13 +2407,16 @@ $currentDate
                               size: isSmallScreen ? 16 : 18,
                             ),
                             SizedBox(width: 6),
-                            Text(
-                              'PEMBAYARAN TERVERIFIKASI',
-                              style: TextStyle(
-                                fontSize: smallFontSize,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green[700],
-                                letterSpacing: 0.5,
+                            Flexible(
+                              child: Text(
+                                'PEMBAYARAN TERVERIFIKASI',
+                                style: TextStyle(
+                                  fontSize: smallFontSize,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green[700],
+                                  letterSpacing: 0.5,
+                                ),
+                                textAlign: TextAlign.center,
                               ),
                             ),
                           ],

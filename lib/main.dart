@@ -88,6 +88,9 @@ class _AppWrapperState extends State<AppWrapper> {
   @override
   void initState() {
     super.initState();
+    // Log molah.png saat aplikasi dimulai
+    developer.log('🖼️ Loading logo: assets/img/molah.png');
+    
     // Cek update setelah app dimuat
     WidgetsBinding.instance.addPostFrameCallback((_) {
       checkForUpdate();
@@ -107,14 +110,27 @@ class _AppWrapperState extends State<AppWrapper> {
               colors: [Colors.red, Colors.redAccent],
             ),
           ),
-          child: const Center(
+          child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo atau branding app
-                Icon(Icons.mobile_friendly, size: 80, color: Colors.white),
-                SizedBox(height: 20),
-                Text(
+                // Logo dari assets - PERUBAHAN DI SINI
+                Image.asset(
+                  'assets/img/molah.png',
+                  width: 120,
+                  height: 120,
+                  errorBuilder: (context, error, stackTrace) {
+                    developer.log('❌ Error loading molah.png: $error');
+                    // Fallback ke icon jika gambar tidak ditemukan
+                    return const Icon(
+                      Icons.mobile_friendly,
+                      size: 80,
+                      color: Colors.white,
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+                const Text(
                   'MOLAH',
                   style: TextStyle(
                     fontSize: 32,
@@ -122,13 +138,13 @@ class _AppWrapperState extends State<AppWrapper> {
                     color: Colors.white,
                   ),
                 ),
-                SizedBox(height: 40),
+                const SizedBox(height: 40),
                 // Loading indicator
-                CircularProgressIndicator(
+                const CircularProgressIndicator(
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
-                SizedBox(height: 20),
-                Text(
+                const SizedBox(height: 20),
+                const Text(
                   'Memeriksa pembaruan...',
                   style: TextStyle(fontSize: 16, color: Colors.white70),
                 ),
