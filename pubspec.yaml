@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+16
+version: 1.0.0+19
 
 environment:
   sdk: ^3.9.0
@@ -76,7 +76,13 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/img/molah.png 
+    - assets/img/molah.png
+    - assets/json/doa.json
+    - assets/json/dzikir.json
+    - assets/other/iconquran.png
+    - assets/other/img_number.png
+    - assets/image/
+    - assets/quran-json/update/
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
@@ -90,6 +96,15 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
+  fonts:
+    - family: Amiri
+      fonts:
+        - asset: assets/font/Amiri-Regular.ttf
+        - asset: assets/font/Amiri-Bold.ttf
+          weight: 700
+    - family: Utsmani
+      fonts:
+        - asset: assets/font/LPMQIsepMisbah.ttf
   # fonts:
   #   - family: Schyler
   #     fonts:

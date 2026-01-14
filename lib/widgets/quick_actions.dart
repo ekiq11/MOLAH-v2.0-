@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pizab_molah/doa/screens/doa_list_page.dart';
+import 'package:pizab_molah/dzikir/screens/main_dzikir.dart';
+import 'package:pizab_molah/quran/screens/quran_main.dart';
+
+
 import '../screens/HafalanHistoryPage.dart';
 import '../screens/ekskul.dart';
 import '../screens/history_transaction.dart';
 import '../screens/reward.dart';
 import '../screens/spp.dart';
+
+
 
 class QuickActions extends StatelessWidget {
   final String nisn;
@@ -132,27 +139,21 @@ class QuickActions extends StatelessWidget {
   Widget _buildGrid(BuildContext context, double screenWidth) {
     final actions = _getActionItems(context);
 
-    // Lebih user-friendly: maksimal 4 kolom untuk smartphone
-    // Prioritaskan kemudahan tap dan keterbacaan
     int columns;
     double spacing;
     
     if (screenWidth < 360) {
-      // Layar kecil: 3 kolom (icon besar, mudah di-tap)
       columns = 3;
       spacing = 12.0;
     } else if (screenWidth < 600) {
-      // Layar medium: 4 kolom (balanced)
       columns = 4;
       spacing = 16.0;
     } else if (screenWidth < 900) {
-      // Tablet kecil: 5 kolom
       columns = 5;
       spacing = 20.0;
     } else {
-      // Tablet besar: 6 kolom
       columns = 6;
-      spacing: 24.0;
+      spacing = 24.0;
     }
 
     return LayoutBuilder(
@@ -161,7 +162,7 @@ class QuickActions extends StatelessWidget {
 
         return Wrap(
           spacing: 0,
-          runSpacing: 20, // Lebih lega untuk vertical spacing
+          runSpacing: 20,
           children: actions.map((action) {
             return SizedBox(
               width: itemWidth,
@@ -175,6 +176,7 @@ class QuickActions extends StatelessWidget {
 
   List<ActionItem> _getActionItems(BuildContext context) {
     return [
+      
       ActionItem(
         icon: Icons.auto_stories_rounded,
         title: 'Hafalan',
@@ -189,6 +191,7 @@ class QuickActions extends StatelessWidget {
           );
         },
       ),
+      
       ActionItem(
         icon: Icons.stars_rounded,
         title: 'Reward',
@@ -248,30 +251,70 @@ class QuickActions extends StatelessWidget {
           );
         },
       ),
+      ActionItem(
+        title: 'Al-Quran',
+        color: Color(0xFF059669),
+        customImage: 'assets/other/iconquran.png',
+        onTap: () {
+          HapticFeedback.lightImpact();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => QuranMainPage(),
+            ),
+          );
+        },
+      ),
+      ActionItem(
+        icon: Icons.mosque_rounded,
+        title: 'Doa-Doa',
+       color: Color(0xFF059669),
+        onTap: () {
+          HapticFeedback.lightImpact();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => DoaListPage(),
+            ),
+          );
+        },
+      ),
+      ActionItem(
+        icon: Icons.wb_sunny_outlined,
+        title: 'Dzikir',
+        color: Color(0xFF7C3AED),
+        
+        onTap: () {
+          HapticFeedback.lightImpact();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => DzikirMainPage(),
+            ),
+          );
+        },
+      ),
     ];
   }
 
   Widget _buildMenuItem(ActionItem action, double itemWidth, double screenWidth) {
-    // Ukuran minimum yang nyaman untuk di-tap: 56x56 (Material Design guideline)
-    // Tapi disesuaikan dengan ruang yang ada
     final double containerSize = itemWidth < 70 
-        ? 52.0  // Minimum 52px untuk tap target yang nyaman
+        ? 52.0
         : itemWidth < 90 
             ? 56.0 
             : itemWidth < 110 
                 ? 60.0 
                 : 64.0;
     
-    final double iconSize = containerSize * 0.5; // 50% dari container (lebih besar)
+    final double iconSize = containerSize * 0.5;
     
-    // Font size yang lebih mudah dibaca
     final double titleFontSize = screenWidth < 360 
         ? 11.0 
         : screenWidth < 600 
             ? 12.0 
             : 13.0;
     
-    final double borderRadius = 14.0; // Fixed radius yang nyaman
+    final double borderRadius = 14.0;
     
     return InkWell(
       onTap: action.onTap,
@@ -281,7 +324,6 @@ class QuickActions extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Icon dengan gradient dan shadow
             Container(
               width: containerSize,
               height: containerSize,
@@ -310,15 +352,24 @@ class QuickActions extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Icon(
-                action.icon,
-                color: Colors.white,
-                size: iconSize,
-              ),
+              child: action.customImage != null
+                  ? Padding(
+                      padding: EdgeInsets.all(containerSize * 0.2),
+                      child: Image.asset(
+                        action.customImage!,
+                        width: iconSize * 1.1,
+                        height: iconSize * 1.1,
+                        fit: BoxFit.contain,
+                      ),
+                    )
+                  : Icon(
+                      action.icon,
+                      color: Colors.white,
+                      size: iconSize,
+                    ),
             ),
-            SizedBox(height: 8), // Lebih lega
+            SizedBox(height: 8),
             
-            // Label dengan ukuran yang mudah dibaca
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 4),
               child: Text(
@@ -341,17 +392,18 @@ class QuickActions extends StatelessWidget {
   }
 }
 
-// Model class untuk action items
 class ActionItem {
-  final IconData icon;
+  final IconData? icon;
   final String title;
   final Color color;
   final VoidCallback onTap;
+  final String? customImage;
 
   ActionItem({
-    required this.icon,
+    this.icon,
     required this.title,
     required this.color,
     required this.onTap,
+    this.customImage,
   });
 }
