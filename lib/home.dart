@@ -343,7 +343,7 @@ class _HomeScreenState extends State<HomeScreen>
     if (!_isNetworkAvailable || !OfflineCacheService.isOnline) {
       if (!silent && mounted) {
         LoadingTimeoutDialog.cancelTimeout();
-        
+
         // Coba baca dari cache offline
         final cachedData = OfflineCacheService.getSantriData(widget.username);
         if (cachedData != null) {
@@ -352,7 +352,8 @@ class _HomeScreenState extends State<HomeScreen>
         } else {
           setState(() {
             _isLoading = false;
-            _errorMessage = 'Tidak ada koneksi internet dan belum ada data tersimpan.';
+            _errorMessage =
+                'Tidak ada koneksi internet dan belum ada data tersimpan.';
           });
         }
       }
@@ -476,7 +477,7 @@ class _HomeScreenState extends State<HomeScreen>
     }
     // Cancel timeout sebelum handle error
     LoadingTimeoutDialog.cancelTimeout();
-    
+
     // Fallback terakhir: Coba ambil dari cache offline
     final cachedData = OfflineCacheService.getSantriData(widget.username);
     if (cachedData != null) {
@@ -731,7 +732,10 @@ class _HomeScreenState extends State<HomeScreen>
     return formatted;
   }
 
-  Future<void> _processNewData(Map<String, dynamic> newData, {bool fromCache = false}) async {
+  Future<void> _processNewData(
+    Map<String, dynamic> newData, {
+    bool fromCache = false,
+  }) async {
     final hasChanges = _checkChanges(newData);
     if (_shimmerController.isAnimating) {
       _shimmerController.stop();
@@ -746,7 +750,7 @@ class _HomeScreenState extends State<HomeScreen>
         _animationController.forward();
       }
     }
-    
+
     if (!fromCache) {
       // Simpan ke offline cache jika data ini berasal dari internet
       OfflineCacheService.saveSantriData(widget.username, newData);
@@ -1086,36 +1090,45 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     super.build(context);
     final screenSize = MediaQuery.of(context).size;
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Banner Offline
-            if (!_isNetworkAvailable || !OfflineCacheService.isOnline)
-              OfflineBanner(
-                lastUpdated: OfflineCacheService.getLastCacheLabel(widget.username),
-              ),
-              
-            Expanded(
-              child: IndexedStack(
-                index: _currentIndex,
-                children: [
-                  _isLoading && _santriData.isEmpty
-                      ? _buildLoadingState(screenSize)
-                      : _buildMainContent(screenSize),
-                  _buildEnhancedNotificationPage(screenSize),
-                  PaymentPage(
-                    username: widget.username,
-                    studentName: _santriData['nama'] ?? 'Santri',
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(screenSize),
+      child: Scaffold(
+        backgroundColor: Colors.grey[50],
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Banner Offline
+              if (!_isNetworkAvailable || !OfflineCacheService.isOnline)
+                OfflineBanner(
+                  lastUpdated: OfflineCacheService.getLastCacheLabel(
+                    widget.username,
+                  ),
+                ),
+
+              Expanded(
+                child: IndexedStack(
+                  index: _currentIndex,
+                  children: [
+                    _isLoading && _santriData.isEmpty
+                        ? _buildLoadingState(screenSize)
+                        : _buildMainContent(screenSize),
+                    _buildEnhancedNotificationPage(screenSize),
+                    PaymentPage(
+                      username: widget.username,
+                      studentName: _santriData['nama'] ?? 'Santri',
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        bottomNavigationBar: _buildBottomNavigationBar(screenSize),
+      ),
     );
   }
 

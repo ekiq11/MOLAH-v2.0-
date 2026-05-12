@@ -7,6 +7,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   cloud_firestore
   connectivity_plus
   firebase_core
+  local_auth_windows
   mmkv_win32
   permission_handler_windows
   printing

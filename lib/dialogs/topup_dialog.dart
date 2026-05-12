@@ -80,8 +80,8 @@ class TopUpDialog {
                         children: [
                           // Header with icon
                           Container(
-                            width: isSmallScreen ? 60 : 72,
-                            height: isSmallScreen ? 60 : 72,
+                            width: isSmallScreen ? 48 : 56,
+                            height: isSmallScreen ? 48 : 56,
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 begin: Alignment.topLeft,
@@ -91,23 +91,23 @@ class TopUpDialog {
                                   Colors.green[500]!,
                                 ],
                               ),
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.green.withValues(alpha: 0.3),
                                   spreadRadius: 0,
-                                  blurRadius: 15,
-                                  offset: Offset(0, 5),
+                                  blurRadius: 10,
+                                  offset: Offset(0, 4),
                                 ),
                               ],
                             ),
                             child: Icon(
                               Icons.account_balance_wallet,
                               color: Colors.white,
-                              size: isSmallScreen ? 30 : 36,
+                              size: isSmallScreen ? 24 : 28,
                             ),
                           ),
-                          SizedBox(height: isSmallScreen ? 16 : 20),
+                          SizedBox(height: isSmallScreen ? 12 : 16),
                           Text(
                             'Top Up Saldo',
                             style: TextStyle(
@@ -127,32 +127,9 @@ class TopUpDialog {
                             ),
                           ),
                           SizedBox(height: isSmallScreen ? 6 : 8),
-                          // Show NISN for confirmation
+                          // Compact Info (NISN & Balance)
                           Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.blue[50],
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.blue[200]!),
-                            ),
-                            child: Text(
-                              'NISN: $nisn',
-                              style: TextStyle(
-                                fontSize: isSmallScreen ? 11 : 12,
-                                color: Colors.blue[700],
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          SizedBox(height: isSmallScreen ? 16 : 24),
-
-                          // Current Balance
-                          Container(
-                            width: double.infinity,
-                            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 begin: Alignment.topLeft,
@@ -162,29 +139,39 @@ class TopUpDialog {
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(color: Colors.blue[200]!),
                             ),
-                            child: Column(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  'Saldo Saat Ini',
-                                  style: TextStyle(
-                                    fontSize: isSmallScreen ? 11 : 12,
-                                    color: Colors.blue[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'NISN',
+                                      style: TextStyle(fontSize: 10, color: Colors.blue[600], fontWeight: FontWeight.w600),
+                                    ),
+                                    Text(
+                                      nisn,
+                                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.blue[800]),
+                                    ),
+                                  ],
                                 ),
-                                SizedBox(height: 4),
-                                Text(
-                                  currentBalance,
-                                  style: TextStyle(
-                                    fontSize: isSmallScreen ? 16 : 20,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.blue[700],
-                                  ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      'Saldo Saat Ini',
+                                      style: TextStyle(fontSize: 10, color: Colors.blue[600], fontWeight: FontWeight.w600),
+                                    ),
+                                    Text(
+                                      currentBalance,
+                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blue[800]),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
-                          SizedBox(height: isSmallScreen ? 16 : 24),
+                          SizedBox(height: isSmallScreen ? 16 : 20),
 
                           // Quick amount buttons
                           Align(
@@ -204,10 +191,10 @@ class TopUpDialog {
                             physics: NeverScrollableScrollPhysics(),
                             gridDelegate:
                                 SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: isSmallScreen ? 2 : 2,
+                                  crossAxisCount: isSmallScreen ? 3 : 4,
                                   crossAxisSpacing: 8,
                                   mainAxisSpacing: 8,
-                                  childAspectRatio: isSmallScreen ? 2.2 : 2.5,
+                                  childAspectRatio: isSmallScreen ? 2.5 : 2.5,
                                 ),
                             itemCount: quickAmounts.length,
                             itemBuilder: (context, index) {
@@ -254,10 +241,10 @@ class TopUpDialog {
                                     ),
                                     child: Center(
                                       child: Text(
-                                        'Rp.${CurrencyFormatter.format(amount.toString())}',
+                                        CurrencyFormatter.format(amount.toString()),
                                         style: TextStyle(
-                                          fontSize: isSmallScreen ? 14 : 16,
-                                          fontWeight: FontWeight.w600,
+                                          fontSize: isSmallScreen ? 12 : 14,
+                                          fontWeight: FontWeight.w700,
                                           color: isSelected
                                               ? Colors.green[600]
                                               : Colors.grey[700],

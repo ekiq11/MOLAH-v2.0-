@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:pizab_molah/doa/screens/doa_list_page.dart';
 import 'package:pizab_molah/dzikir/screens/main_dzikir.dart';
 import 'package:pizab_molah/quran/screens/quran_main.dart';
@@ -106,18 +107,20 @@ class QuickActions extends StatelessWidget {
           children: [
             Text(
               'Menu Cepat',
-              style: TextStyle(
+              style: GoogleFonts.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1F2937),
+                color: const Color(0xFF1F2937),
+                letterSpacing: -0.3,
               ),
             ),
+            const SizedBox(height: 2),
             Text(
               'Akses layanan dengan mudah',
-              style: TextStyle(
+              style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w400,
-                color: Color(0xFF6B7280),
+                color: const Color(0xFF6B7280),
               ),
             ),
           ],
@@ -152,7 +155,7 @@ class QuickActions extends StatelessWidget {
 
         return Wrap(
           spacing: 0,
-          runSpacing: 20,
+          runSpacing: spacing,
           children: actions.map((action) {
             return SizedBox(
               width: itemWidth,
@@ -351,11 +354,12 @@ class QuickActions extends StatelessWidget {
               child: Text(
                 action.title,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: GoogleFonts.inter(
                   fontSize: titleFontSize,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF374151),
-                  height: 1.3,
+                  color: const Color(0xFF374151),
+                  height: 1.2,
+                  letterSpacing: -0.2,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,

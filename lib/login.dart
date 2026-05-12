@@ -9,6 +9,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui';
+import 'package:local_auth/local_auth.dart';
 
 // ==================== Login Screen ====================
 class LoginScreen extends StatefulWidget {
@@ -24,6 +25,11 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _showPassword = false;
+
+  // Biometric variables
+  final LocalAuthentication _localAuth = LocalAuthentication();
+  bool _canCheckBiometrics = false;
+  String? _lastUsername;
 
   // CSV URLs
   static const String SPREADSHEET_ID =
@@ -56,8 +62,80 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // Check existing login
       await _checkExistingLogin();
+
+      // Check biometrics availability
+      await _checkBiometrics();
     } catch (e) {
       print('❌ Error initializing app: $e');
+    }
+  }
+
+  Future<void> _checkBiometrics() async {
+    try {
+      final canCheck =
+          await _localAuth.canCheckBiometrics ||
+          await _localAuth.isDeviceSupported();
+      final lastUser = await LoginPreferences.getLastSuccessfulUsername();
+      if (mounted) {
+        setState(() {
+          _canCheckBiometrics = canCheck;
+          _lastUsername = lastUser;
+        });
+      }
+    } catch (e) {
+      print('❌ Error checking biometrics: $e');
+    }
+  }
+
+  Future<void> _loginWithBiometrics() async {
+    if (_lastUsername == null) return;
+
+    try {
+      final authenticated = await _localAuth.authenticate(
+        localizedReason:
+            'Gunakan sidik jari untuk login sebagai $_lastUsername',
+        persistAcrossBackgrounding: true,
+        biometricOnly: false,
+      );
+
+      if (authenticated) {
+        if (mounted) {
+          setState(() => _isLoading = true);
+        }
+
+        final userData = await _validateCredentials(
+          _lastUsername!,
+          '',
+          bypassPassword: true,
+        );
+
+        if (userData != null && mounted) {
+          await LoginPreferences.saveLoginData(
+            username: _lastUsername!,
+            userData: userData,
+          );
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => HomeScreen(username: _lastUsername!),
+            ),
+          );
+        } else {
+          if (mounted) {
+            setState(() => _isLoading = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Gagal mengambil data akun')),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      print('❌ Error during biometric auth: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal verifikasi biometrik')),
+        );
+      }
     }
   }
 
@@ -86,8 +164,9 @@ class _LoginScreenState extends State<LoginScreen> {
   // Validate credentials method (same as original)
   Future<Map<String, dynamic>?> _validateCredentials(
     String username,
-    String password,
-  ) async {
+    String password, {
+    bool bypassPassword = false,
+  }) async {
     try {
       print(
         '🔍 Memvalidasi kredensial: username="$username", password="$password"',
@@ -238,14 +317,15 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         // Validasi kredensial dengan matching yang lebih fleksibel
-        if (_isMatchingCredentials(username, csvNisn) &&
-            _isMatchingCredentials(password, csvNis)) {
-          print('✅ Kredensial cocok ditemukan untuk: $csvNama');
-          return {
-            'nisn': csvNisn.isNotEmpty ? csvNisn : username,
-            'nama': csvNama.isNotEmpty ? csvNama : 'Santri',
-            'nis': csvNis.isNotEmpty ? csvNis : password,
-          };
+        if (_isMatchingCredentials(username, csvNisn)) {
+          if (bypassPassword || _isMatchingCredentials(password, csvNis)) {
+            print('✅ Kredensial cocok ditemukan untuk: $csvNama');
+            return {
+              'nisn': csvNisn.isNotEmpty ? csvNisn : username,
+              'nama': csvNama.isNotEmpty ? csvNama : 'Santri',
+              'nis': csvNis.isNotEmpty ? csvNis : password,
+            };
+          }
         }
       }
 
@@ -477,196 +557,216 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                         ),
                         child: Form(
-                        key: _formKey,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              'Masuk ke Akun',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF2D3748),
-                              ),
-                            ),
-                            const SizedBox(height: 30),
-                            // NISN Field - Numeric Input Only
-                            TextFormField(
-                              controller: _usernameController,
-                              decoration: InputDecoration(
-                                labelText: 'Username',
-                                hintText: 'Masukkan Username',
-                                prefixIcon: const Icon(
-                                  Icons.badge,
-                                  color: Color(0xFFE53E3E),
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFFE53E3E),
-                                    width: 2,
-                                  ),
+                          key: _formKey,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'Masuk ke Akun',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2D3748),
                                 ),
                               ),
-                              keyboardType:
-                                  TextInputType.number, // Numeric keyboard
-                              inputFormatters: [
-                                FilteringTextInputFormatter
-                                    .digitsOnly, // Only digits
-                                LengthLimitingTextInputFormatter(
-                                  12,
-                                ), // Max 12 digits
-                              ],
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Username tidak boleh kosong';
-                                }
-                                if (value.trim().length < 6) {
-                                  return 'Username minimal 6 digit';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            // NIS Field - Numeric Input Only
-                            TextFormField(
-                              controller: _passwordController,
-                              obscureText: !_showPassword,
-                              decoration: InputDecoration(
-                                labelText: 'Password',
-                                hintText: 'Masukkan Password',
-                                prefixIcon: const Icon(
-                                  Icons.key_outlined,
-                                  color: Color(0xFFE53E3E),
-                                ),
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _showPassword
-                                        ? Icons.visibility_off
-                                        : Icons.visibility,
+                              const SizedBox(height: 30),
+                              // NISN Field - Numeric Input Only
+                              TextFormField(
+                                controller: _usernameController,
+                                decoration: InputDecoration(
+                                  labelText: 'Username',
+                                  hintText: 'Masukkan Username',
+                                  prefixIcon: const Icon(
+                                    Icons.badge,
                                     color: Color(0xFFE53E3E),
                                   ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _showPassword = !_showPassword;
-                                    });
-                                  },
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFFE53E3E),
-                                    width: 2,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                ),
-                              ),
-                              keyboardType:
-                                  TextInputType.number, // Numeric keyboard
-                              inputFormatters: [
-                                FilteringTextInputFormatter
-                                    .digitsOnly, // Only digits
-                                LengthLimitingTextInputFormatter(
-                                  10,
-                                ), // Max 10 digits
-                              ],
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Password tidak boleh kosong';
-                                }
-                                if (value.trim().length < 4) {
-                                  return 'Password minimal 4 digit';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 24),
-                            Container(
-                              width: double.infinity,
-                              height: 55,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFFE53E3E), Color(0xFFD53F8C)],
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFFE53E3E).withValues(alpha: 0.4),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 6),
-                                  ),
-                                ],
-                              ),
-                              child: ElevatedButton(
-                                onPressed: _isLoading ? null : _login,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.transparent,
-                                  foregroundColor: Colors.white,
-                                  shadowColor: Colors.transparent,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                                child: _isLoading
-                                    ? const Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          SizedBox(
-                                            width: 20,
-                                            height: 20,
-                                            child: CircularProgressIndicator(
-                                              color: Colors.white,
-                                              strokeWidth: 2,
-                                            ),
-                                          ),
-                                          SizedBox(width: 12),
-                                          Text('Memuat...'),
-                                        ],
-                                      )
-                                    : const Text(
-                                        'Masuk',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.info_outline,
-                                    color: Colors.blue,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      'Silahkan tanyakan username dan password jika ada yang salah ke Admin',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.blue[700],
-                                      ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFE53E3E),
+                                      width: 2,
                                     ),
                                   ),
+                                ),
+                                keyboardType:
+                                    TextInputType.number, // Numeric keyboard
+                                inputFormatters: [
+                                  FilteringTextInputFormatter
+                                      .digitsOnly, // Only digits
+                                  LengthLimitingTextInputFormatter(
+                                    12,
+                                  ), // Max 12 digits
                                 ],
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Username tidak boleh kosong';
+                                  }
+                                  if (value.trim().length < 6) {
+                                    return 'Username minimal 6 digit';
+                                  }
+                                  return null;
+                                },
                               ),
-                            ),
+                              const SizedBox(height: 16),
+                              // NIS Field - Numeric Input Only
+                              TextFormField(
+                                controller: _passwordController,
+                                obscureText: !_showPassword,
+                                decoration: InputDecoration(
+                                  labelText: 'Password',
+                                  hintText: 'Masukkan Password',
+                                  prefixIcon: const Icon(
+                                    Icons.key_outlined,
+                                    color: Color(0xFFE53E3E),
+                                  ),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _showPassword
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                      color: Color(0xFFE53E3E),
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _showPassword = !_showPassword;
+                                      });
+                                    },
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFE53E3E),
+                                      width: 2,
+                                    ),
+                                  ),
+                                ),
+                                keyboardType:
+                                    TextInputType.number, // Numeric keyboard
+                                inputFormatters: [
+                                  FilteringTextInputFormatter
+                                      .digitsOnly, // Only digits
+                                  LengthLimitingTextInputFormatter(
+                                    10,
+                                  ), // Max 10 digits
+                                ],
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Password tidak boleh kosong';
+                                  }
+                                  if (value.trim().length < 4) {
+                                    return 'Password minimal 4 digit';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 24),
+                              Container(
+                                width: double.infinity,
+                                height: 55,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(16),
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color(0xFFE53E3E),
+                                      Color(0xFFD53F8C),
+                                    ],
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(
+                                        0xFFE53E3E,
+                                      ).withValues(alpha: 0.4),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 6),
+                                    ),
+                                  ],
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: _isLoading ? null : _login,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    foregroundColor: Colors.white,
+                                    shadowColor: Colors.transparent,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  child: _isLoading
+                                      ? const Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                color: Colors.white,
+                                                strokeWidth: 2,
+                                              ),
+                                            ),
+                                            SizedBox(width: 12),
+                                            Text('Memuat...'),
+                                          ],
+                                        )
+                                      : const Text(
+                                          'Masuk',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                ),
+                              ),
+
+                              // Fingerprint Login Button
+                              if (_canCheckBiometrics &&
+                                  _lastUsername != null) ...[
+                                const SizedBox(height: 16),
+                                IconButton(
+                                  onPressed: _isLoading
+                                      ? null
+                                      : _loginWithBiometrics,
+                                  icon: const Icon(Icons.fingerprint),
+                                  iconSize: 48,
+                                  color: const Color(0xFFE53E3E),
+                                  tooltip: 'Login dengan Sidik Jari',
+                                ),
+                              ],
+                              const SizedBox(height: 20),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.info_outline,
+                                      color: Colors.blue,
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Silahkan tanyakan username dan password jika ada yang salah ke Admin',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.blue[700],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -686,4 +786,8 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+}
+
+class AuthenticationOptions {
+  const AuthenticationOptions();
 }

@@ -82,6 +82,18 @@ class LoginPreferences {
     }
   }
 
+  // ✅ Get last successful username for biometric login
+  static Future<String?> getLastSuccessfulUsername() async {
+    try {
+      final mmkv = _getMMKV();
+      if (mmkv == null) return null;
+      final username = mmkv.decodeString('last_successful_username');
+      return username?.isNotEmpty == true ? username : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   // ✅ Robust saveLoginData dengan verifikasi
   static Future<bool> saveLoginData({
     required String username,
@@ -97,6 +109,7 @@ class LoginPreferences {
       // Simpan dengan key yang konsisten
       mmkv.encodeBool('user_logged_in', true);
       mmkv.encodeString('user_username', username);
+      mmkv.encodeString('last_successful_username', username); // Save for biometric
       mmkv.encodeString('user_data_json', json.encode(userData));
       mmkv.encodeInt('user_login_time', DateTime.now().millisecondsSinceEpoch);
 
@@ -140,6 +153,7 @@ class LoginPreferences {
         'notifications_$username',
         'last_update_$username',
         'notifications_enhanced_$username',
+        // DO NOT remove 'last_successful_username' here so biometric still works
       ];
 
       for (final key in keysToRemove) {

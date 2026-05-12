@@ -1,5 +1,7 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:pizab_molah/widgets/profile.dart';
 
 class CombinedHeader extends StatelessWidget {
@@ -146,7 +148,7 @@ class CombinedHeader extends StatelessWidget {
                                   SizedBox(width: 4),
                                   Text(
                                     'Selamat Datang',
-                                    style: TextStyle(
+                                    style: GoogleFonts.inter(
                                       fontSize: isSmallScreen ? 11 : 12,
                                       color: Colors.white,
                                       fontWeight: FontWeight.w600,
@@ -161,7 +163,7 @@ class CombinedHeader extends StatelessWidget {
                         SizedBox(height: 8),
                         Text(
                           santriData['nisn'] ?? 'Memuat data...',
-                          style: TextStyle(
+                          style: GoogleFonts.inter(
                             fontSize: isSmallScreen ? 20 : 24,
                             fontWeight: FontWeight.w900,
                             color: Colors.white,
@@ -170,7 +172,7 @@ class CombinedHeader extends StatelessWidget {
                             shadows: [
                               Shadow(
                                 color: Colors.black.withValues(alpha: 0.3),
-                                offset: Offset(0, 2),
+                                offset: const Offset(0, 2),
                                 blurRadius: 4,
                               ),
                             ],
@@ -178,10 +180,10 @@ class CombinedHeader extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        SizedBox(height: 4),
+                        const SizedBox(height: 4),
                         Text(
                           santriData['nama'] ?? 'Memuat data...',
-                          style: TextStyle(
+                          style: GoogleFonts.inter(
                             fontSize: isSmallScreen ? 13 : 15,
                             color: Colors.white.withValues(alpha: 0.95),
                             fontWeight: FontWeight.w500,
@@ -231,7 +233,9 @@ class CombinedHeader extends StatelessWidget {
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.amber.withValues(alpha: 0.5),
+                                        color: Colors.amber.withValues(
+                                          alpha: 0.5,
+                                        ),
                                         blurRadius: 8,
                                         spreadRadius: 1,
                                       ),
@@ -246,7 +250,7 @@ class CombinedHeader extends StatelessWidget {
                                       notificationCount > 9
                                           ? '9+'
                                           : notificationCount.toString(),
-                                      style: TextStyle(
+                                      style: GoogleFonts.inter(
                                         color: Color(0xFFDC2626),
                                         fontSize: 9,
                                         fontWeight: FontWeight.w900,
@@ -264,173 +268,146 @@ class CombinedHeader extends StatelessWidget {
 
               SizedBox(height: isSmallScreen ? 24 : 28),
 
-              // Balance Card - Premium Design
-              Container(
-                padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Colors.white.withValues(alpha: 0.2),
-                      Colors.white.withValues(alpha: 0.1),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.3),
-                    width: 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
+              // Balance Card - Premium FinTech Design
+              ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                  child: Container(
+                    padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white.withValues(alpha: 0.3),
+                          Colors.white.withValues(alpha: 0.05),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.4),
+                        width: 1,
+                      ),
                     ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    // Label Saldo
-                    Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Icon(
-                            Icons.account_balance_wallet_rounded,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        Text(
-                          'Saldo Santri',
-                          style: TextStyle(
-                            fontSize: isSmallScreen ? 13 : 14,
-                            color: Colors.white.withValues(alpha: 0.9),
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        Spacer(),
-                        GestureDetector(
-                          onTap: onToggleSaldoVisibility,
-                          child: Container(
-                            padding: EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(
-                              isSaldoVisible
-                                  ? Icons.visibility_off_rounded
-                                  : Icons.visibility_rounded,
-                              color: Colors.white.withValues(alpha: 0.9),
-                              size: 18,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    SizedBox(height: 16),
-
-                    // Saldo Amount
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            isSaldoVisible ? saldo : 'Rp ••••••••',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: isSmallScreen ? 22 : 22,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -1,
-                              height: 1.1,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black.withValues(alpha: 0.2),
-                                  offset: Offset(0, 2),
-                                  blurRadius: 4,
-                                ),
-                              ],
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ),
-
-                        SizedBox(width: 16),
-
-                        // Top Up Button - Eye Catching
-                        GestureDetector(
-                          onTap: onTopUpTap,
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: isSmallScreen ? 18 : 22,
-                              vertical: isSmallScreen ? 12 : 14,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Colors.white,
-                                  Colors.white.withValues(alpha: 0.95),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.white.withValues(alpha: 0.3),
-                                  blurRadius: 12,
-                                  spreadRadius: 1,
-                                ),
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.2),
-                                  blurRadius: 8,
-                                  offset: Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                        // Label Saldo & Visibility
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
                               children: [
                                 Container(
-                                  padding: EdgeInsets.all(4),
+                                  padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: Color(0xFFDC2626),
-                                    shape: BoxShape.circle,
+                                    color: Colors.white.withValues(alpha: 0.25),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: Icon(
-                                    Icons.add_rounded,
+                                  child: const Icon(
+                                    Icons.account_balance_wallet_rounded,
                                     color: Colors.white,
-                                    size: isSmallScreen ? 16 : 18,
+                                    size: 18,
                                   ),
                                 ),
-                                SizedBox(width: 8),
+                                const SizedBox(width: 12),
                                 Text(
-                                  'Top Up',
-                                  style: TextStyle(
-                                    color: Color(0xFFDC2626),
-                                    fontSize: isSmallScreen ? 13 : 15,
-                                    fontWeight: FontWeight.w800,
+                                  'Total Saldo',
+                                  style: GoogleFonts.inter(
+                                    fontSize: isSmallScreen ? 13 : 14,
+                                    color: Colors.white.withValues(alpha: 0.95),
+                                    fontWeight: FontWeight.w500,
                                     letterSpacing: 0.3,
                                   ),
                                 ),
                               ],
                             ),
+                            GestureDetector(
+                              onTap: onToggleSaldoVisibility,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: const BoxDecoration(
+                                  color: Colors.transparent,
+                                ),
+                                child: Icon(
+                                  isSaldoVisible
+                                      ? Icons.visibility_outlined
+                                      : Icons.visibility_off_outlined,
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Saldo Amount
+                        Text(
+                          isSaldoVisible ? saldo : 'Rp ••••••••',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: isSmallScreen ? 28 : 34,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -1.0,
+                            height: 1.0,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withValues(alpha: 0.15),
+                                offset: const Offset(0, 2),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                        const SizedBox(height: 20),
+                        // Top Up Button (Full Width)
+                        GestureDetector(
+                          onTap: onTopUpTap,
+                          child: Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.symmetric(
+                              vertical: isSmallScreen ? 12 : 14,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.add_circle_rounded,
+                                  color: Color(0xFFDC2626),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Isi Saldo',
+                                  style: GoogleFonts.inter(
+                                    color: const Color(0xFFDC2626),
+                                    fontSize: isSmallScreen ? 14 : 15,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ],

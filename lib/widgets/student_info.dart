@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class StudentInfo extends StatelessWidget {
   final Map<String, dynamic> santriData;
@@ -70,20 +71,20 @@ class StudentInfo extends StatelessWidget {
                   children: [
                     Text(
                       'Informasi Akademik',
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? 17 : (isLargeScreen ? 21 : 19),
-                        fontWeight: FontWeight.w800,
-                        color: Colors.grey[800],
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1F2937),
                         letterSpacing: -0.3,
                       ),
                     ),
-                    SizedBox(height: 2),
+                    const SizedBox(height: 2),
                     Text(
                       'Data pendidikan santri',
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? 12 : 13,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey[600],
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w400,
+                        color: const Color(0xFF6B7280),
                       ),
                     ),
                   ],
@@ -191,7 +192,8 @@ class StudentInfo extends StatelessWidget {
     // Responsive sizing berdasarkan lebar item
     final double paddingValue = itemWidth < 160 ? 12 : (itemWidth < 200 ? 14 : 16);
     final double iconSize = itemWidth < 160 ? 20 : (itemWidth < 200 ? 22 : 24);
-    final double titleFontSize = itemWidth < 160 ? 10 : (itemWidth < 200 ? 10.5 : 11);
+    final double titleFontSize = itemWidth < 160 ? 11 : 12;
+    final double valueFontSize = itemWidth < 160 ? 14 : 15;
 
     return Container(
       decoration: BoxDecoration(
@@ -265,7 +267,7 @@ class StudentInfo extends StatelessWidget {
                 // Title
                 Text(
                   cardData.title,
-                  style: TextStyle(
+                  style: GoogleFonts.inter(
                     fontSize: titleFontSize,
                     fontWeight: FontWeight.w700,
                     color: Colors.grey[500],
@@ -280,12 +282,12 @@ class StudentInfo extends StatelessWidget {
                 // Value - Menggunakan fontSize yang fleksibel
                 Text(
                   cardData.value,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                  style: GoogleFonts.inter(
+                    fontSize: valueFontSize,
+                    fontWeight: FontWeight.w800,
                     color: Colors.grey[800],
-                    height: 1.3,
-                    letterSpacing: -0.2,
+                    height: 1.2,
+                    letterSpacing: -0.3,
                   ),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,

@@ -236,6 +236,7 @@ class _RewardPelanggaranPageState extends State<RewardPelanggaranPage>
         _error = '';
       });
       final cacheLoaded = await _loadFromCache();
+      if (!mounted) return;
       if (cacheLoaded) {
         setState(() {
           _loading = false;
@@ -248,6 +249,7 @@ class _RewardPelanggaranPageState extends State<RewardPelanggaranPage>
         await _fetchFromServer();
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _loading = false;
         _error = 'Terjadi kesalahan: $e';
@@ -391,6 +393,7 @@ class _RewardPelanggaranPageState extends State<RewardPelanggaranPage>
         });
       }
       final res = await http.get(Uri.parse(csvUrl));
+      if (!mounted) return;
       if (res.statusCode == 200) {
         final data = const CsvToListConverter().convert(res.body);
         if (data.isNotEmpty) {
@@ -417,6 +420,7 @@ class _RewardPelanggaranPageState extends State<RewardPelanggaranPage>
             final kelas = filtered.first.kelasAsrama;
             await _saveToCache(filtered, nama, kelas);
             _processData(filtered);
+            if (!mounted) return;
             setState(() {
               _currentNamaSantri = nama;
               _currentKelasAsrama = kelas;
@@ -438,6 +442,7 @@ class _RewardPelanggaranPageState extends State<RewardPelanggaranPage>
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _loading = false;
         _error = 'Terjadi kesalahan: $e';
