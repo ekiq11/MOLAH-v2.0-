@@ -7,8 +7,7 @@ import 'package:csv/csv.dart';
 import 'package:mmkv/mmkv.dart';
 import 'dart:convert';
 import 'dart:async';
-import 'dart:isolate';
-import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
+
 
 // Background task callback function - harus di top level
 @pragma('vm:entry-point')
@@ -604,7 +603,6 @@ class GoogleSheetsMonitorService {
     try {
       await Workmanager().initialize(
         callbackDispatcher,
-        isInDebugMode: kDebugMode,
       );
       debugPrint('Background tasks initialized');
     } catch (e) {
@@ -652,45 +650,81 @@ class GoogleSheetsMonitorService {
   static Future<void> _initializeLocalNotifications() async {
     if (_localNotificationPlugin != null) return;
     _localNotificationPlugin = FlutterLocalNotificationsPlugin();
-    // Create notification channels
-    const AndroidNotificationChannel foregroundChannel =
-        AndroidNotificationChannel(
-          'channel_sheets_monitor',
-          'Google Sheets Monitor',
-          description: 'Notifikasi untuk perubahan data dan pengingat SPP',
-          importance: Importance.high,
-          playSound: true,
-          enableVibration: true,
-          enableLights: true,
-        );
-    const AndroidNotificationChannel backgroundChannel =
-        AndroidNotificationChannel(
-          'channel_sheets_monitor_bg',
-          'Background Monitor',
-          description: 'Background monitoring untuk perubahan data',
-          importance: Importance.high,
-          playSound: true,
-          enableVibration: true,
-          enableLights: true,
-        );
+
     final androidPlugin = _localNotificationPlugin
         ?.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >();
-    await androidPlugin?.createNotificationChannel(foregroundChannel);
-    await androidPlugin?.createNotificationChannel(backgroundChannel);
+
+    // Channel utama — untuk perubahan data (seperti WhatsApp message channel)
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'channel_sheets_monitor',
+        'Notifikasi MOLAH',
+        description: 'Notifikasi perubahan data santri, keuangan, dan akademik',
+        importance: Importance.high,
+        playSound: true,
+        enableVibration: true,
+        enableLights: true,
+        ledColor: Color(0xFFDC2626), // Merah MOLAH
+        showBadge: true,
+      ),
+    );
+
+    // Channel background — WorkManager periodic check
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'channel_sheets_monitor_bg',
+        'Monitor Latar Belakang',
+        description: 'Pemantauan data di latar belakang',
+        importance: Importance.high,
+        playSound: true,
+        enableVibration: true,
+        enableLights: true,
+        ledColor: Color(0xFFDC2626),
+        showBadge: true,
+      ),
+    );
+
+    // Channel SPP — khusus pengingat pembayaran
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'channel_spp_reminder',
+        'Pengingat SPP',
+        description: 'Pengingat pembayaran SPP bulanan',
+        importance: Importance.high,
+        playSound: true,
+        enableVibration: true,
+        enableLights: true,
+        ledColor: Color(0xFFF59E0B), // Kuning untuk pengingat keuangan
+        showBadge: true,
+      ),
+    );
+
     const AndroidInitializationSettings android = AndroidInitializationSettings(
       '@mipmap/ic_launcher',
     );
-    const DarwinInitializationSettings ios = DarwinInitializationSettings();
+    const DarwinInitializationSettings ios = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
     await _localNotificationPlugin!.initialize(
       const InitializationSettings(android: android, iOS: ios),
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        debugPrint('Notification clicked: ${response.payload}');
-        // Handle notification tap - you can add navigation logic here
+        debugPrint('Notification tapped: ${response.payload}');
       },
+      onDidReceiveBackgroundNotificationResponse: _onBackgroundNotificationTap,
     );
+    debugPrint('✅ LocalNotifications initialized with 3 channels');
   }
+
+  // Background notification tap handler — must be top-level or static
+  @pragma('vm:entry-point')
+  static void _onBackgroundNotificationTap(NotificationResponse response) {
+    debugPrint('Background notification tapped: ${response.payload}');
+  }
+
 
   // Check if in SPP reminder period
   static bool _isInSPPReminderPeriod() {
@@ -749,46 +783,83 @@ class GoogleSheetsMonitorService {
     debugPrint('SPP reminder notification added for $username');
   }
 
-  // Display local notification
+  // Display local notification — WhatsApp-style BigText expandable
   static Future<void> _showLocalNotification({
     required String title,
     required String body,
     String? payload,
+    String channelId = 'channel_sheets_monitor',
+    String channelName = 'Notifikasi MOLAH',
+    String? subText,
   }) async {
     try {
       await _initializeLocalNotifications();
-      const AndroidNotificationDetails androidPlatformChannelSpecifics =
-          AndroidNotificationDetails(
-            'channel_sheets_monitor',
-            'Google Sheets Monitor',
-            channelDescription:
-                'Notifikasi untuk perubahan data dan pengingat SPP',
-            importance: Importance.high,
-            priority: Priority.high,
-            ticker: 'ticker',
-            visibility: NotificationVisibility.public,
-            playSound: true,
-            enableVibration: true,
-            enableLights: true,
-            icon: '@mipmap/ic_launcher',
-          );
-      const NotificationDetails platformChannelSpecifics = NotificationDetails(
-        android: androidPlatformChannelSpecifics,
+
+      final androidDetails = AndroidNotificationDetails(
+        channelId,
+        channelName,
+        channelDescription: 'Notifikasi perubahan data santri dan pengingat SPP',
+        importance: Importance.high,
+        priority: Priority.high,
+        ticker: title,
+        visibility: NotificationVisibility.public,
+        playSound: true,
+        enableVibration: true,
+        enableLights: true,
+        ledColor: const Color(0xFFDC2626),
+        ledOnMs: 1000,
+        ledOffMs: 500,
+        icon: '@mipmap/ic_launcher',
+        // WhatsApp-style: BigTextStyle — body tampil penuh saat diexpand
+        styleInformation: BigTextStyleInformation(
+          body,
+          htmlFormatBigText: false,
+          contentTitle: title,
+          htmlFormatContentTitle: false,
+          summaryText: subText ?? 'MOLAH — Monitoring Santri',
+          htmlFormatSummaryText: false,
+        ),
+        // Grouping seperti WhatsApp — notifikasi dikumpulkan per kategori
+        groupKey: 'com.pizab.molah.notifications',
+        setAsGroupSummary: false,
+        autoCancel: true,
+        ongoing: false,
+        color: const Color(0xFFDC2626),
       );
-      final notificationId = DateTime.now().millisecondsSinceEpoch.remainder(
-        2147483647,
-      );
+
+      final notificationDetails = NotificationDetails(android: androidDetails);
+      final notificationId =
+          DateTime.now().millisecondsSinceEpoch.remainder(2147483647);
+
       await _localNotificationPlugin?.show(
         notificationId,
         title,
         body,
-        platformChannelSpecifics,
+        notificationDetails,
         payload: payload,
       );
+      debugPrint('✅ Notification shown: $title');
     } catch (e) {
-      debugPrint('Failed to show local notification: $e');
+      debugPrint('❌ Failed to show notification: $e');
     }
   }
+
+  // Notifikasi khusus SPP — menggunakan channel & warna berbeda
+  static Future<void> _showSPPNotification({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    await _showLocalNotification(
+      title: title,
+      body: body,
+      payload: payload,
+      channelId: 'channel_spp_reminder',
+      channelName: 'Pengingat SPP',
+      subText: 'Pengingat Keuangan Pesantren',
+    );
+  }
+
 
   // Sheet configurations
   static const List<Map<String, String>> _sheetConfigs = [
@@ -1140,7 +1211,7 @@ class GoogleSheetsMonitorService {
                 : '0',
             'waktu': waktuIndex >= 0 && row.length > waktuIndex
                 ? (row[waktuIndex]?.toString() ?? '')
-                : (row.length > 0 ? row[0]?.toString() ?? '' : ''),
+                : (row.isNotEmpty ? row[0]?.toString() ?? '' : ''),
           });
         }
       }
@@ -1529,7 +1600,7 @@ class GoogleSheetsMonitorService {
       final currentNotifications = List<NotificationItem>.from(
         _userNotifications[username]!.value,
       );
-      // Check for duplicates
+      // Check for duplicates (dalam 1 menit)
       final now = DateTime.now();
       final isDuplicate = currentNotifications.any((existing) {
         final timeDiff = now.difference(existing.timestamp).inMinutes;
@@ -1545,12 +1616,36 @@ class GoogleSheetsMonitorService {
         _userNotifications[username]!.value = currentNotifications;
         await _saveUserNotifications(username);
         debugPrint('Added notification for $username: ${notification.title}');
-        // Send local notification
-        await _showLocalNotification(
-          title: notification.title,
-          body: notification.message,
-          payload: notification.id,
-        );
+
+        // Route ke channel yang tepat berdasarkan tipe notifikasi
+        final isSPP = notification.sheetName == _sppSheetName ||
+            (notification.changes['category'] == 'spp_payment');
+        final isTransaction =
+            notification.changes['type'] == 'transaction';
+
+        if (isSPP) {
+          // SPP → channel khusus pengingat (warna kuning)
+          await _showSPPNotification(
+            title: notification.title,
+            body: notification.message,
+            payload: notification.id,
+          );
+        } else if (isTransaction) {
+          // Transaksi → channel utama dengan subtext khusus
+          await _showLocalNotification(
+            title: notification.title,
+            body: notification.message,
+            payload: notification.id,
+            subText: 'Update Keuangan Santri',
+          );
+        } else {
+          // Perubahan data umum → channel utama
+          await _showLocalNotification(
+            title: notification.title,
+            body: notification.message,
+            payload: notification.id,
+          );
+        }
       } else {
         debugPrint('Duplicate notification skipped for $username');
       }
@@ -1558,6 +1653,7 @@ class GoogleSheetsMonitorService {
       debugPrint('Error adding notification for user $username: $e');
     }
   }
+
 
   // Load user notifications from MMKV with error handling
   static Future<void> _loadUserNotifications(String username) async {
@@ -1600,8 +1696,9 @@ class GoogleSheetsMonitorService {
   static Future<void> _saveUserNotifications(String username) async {
     if (_mmkv == null ||
         !_userNotifications.containsKey(username) ||
-        username.isEmpty)
+        username.isEmpty) {
       return;
+    }
     try {
       final notificationsKey = 'notifications_enhanced_$username';
       final notifications = _userNotifications[username]!.value;
@@ -1811,466 +1908,527 @@ class EnhancedNotificationDialog {
     await showDialog(
       context: context,
       builder: (context) {
-       return StatefulBuilder(
-  builder: (context, setState) {
-    // ✅ TAMBAHAN: Responsive sizing saja
-    final screenSize = MediaQuery.of(context).size;
-    final dialogWidth = screenSize.width > 600 ? 450.0 : screenSize.width * 0.9;
-    final dialogHeight = screenSize.height > 700 ? 650.0 : screenSize.height * 0.8;
-    
-   return Dialog(
-  shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(24),
-  ),
-  elevation: 0,
-  backgroundColor: Colors.transparent,
-  child: ValueListenableBuilder<List<NotificationItem>>(
-    valueListenable: notificationsNotifier,
-    builder: (context, notifications, _) {
-      final recentNotifications = notifications
-          .where(
-            (n) => n.timestamp.isAfter(
-              DateTime.now().subtract(const Duration(days: 30)),
-            ),
-          )
-          .toList()
-        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-      
-      final displayed = recentNotifications.take(visibleCount).toList();
-      
-      scrollController.addListener(() {
-        if (scrollController.position.pixels ==
-            scrollController.position.maxScrollExtent) {
-          if (visibleCount < 15 &&
-              visibleCount < recentNotifications.length) {
-            setState(() {
-              visibleCount = 15;
-            });
-          }
-        }
-      });
-      
-      return Container(
-        width: dialogWidth,
-        height: dialogHeight,
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.9,
-          maxHeight: MediaQuery.of(context).size.height * 0.85,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFDC2626).withOpacity(0.15),
-              blurRadius: 30,
-              offset: const Offset(0, 10),
-            ),
-            BoxShadow(
-              color: const Color(0xFF991B1B).withOpacity(0.1),
-              blurRadius: 60,
-              offset: const Offset(0, 20),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFFDC2626),
-                    Color(0xFFB91C1C),
-                    Color(0xFF991B1B),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(24),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFDC2626).withOpacity(0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+        return StatefulBuilder(
+          builder: (context, setState) {
+            // ✅ TAMBAHAN: Responsive sizing saja
+            final screenSize = MediaQuery.of(context).size;
+            final dialogWidth = screenSize.width > 600
+                ? 450.0
+                : screenSize.width * 0.9;
+            final dialogHeight = screenSize.height > 700
+                ? 650.0
+                : screenSize.height * 0.8;
+
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              child: ValueListenableBuilder<List<NotificationItem>>(
+                valueListenable: notificationsNotifier,
+                builder: (context, notifications, _) {
+                  final recentNotifications =
+                      notifications
+                          .where(
+                            (n) => n.timestamp.isAfter(
+                              DateTime.now().subtract(const Duration(days: 30)),
+                            ),
+                          )
+                          .toList()
+                        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+                  final displayed = recentNotifications
+                      .take(visibleCount)
+                      .toList();
+
+                  scrollController.addListener(() {
+                    if (scrollController.position.pixels ==
+                        scrollController.position.maxScrollExtent) {
+                      if (visibleCount < 15 &&
+                          visibleCount < recentNotifications.length) {
+                        setState(() {
+                          visibleCount = 15;
+                        });
+                      }
+                    }
+                  });
+
+                  return Container(
+                    width: dialogWidth,
+                    height: dialogHeight,
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width * 0.9,
+                      maxHeight: MediaQuery.of(context).size.height * 0.85,
+                    ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.3),
-                        width: 2,
-                      ),
-                    ),
-                    child: Stack(
-                      children: [
-                        const Icon(
-                          Icons.notifications_active_rounded,
-                          color: Colors.white,
-                          size: 24,
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFDC2626).withValues(alpha: 0.15),
+                          blurRadius: 30,
+                          offset: const Offset(0, 10),
                         ),
-                        if (notifications.isNotEmpty)
-                          Positioned(
-                            right: -2,
-                            top: -2,
-                            child: Container(
-                              width: 10,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFEF2F2),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-                          ),
+                        BoxShadow(
+                          color: const Color(0xFF991B1B).withValues(alpha: 0.1),
+                          blurRadius: 60,
+                          offset: const Offset(0, 20),
+                        ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Notifikasi',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        if (notifications.isNotEmpty)
-                          Container(
-                            margin: const EdgeInsets.only(top: 4),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.25),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              '${recentNotifications.length} notifikasi',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.white.withOpacity(0.95),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  if (notifications.isNotEmpty)
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: IconButton(
-                        onPressed: () async {
-                          final confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              title: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFEE2E2),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: const Icon(
-                                      Icons.delete_sweep,
-                                      color: Color(0xFFDC2626),
-                                      size: 24,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  const Text('Hapus Semua?'),
-                                ],
-                              ),
-                              content: const Text(
-                                'Apakah Anda yakin ingin menghapus semua notifikasi?',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context, false),
-                                  child: const Text('Batal'),
-                                ),
-                                ElevatedButton(
-                                  onPressed: () => Navigator.pop(context, true),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFDC2626),
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                  ),
-                                  child: const Text('Hapus'),
-                                ),
-                              ],
-                            ),
-                          );
-
-                          if (confirm == true) {
-                            await GoogleSheetsMonitorService
-                                .clearAllNotificationsForUser(username);
-                            onClearAll();
-                          }
-                        },
-                        icon: const Icon(Icons.delete_sweep, color: Colors.white),
-                        tooltip: 'Hapus Semua',
-                      ),
-                    ),
-                ],
-              ),
-            ),
-
-            // Content
-            Expanded(
-              child: displayed.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(32),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  const Color(0xFFFEE2E2),
-                                  const Color(0xFFFEE2E2).withOpacity(0.5),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFFDC2626).withOpacity(0.1),
-                                  blurRadius: 20,
-                                  spreadRadius: 5,
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.notifications_none,
-                              size: 80,
-                              color: Color(0xFFDC2626),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Tidak ada notifikasi',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Notifikasi Anda akan muncul di sini',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[500],
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.separated(
-                      controller: scrollController,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      itemCount: displayed.length,
-                      separatorBuilder: (context, index) => Divider(
-                        height: 1,
-                        thickness: 1,
-                        color: Colors.grey[200],
-                      ),
-                      itemBuilder: (context, index) {
-                        final notification = displayed[index];
-                        return _buildNotificationTile(
-                          context,
-                          notification,
-                          username,
-                          notificationsNotifier,
-                        );
-                      },
-                    ),
-            ),
-
-            // Footer
-            Container(
-              padding: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                border: Border(
-                  top: BorderSide(color: Colors.grey[200]!),
-                ),
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(24),
-                ),
-              ),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  if (constraints.maxWidth < 350) {
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (notifications.isNotEmpty)
-                          Container(
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [
-                                  Color(0xFFFEE2E2),
-                                  Color(0xFFFECDD3),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: ElevatedButton.icon(
-                              onPressed: () async {
-                                await GoogleSheetsMonitorService
-                                    .markAllAsReadForUser(username);
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                foregroundColor: const Color(0xFFB91C1C),
-                                elevation: 0,
-                                shadowColor: Colors.transparent,
-                              ),
-                              icon: const Icon(Icons.done_all, size: 18),
-                              label: const Text('Tandai Semua Dibaca'),
-                            ),
-                          ),
-                        if (notifications.isNotEmpty) const SizedBox(height: 8),
+                        // Header
                         Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 16,
+                          ),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
                               colors: [
                                 Color(0xFFDC2626),
                                 Color(0xFFB91C1C),
+                                Color(0xFF991B1B),
                               ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(24),
+                            ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFFDC2626).withOpacity(0.3),
-                                blurRadius: 8,
+                                color: const Color(0xFFDC2626).withValues(alpha: 0.3),
+                                blurRadius: 12,
                                 offset: const Offset(0, 4),
                               ),
                             ],
                           ),
-                          child: ElevatedButton.icon(
-                            onPressed: () => Navigator.pop(context),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shadowColor: Colors.transparent,
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.3),
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Stack(
+                                  children: [
+                                    const Icon(
+                                      Icons.notifications_active_rounded,
+                                      color: Colors.white,
+                                      size: 24,
+                                    ),
+                                    if (notifications.isNotEmpty)
+                                      Positioned(
+                                        right: -2,
+                                        top: -2,
+                                        child: Container(
+                                          width: 10,
+                                          height: 10,
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFFEF2F2),
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: Colors.white,
+                                              width: 2,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Notifikasi',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    if (notifications.isNotEmpty)
+                                      Container(
+                                        margin: const EdgeInsets.only(top: 4),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(alpha: 0.25),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          '${recentNotifications.length} notifikasi',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.white.withValues(alpha: 
+                                              0.95,
+                                            ),
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              if (notifications.isNotEmpty)
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: IconButton(
+                                    onPressed: () async {
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                          ),
+                                          title: Row(
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.all(
+                                                  8,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(
+                                                    0xFFFEE2E2,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                ),
+                                                child: const Icon(
+                                                  Icons.delete_sweep,
+                                                  color: Color(0xFFDC2626),
+                                                  size: 24,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              const Text('Hapus Semua?'),
+                                            ],
+                                          ),
+                                          content: const Text(
+                                            'Apakah Anda yakin ingin menghapus semua notifikasi?',
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(context, false),
+                                              child: const Text('Batal'),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(context, true),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: const Color(
+                                                  0xFFDC2626,
+                                                ),
+                                                foregroundColor: Colors.white,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                ),
+                                              ),
+                                              child: const Text('Hapus'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+
+                                      if (confirm == true) {
+                                        await GoogleSheetsMonitorService.clearAllNotificationsForUser(
+                                          username,
+                                        );
+                                        onClearAll();
+                                      }
+                                    },
+                                    icon: const Icon(
+                                      Icons.delete_sweep,
+                                      color: Colors.white,
+                                    ),
+                                    tooltip: 'Hapus Semua',
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+
+                        // Content
+                        Expanded(
+                          child: displayed.isEmpty
+                              ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(32),
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              const Color(0xFFFEE2E2),
+                                              const Color(
+                                                0xFFFEE2E2,
+                                              ).withValues(alpha: 0.5),
+                                            ],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          ),
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(
+                                                0xFFDC2626,
+                                              ).withValues(alpha: 0.1),
+                                              blurRadius: 20,
+                                              spreadRadius: 5,
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                          Icons.notifications_none,
+                                          size: 80,
+                                          color: Color(0xFFDC2626),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'Tidak ada notifikasi',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Notifikasi Anda akan muncul di sini',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[500],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : ListView.separated(
+                                  controller: scrollController,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
+                                  itemCount: displayed.length,
+                                  separatorBuilder: (context, index) => Divider(
+                                    height: 1,
+                                    thickness: 1,
+                                    color: Colors.grey[200],
+                                  ),
+                                  itemBuilder: (context, index) {
+                                    final notification = displayed[index];
+                                    return _buildNotificationTile(
+                                      context,
+                                      notification,
+                                      username,
+                                      notificationsNotifier,
+                                    );
+                                  },
+                                ),
+                        ),
+
+                        // Footer
+                        Container(
+                          padding: const EdgeInsets.all(16.0),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            border: Border(
+                              top: BorderSide(color: Colors.grey[200]!),
                             ),
-                            icon: const Icon(Icons.close, size: 18),
-                            label: const Text('Tutup'),
+                            borderRadius: const BorderRadius.vertical(
+                              bottom: Radius.circular(24),
+                            ),
+                          ),
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              if (constraints.maxWidth < 350) {
+                                return Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    if (notifications.isNotEmpty)
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            colors: [
+                                              Color(0xFFFEE2E2),
+                                              Color(0xFFFECDD3),
+                                            ],
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                        child: ElevatedButton.icon(
+                                          onPressed: () async {
+                                            await GoogleSheetsMonitorService.markAllAsReadForUser(
+                                              username,
+                                            );
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent,
+                                            foregroundColor: const Color(
+                                              0xFFB91C1C,
+                                            ),
+                                            elevation: 0,
+                                            shadowColor: Colors.transparent,
+                                          ),
+                                          icon: const Icon(
+                                            Icons.done_all,
+                                            size: 18,
+                                          ),
+                                          label: const Text(
+                                            'Tandai Semua Dibaca',
+                                          ),
+                                        ),
+                                      ),
+                                    if (notifications.isNotEmpty)
+                                      const SizedBox(height: 8),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [
+                                            Color(0xFFDC2626),
+                                            Color(0xFFB91C1C),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(10),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(
+                                              0xFFDC2626,
+                                            ).withValues(alpha: 0.3),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: ElevatedButton.icon(
+                                        onPressed: () => Navigator.pop(context),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.transparent,
+                                          foregroundColor: Colors.white,
+                                          elevation: 0,
+                                          shadowColor: Colors.transparent,
+                                        ),
+                                        icon: const Icon(Icons.close, size: 18),
+                                        label: const Text('Tutup'),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }
+
+                              return Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  if (notifications.isNotEmpty)
+                                    Flexible(
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            colors: [
+                                              Color(0xFFFEE2E2),
+                                              Color(0xFFFECDD3),
+                                            ],
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                        child: ElevatedButton.icon(
+                                          onPressed: () async {
+                                            await GoogleSheetsMonitorService.markAllAsReadForUser(
+                                              username,
+                                            );
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent,
+                                            foregroundColor: const Color(
+                                              0xFFB91C1C,
+                                            ),
+                                            elevation: 0,
+                                            shadowColor: Colors.transparent,
+                                          ),
+                                          icon: const Icon(
+                                            Icons.done_all,
+                                            size: 18,
+                                          ),
+                                          label: const Text('Tandai Dibaca'),
+                                        ),
+                                      ),
+                                    ),
+                                  if (notifications.isEmpty) const Spacer(),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Color(0xFFDC2626),
+                                          Color(0xFFB91C1C),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(10),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(
+                                            0xFFDC2626,
+                                          ).withValues(alpha: 0.3),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ElevatedButton.icon(
+                                      onPressed: () => Navigator.pop(context),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.transparent,
+                                        foregroundColor: Colors.white,
+                                        elevation: 0,
+                                        shadowColor: Colors.transparent,
+                                      ),
+                                      icon: const Icon(Icons.close, size: 18),
+                                      label: const Text('Tutup'),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                         ),
                       ],
-                    );
-                  }
-
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      if (notifications.isNotEmpty)
-                        Flexible(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [
-                                  Color(0xFFFEE2E2),
-                                  Color(0xFFFECDD3),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: ElevatedButton.icon(
-                              onPressed: () async {
-                                await GoogleSheetsMonitorService
-                                    .markAllAsReadForUser(username);
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                foregroundColor: const Color(0xFFB91C1C),
-                                elevation: 0,
-                                shadowColor: Colors.transparent,
-                              ),
-                              icon: const Icon(Icons.done_all, size: 18),
-                              label: const Text('Tandai Dibaca'),
-                            ),
-                          ),
-                        ),
-                      if (notifications.isEmpty) const Spacer(),
-                      const SizedBox(width: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFFDC2626),
-                              Color(0xFFB91C1C),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFDC2626).withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: ElevatedButton.icon(
-                          onPressed: () => Navigator.pop(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shadowColor: Colors.transparent,
-                          ),
-                          icon: const Icon(Icons.close, size: 18),
-                          label: const Text('Tutup'),
-                        ),
-                      ),
-                    ],
+                    ),
                   );
                 },
               ),
-            ),
-          ],
-        ),
-      );
-    },
-  ),
-);
-  },
-);
+            );
+          },
+        );
       },
     );
     scrollController.dispose();

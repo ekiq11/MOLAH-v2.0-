@@ -1,7 +1,8 @@
-// screens/dzikir_detail_page.dart
+// screens/dzikir_detail_page.dart - IMPROVED
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pizab_molah/dzikir/model/model_dzikir.dart';
+import 'package:pizab_molah/dzikir/screens/share_dzikir.dart';
 
 class DzikirDetailPage extends StatefulWidget {
   final List<Dzikir> dzikirs;
@@ -22,18 +23,21 @@ class DzikirDetailPage extends StatefulWidget {
 class _DzikirDetailPageState extends State<DzikirDetailPage> {
   late PageController _pageController;
   late int _currentIndex;
-  Map<int, int> _counters = {};
+  final Map<int, int> _counters = {};
 
   Color get _primaryColor {
-    return widget.type == 'pagi' 
-        ? Color(0xFF059669) // Hijau untuk pagi
-        : Color(0xFF1E293B); // Abu gelap untuk sore
+    return widget.type == 'pagi' ? Color(0xFF059669) : Color(0xFF1E293B);
   }
 
   List<Color> get _gradientColors {
     return widget.type == 'pagi'
-        ? [Color(0xFF10B981), Color(0xFF059669)] // Gradient hijau
-        : [Color(0xFF334155), Color(0xFF1E293B)]; // Gradient abu gelap
+        ? [Color(0xFF10B981), Color(0xFF059669)]
+        : [Color(0xFF334155), Color(0xFF1E293B)];
+  }
+
+  // Dzikir 1-4 adalah dalil/pembukaan, tidak perlu counter
+  bool get _isIntroductionDzikir {
+    return _currentIndex < 4;
   }
 
   @override
@@ -41,7 +45,7 @@ class _DzikirDetailPageState extends State<DzikirDetailPage> {
     super.initState();
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
-    
+
     // Initialize counters
     for (int i = 0; i < widget.dzikirs.length; i++) {
       _counters[i] = 0;
@@ -58,7 +62,7 @@ class _DzikirDetailPageState extends State<DzikirDetailPage> {
     setState(() {
       final dzikir = widget.dzikirs[_currentIndex];
       final maxCount = int.tryParse(dzikir.repeat) ?? 1;
-      
+
       if (_counters[_currentIndex]! < maxCount) {
         _counters[_currentIndex] = _counters[_currentIndex]! + 1;
         HapticFeedback.lightImpact();
@@ -101,7 +105,7 @@ class _DzikirDetailPageState extends State<DzikirDetailPage> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final titleFontSize = _getResponsiveFontSize(screenWidth, base: 14);
-    
+
     return Scaffold(
       backgroundColor: Color(0xFFF8F9FA),
       appBar: AppBar(
@@ -123,10 +127,23 @@ class _DzikirDetailPageState extends State<DzikirDetailPage> {
         ),
         centerTitle: true,
         actions: [
+          // ✅ TOMBOL SHARE
+          IconButton(
+            icon: Icon(Icons.share, color: Colors.white),
+            iconSize: screenWidth < 360 ? 22 : 24,
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              _openSharePage();
+            },
+          ),
+          // ✅ TOMBOL COPY
           IconButton(
             icon: Icon(Icons.copy, color: Colors.white),
             iconSize: screenWidth < 360 ? 22 : 24,
-            onPressed: _shareDzikir,
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              _copyDzikir();
+            },
           ),
         ],
       ),
@@ -143,10 +160,7 @@ class _DzikirDetailPageState extends State<DzikirDetailPage> {
               },
               itemCount: widget.dzikirs.length,
               itemBuilder: (context, index) {
-                return _buildDzikirContent(
-                  widget.dzikirs[index],
-                  screenWidth,
-                );
+                return _buildDzikirContent(widget.dzikirs[index], screenWidth);
               },
             ),
           ),
@@ -186,7 +200,7 @@ class _DzikirDetailPageState extends State<DzikirDetailPage> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withValues(alpha: 0.04),
                   blurRadius: 10,
                   offset: Offset(0, 2),
                 ),
@@ -195,20 +209,23 @@ class _DzikirDetailPageState extends State<DzikirDetailPage> {
             child: Column(
               children: [
                 Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: _primaryColor.withOpacity(0.1),
+                    color: _isIntroductionDzikir
+                        ? Color(0xFF3B82F6).withValues(alpha: 0.1)
+                        : _primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    'DZIKIR ${_currentIndex + 1}',
+                    _isIntroductionDzikir
+                        ? 'DALIL'
+                        : 'DZIKIR ${_currentIndex + 1}',
                     style: TextStyle(
                       fontSize: labelFontSize,
                       fontWeight: FontWeight.w600,
-                      color: _primaryColor,
+                      color: _isIntroductionDzikir
+                          ? Color(0xFF3B82F6)
+                          : _primaryColor,
                       letterSpacing: 1.2,
                     ),
                   ),
@@ -230,181 +247,198 @@ class _DzikirDetailPageState extends State<DzikirDetailPage> {
 
           SizedBox(height: 16),
 
-          // Arabic Text (Lafal)
+          // Arabic Text (Lafal) - IMPROVED JUSTIFICATION
           if (dzikir.lafal.isNotEmpty)
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(
-              vertical: screenWidth < 360 ? 24 : 32,
-              horizontal: cardPadding,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 10,
-                  offset: Offset(0, 2),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(
+                vertical: screenWidth < 360 ? 28 : 32,
+                horizontal: cardPadding + 4,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 10,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Directionality(
+                textDirection: TextDirection.rtl,
+                child: Text(
+                  dzikir.lafal,
+                  textAlign: TextAlign.justify,
+                  textDirection: TextDirection.rtl,
+                  style: TextStyle(
+                    fontFamily: 'Arabic',
+                    fontSize: arabicFontSize,
+                    height: 1.85, // ✅ Line height lebih lega untuk readability
+                    color: Color(0xFF1F2937),
+                    fontWeight: FontWeight.w500,
+                    wordSpacing: 1, // ✅ Word spacing tidak terlalu lebar
+                    letterSpacing: 0,
+                    fontFeatures: [
+                      FontFeature.enable('kern'),
+                      FontFeature.enable('liga'),
+                    ],
+                  ),
+                  softWrap: true,
+                  locale: Locale('ar'),
                 ),
-              ],
-            ),
-            child: Text(
-              dzikir.lafal,
-              textAlign: TextAlign.right,
-              textDirection: TextDirection.rtl,
-              style: TextStyle(
-                fontSize: arabicFontSize,
-                height: screenWidth < 360 ? 2.2 : 2.4,
-                fontWeight: FontWeight.w400,
-                color: Color(0xFF111827),
-                fontFamily: 'Utsmani',
-                letterSpacing: 0,
               ),
             ),
-          ),
 
-          if (dzikir.lafal.isNotEmpty)
-          SizedBox(height: 16),
+          if (dzikir.lafal.isNotEmpty) SizedBox(height: 16),
 
-          // Counter Card
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(cardPadding),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: _gradientColors,
+          // Counter Card - HANYA UNTUK DZIKIR 5+
+          if (!_isIntroductionDzikir)
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(cardPadding),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: _gradientColors,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: _primaryColor.withValues(alpha: 0.3),
+                    blurRadius: 20,
+                    offset: Offset(0, 10),
+                  ),
+                ],
               ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: _primaryColor.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Text(
-                  'Hitungan',
-                  style: TextStyle(
-                    fontSize: bodyFontSize + 2,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white.withOpacity(0.9),
-                  ),
-                ),
-                SizedBox(height: 12),
-                Text(
-                  '$currentCount / $maxCount',
-                  style: TextStyle(
-                    fontSize: screenWidth < 360 ? 44 : 48,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(height: 16),
-                
-                // Progress Bar
-                Container(
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: FractionallySizedBox(
-                    widthFactor: maxCount > 0 ? currentCount / maxCount : 0,
-                    alignment: Alignment.centerLeft,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
+              child: Column(
+                children: [
+                  Text(
+                    'Hitungan',
+                    style: TextStyle(
+                      fontSize: bodyFontSize + 2,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white.withValues(alpha: 0.9),
                     ),
                   ),
-                ),
-                
-                SizedBox(height: 20),
-                
-                // Buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _resetCounter,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white.withOpacity(0.2),
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(
-                            vertical: screenWidth < 360 ? 14 : 16,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.refresh, size: screenWidth < 360 ? 18 : 20),
-                            SizedBox(width: 8),
-                            Text(
-                              'Reset',
-                              style: TextStyle(
-                                fontSize: bodyFontSize + 2,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                  SizedBox(height: 12),
+                  Text(
+                    '$currentCount / $maxCount',
+                    style: TextStyle(
+                      fontSize: screenWidth < 360 ? 44 : 48,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: ElevatedButton(
-                        onPressed: isCompleted ? null : _incrementCounter,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: _primaryColor,
-                          disabledBackgroundColor: Colors.white.withOpacity(0.5),
-                          disabledForegroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(
-                            vertical: screenWidth < 360 ? 14 : 16,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              isCompleted ? Icons.check_circle : Icons.add_circle,
-                              size: screenWidth < 360 ? 18 : 20,
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              isCompleted ? 'Selesai' : 'Hitung',
-                              style: TextStyle(
-                                fontSize: bodyFontSize + 2,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+                  ),
+                  SizedBox(height: 16),
 
-          SizedBox(height: 16),
+                  // Progress Bar
+                  Container(
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: FractionallySizedBox(
+                      widthFactor: maxCount > 0 ? currentCount / maxCount : 0,
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(height: 20),
+
+                  // Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _resetCounter,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white.withValues(alpha: 0.2),
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(
+                              vertical: screenWidth < 360 ? 14 : 16,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.refresh,
+                                size: screenWidth < 360 ? 18 : 20,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Reset',
+                                style: TextStyle(
+                                  fontSize: bodyFontSize + 2,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: isCompleted ? null : _incrementCounter,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: _primaryColor,
+                            disabledBackgroundColor: Colors.white.withValues(alpha: 
+                              0.5,
+                            ),
+                            disabledForegroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(
+                              vertical: screenWidth < 360 ? 14 : 16,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                isCompleted
+                                    ? Icons.check_circle
+                                    : Icons.add_circle,
+                                size: screenWidth < 360 ? 18 : 20,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                isCompleted ? 'Selesai' : 'Hitung',
+                                style: TextStyle(
+                                  fontSize: bodyFontSize + 2,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+          if (!_isIntroductionDzikir) SizedBox(height: 16),
 
           // Content Card
           Container(
@@ -415,7 +449,7 @@ class _DzikirDetailPageState extends State<DzikirDetailPage> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withValues(alpha: 0.04),
                   blurRadius: 10,
                   offset: Offset(0, 2),
                 ),
@@ -447,10 +481,7 @@ class _DzikirDetailPageState extends State<DzikirDetailPage> {
                 SizedBox(height: screenWidth < 360 ? 20 : 24),
 
                 // Divider
-                Container(
-                  height: 1,
-                  color: Color(0xFFF3F4F6),
-                ),
+                Container(height: 1, color: Color(0xFFF3F4F6)),
 
                 SizedBox(height: screenWidth < 360 ? 16 : 20),
 
@@ -514,6 +545,7 @@ class _DzikirDetailPageState extends State<DzikirDetailPage> {
         SizedBox(height: 10),
         Text(
           content,
+          textAlign: TextAlign.justify,
           style: TextStyle(
             fontSize: contentSize,
             height: 1.8,
@@ -535,11 +567,7 @@ class _DzikirDetailPageState extends State<DzikirDetailPage> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          icon,
-          size: fontSize + 3,
-          color: _primaryColor,
-        ),
+        Icon(icon, size: fontSize + 3, color: _primaryColor),
         SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -556,6 +584,7 @@ class _DzikirDetailPageState extends State<DzikirDetailPage> {
               SizedBox(height: 4),
               Text(
                 value,
+                textAlign: TextAlign.justify,
                 style: TextStyle(
                   fontSize: fontSize,
                   color: Color(0xFF374151),
@@ -573,7 +602,7 @@ class _DzikirDetailPageState extends State<DzikirDetailPage> {
   Widget _buildNavigationBar(double screenWidth) {
     final indicatorFontSize = _getResponsiveFontSize(screenWidth, base: 14);
     final horizontalPadding = _getResponsivePadding(screenWidth, base: 16);
-    
+
     return Container(
       padding: EdgeInsets.fromLTRB(
         horizontalPadding,
@@ -585,7 +614,7 @@ class _DzikirDetailPageState extends State<DzikirDetailPage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: Offset(0, -2),
           ),
@@ -618,13 +647,13 @@ class _DzikirDetailPageState extends State<DzikirDetailPage> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      _primaryColor.withOpacity(0.08),
-                      _primaryColor.withOpacity(0.12),
+                      _primaryColor.withValues(alpha: 0.08),
+                      _primaryColor.withValues(alpha: 0.12),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: _primaryColor.withOpacity(0.2),
+                    color: _primaryColor.withValues(alpha: 0.2),
                     width: 1,
                   ),
                 ),
@@ -678,7 +707,7 @@ class _DzikirDetailPageState extends State<DzikirDetailPage> {
         boxShadow: isEnabled
             ? [
                 BoxShadow(
-                  color: _primaryColor.withOpacity(0.3),
+                  color: _primaryColor.withValues(alpha: 0.3),
                   blurRadius: 8,
                   offset: Offset(0, 2),
                 ),
@@ -695,9 +724,24 @@ class _DzikirDetailPageState extends State<DzikirDetailPage> {
     );
   }
 
-  void _shareDzikir() {
+  // ✅ FUNGSI UNTUK MEMBUKA HALAMAN SHARE
+  void _openSharePage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DzikirShareFullScreenPage(
+          dzikir: widget.dzikirs[_currentIndex],
+          type: widget.type,
+        ),
+      ),
+    );
+  }
+
+  // ✅ FUNGSI COPY DZIKIR (RENAME dari _shareDzikir)
+  void _copyDzikir() {
     final dzikir = widget.dzikirs[_currentIndex];
-    final text = '''
+    final text =
+        '''
 ${dzikir.nama}
 
 ${dzikir.lafal}
@@ -710,7 +754,7 @@ ${dzikir.keterangan}
 Riwayat: ${dzikir.riwayat}
 ${dzikir.footnote != null && dzikir.footnote!.isNotEmpty ? '\n\nCatatan: ${dzikir.footnote}' : ''}
 ''';
-    
+
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -718,16 +762,12 @@ ${dzikir.footnote != null && dzikir.footnote!.isNotEmpty ? '\n\nCatatan: ${dziki
           children: [
             Icon(Icons.check_circle, color: Colors.white, size: 20),
             SizedBox(width: 12),
-            Expanded(
-              child: Text('Dzikir berhasil disalin ke clipboard'),
-            ),
+            Expanded(child: Text('Dzikir berhasil disalin ke clipboard')),
           ],
         ),
         backgroundColor: _primaryColor,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         margin: EdgeInsets.all(16),
         duration: Duration(seconds: 2),
       ),

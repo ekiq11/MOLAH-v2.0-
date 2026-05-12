@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
-import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:csv/csv.dart';
 import 'package:path_provider/path_provider.dart';
@@ -399,7 +398,7 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -430,7 +429,7 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 20,
             spreadRadius: 0,
             offset: const Offset(0, 4),
@@ -466,13 +465,13 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  const Color(0xFF4F46E5).withOpacity(0.1),
-                  const Color(0xFF7C3AED).withOpacity(0.05),
+                  const Color(0xFF4F46E5).withValues(alpha: 0.1),
+                  const Color(0xFF7C3AED).withValues(alpha: 0.05),
                 ],
               ),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: const Color(0xFF4F46E5).withOpacity(0.2),
+                color: const Color(0xFF4F46E5).withValues(alpha: 0.2),
               ),
             ),
             child: Row(
@@ -521,36 +520,36 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                const Color(0xFF10B981).withOpacity(0.15),
-                                const Color(0xFF059669).withOpacity(0.2),
+                                const Color(0xFF10B981).withValues(alpha: 0.15),
+                                const Color(0xFF059669).withValues(alpha: 0.2),
                               ],
                             )
                           : LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                const Color(0xFFEF4444).withOpacity(0.08),
-                                const Color(0xFFDC2626).withOpacity(0.12),
+                                const Color(0xFFEF4444).withValues(alpha: 0.08),
+                                const Color(0xFFDC2626).withValues(alpha: 0.12),
                               ],
                             ),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isPaid
-                            ? const Color(0xFF10B981).withOpacity(0.3)
-                            : const Color(0xFFEF4444).withOpacity(0.2),
+                            ? const Color(0xFF10B981).withValues(alpha: 0.3)
+                            : const Color(0xFFEF4444).withValues(alpha: 0.2),
                         width: isPaid ? 2 : 1.5,
                       ),
                       boxShadow: isPaid
                           ? [
                               BoxShadow(
-                                color: const Color(0xFF10B981).withOpacity(0.2),
+                                color: const Color(0xFF10B981).withValues(alpha: 0.2),
                                 blurRadius: 8,
                                 offset: const Offset(0, 3),
                               ),
                             ]
                           : [
                               BoxShadow(
-                                color: const Color(0xFFEF4444).withOpacity(0.1),
+                                color: const Color(0xFFEF4444).withValues(alpha: 0.1),
                                 blurRadius: 4,
                                 offset: const Offset(0, 2),
                               ),
@@ -596,7 +595,7 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
                                           (isPaid
                                                   ? const Color(0xFF10B981)
                                                   : const Color(0xFFEF4444))
-                                              .withOpacity(0.4),
+                                              .withValues(alpha: 0.4),
                                       blurRadius: 6,
                                       offset: const Offset(0, 3),
                                     ),
@@ -635,7 +634,7 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
                                       (isPaid
                                               ? const Color(0xFF10B981)
                                               : const Color(0xFFEF4444))
-                                          .withOpacity(0.15),
+                                          .withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
@@ -799,7 +798,7 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 20,
             spreadRadius: 0,
             offset: const Offset(0, 4),
@@ -839,7 +838,7 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 20,
             spreadRadius: 0,
             offset: const Offset(0, 4),
@@ -879,7 +878,7 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 20,
             spreadRadius: 0,
             offset: const Offset(0, 4),
@@ -963,7 +962,7 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 20,
               spreadRadius: 5,
             ),
@@ -976,7 +975,7 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: const Color(0xFFEF4444).withOpacity(0.1),
+                color: const Color(0xFFEF4444).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(32),
               ),
               child: const Icon(
@@ -1034,7 +1033,7 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 20,
               spreadRadius: 5,
             ),
@@ -1047,7 +1046,7 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: const Color(0xFFF59E0B).withOpacity(0.1),
+                color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(32),
               ),
               child: const Icon(
@@ -1115,13 +1114,13 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFDC2626).withOpacity(0.4),
+            color: const Color(0xFFDC2626).withValues(alpha: 0.4),
             blurRadius: 25,
             spreadRadius: 0,
             offset: const Offset(0, 12),
           ),
           BoxShadow(
-            color: const Color(0xFFEF4444).withOpacity(0.2),
+            color: const Color(0xFFEF4444).withValues(alpha: 0.2),
             blurRadius: 15,
             spreadRadius: 2,
             offset: const Offset(0, 6),
@@ -1138,13 +1137,13 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Colors.white.withOpacity(0.25),
-                  Colors.white.withOpacity(0.15),
+                  Colors.white.withValues(alpha: 0.25),
+                  Colors.white.withValues(alpha: 0.15),
                 ],
               ),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Colors.white.withOpacity(0.3),
+                color: Colors.white.withValues(alpha: 0.3),
                 width: 1,
               ),
             ),
@@ -1161,7 +1160,7 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
               children: [
                 const SizedBox(height: 2),
                 Text(
-                  '${santriData!.nama}',
+                  santriData!.nama,
                   style: TextStyle(
                     fontSize: isSmallScreen ? 14 : 16,
                     fontWeight: FontWeight.w700,
@@ -1173,10 +1172,10 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'NISN :' + santriData!.nisn,
+                  'NISN :${santriData!.nisn}',
                   style: TextStyle(
                     fontSize: isSmallScreen ? 14 : 16,
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -1187,14 +1186,14 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         santriData!.status,
                         style: TextStyle(
                           fontSize: isSmallScreen ? 12 : 13,
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                           fontWeight: FontWeight.w500,
                         ),
                         maxLines: 1,
@@ -1211,19 +1210,19 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
                         gradient: LinearGradient(
                           colors: santriData!.lunasBulanKe >= 12
                               ? [
-                                  const Color(0xFF10B981).withOpacity(0.3),
-                                  const Color(0xFF059669).withOpacity(0.2),
+                                  const Color(0xFF10B981).withValues(alpha: 0.3),
+                                  const Color(0xFF059669).withValues(alpha: 0.2),
                                 ]
                               : [
-                                  const Color(0xFFFBBF24).withOpacity(0.3),
-                                  const Color(0xFFF59E0B).withOpacity(0.2),
+                                  const Color(0xFFFBBF24).withValues(alpha: 0.3),
+                                  const Color(0xFFF59E0B).withValues(alpha: 0.2),
                                 ],
                         ),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: santriData!.lunasBulanKe >= 12
-                              ? const Color(0xFF10B981).withOpacity(0.5)
-                              : const Color(0xFFFBBF24).withOpacity(0.5),
+                              ? const Color(0xFF10B981).withValues(alpha: 0.5)
+                              : const Color(0xFFFBBF24).withValues(alpha: 0.5),
                         ),
                       ),
                       child: Text(
@@ -1256,7 +1255,7 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 20,
             spreadRadius: 0,
             offset: const Offset(0, 4),
@@ -1381,7 +1380,7 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 20,
             spreadRadius: 0,
             offset: const Offset(0, 4),
@@ -1478,10 +1477,10 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF7C3AED).withOpacity(0.1),
+                    color: const Color(0xFF7C3AED).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: const Color(0xFF7C3AED).withOpacity(0.2),
+                      color: const Color(0xFF7C3AED).withValues(alpha: 0.2),
                     ),
                   ),
                   child: Column(
@@ -1535,9 +1534,9 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1575,9 +1574,9 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: color.withOpacity(0.3), width: 2),
+            border: Border.all(color: color.withValues(alpha: 0.3), width: 2),
           ),
           child: Center(
             child: Text(
@@ -1942,7 +1941,7 @@ $currentDate
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 30,
             spreadRadius: 0,
             offset: const Offset(0, 10),
@@ -1995,7 +1994,7 @@ $currentDate
                           Text(
                             'Sistem Pembayaran SPP',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                               fontSize: smallFontSize,
                             ),
                           ),
@@ -2006,7 +2005,7 @@ $currentDate
                     Container(
                       padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
@@ -2030,7 +2029,7 @@ $currentDate
                           vertical: isSmallScreen ? 6 : 8,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -2055,10 +2054,10 @@ $currentDate
                           vertical: isSmallScreen ? 4 : 6,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.3),
+                            color: Colors.white.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Text(
@@ -2336,10 +2335,10 @@ $currentDate
                   width: double.infinity,
                   padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF4F46E5).withOpacity(0.1),
+                    color: const Color(0xFF4F46E5).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: const Color(0xFF4F46E5).withOpacity(0.2),
+                      color: const Color(0xFF4F46E5).withValues(alpha: 0.2),
                     ),
                   ),
                   child: Column(

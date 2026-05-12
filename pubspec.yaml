@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+19
+version: 2.0.0+24
 
 environment:
   sdk: ^3.9.0
@@ -40,16 +40,25 @@ dependencies:
   url_launcher: ^6.3.2
   intl: ^0.20.2
   mmkv: ^2.2.3
-  share_plus: ^11.1.0
+  share_plus: ^12.0.1
   path_provider: ^2.1.5
-  device_info_plus: ^11.5.0
-  flutter_local_notifications: ^19.4.1
+  device_info_plus: ^12.3.0
+  flutter_local_notifications: ^18.0.1
   permission_handler: ^12.0.1
   workmanager: ^0.9.0+3
   in_app_update: ^4.2.4
-  package_info_plus: ^8.3.1
+  package_info_plus: ^9.0.0
   connectivity_plus: ^7.0.0
   fl_chart: ^1.1.1
+  audioplayers: ^6.5.1
+  sqflite: ^2.3.0
+  pdf: ^3.11.0
+  printing: ^5.12.0
+  firebase_core: ^3.8.0
+  firebase_analytics: ^11.3.7
+  google_fonts: ^8.1.0
+  firebase_messaging: ^15.2.10
+  cloud_firestore: ^5.6.12
 
 
 dev_dependencies:
@@ -61,7 +70,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
   
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -76,14 +85,27 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/img/molah.png
     - assets/json/doa.json
     - assets/json/dzikir.json
     - assets/other/iconquran.png
+    - assets/other/icon.png
+    - assets/img/molah.png
     - assets/other/img_number.png
+    - assets/image/img_bismillah.png
+    - assets/image/taawuz.png
     - assets/image/
-    - assets/quran-json/update/
-  #   - images/a_dot_ham.jpeg
+    - assets/quran-json/ayat/
+    - assets/quran-json/transliteration/
+    - assets/quran-json/terjemahan/
+    - assets/quran-json/surah/list-surah.json
+
+    # - assets/mushaf/halaman/
+    # - assets/mushaf/surah/surahs.json
+    # - assets/mushaf/QPC1/qpc-v1.json
+    # - assets/mushaf/QPC2/qpc-v2.json
+    # - assets/mushaf/QPC1/verse-mapping.json
+    # - assets/mushaf/QPC2/verse-mapping.json
+
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -96,15 +118,6 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
-  fonts:
-    - family: Amiri
-      fonts:
-        - asset: assets/font/Amiri-Regular.ttf
-        - asset: assets/font/Amiri-Bold.ttf
-          weight: 700
-    - family: Utsmani
-      fonts:
-        - asset: assets/font/LPMQIsepMisbah.ttf
   # fonts:
   #   - family: Schyler
   #     fonts:
@@ -116,6 +129,17 @@ flutter:
   #       - asset: fonts/TrajanPro.ttf
   #       - asset: fonts/TrajanPro_Bold.ttf
   #         weight: 700
-  #
+  fonts:
+    - family: Amiri
+      fonts:
+        - asset: assets/font/Amiri-Regular.ttf
+        - asset: assets/font/Amiri-Bold.ttf
+          weight: 700
+    - family: Utsmani
+      fonts:
+        - asset: assets/font/LPMQIsepMisbah.ttf
+    - family: Arabic
+      fonts:
+        - asset: assets/font/arabic.ttf
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package

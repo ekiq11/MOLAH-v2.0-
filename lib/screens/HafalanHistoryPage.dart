@@ -962,7 +962,7 @@ class _HafalanHistoryPageState extends State<HafalanHistoryPage> {
             : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: Offset(0, 2),
           ),
@@ -1228,7 +1228,7 @@ class _HafalanHistoryPageState extends State<HafalanHistoryPage> {
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -1294,7 +1294,7 @@ class _HafalanHistoryPageState extends State<HafalanHistoryPage> {
                 children: [
                   CircleAvatar(
                     radius: 20,
-                    backgroundColor: Colors.white.withOpacity(0.3),
+                    backgroundColor: Colors.white.withValues(alpha: 0.3),
                     child: Text(
                       _currentNamaSantri[0].toUpperCase(),
                       style: TextStyle(
@@ -1320,7 +1320,7 @@ class _HafalanHistoryPageState extends State<HafalanHistoryPage> {
                         Text(
                           "NISN: ${widget.nisn}",
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                             fontSize: 13,
                           ),
                         ),
@@ -1330,7 +1330,7 @@ class _HafalanHistoryPageState extends State<HafalanHistoryPage> {
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(

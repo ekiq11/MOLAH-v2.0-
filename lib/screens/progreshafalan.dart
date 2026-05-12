@@ -3,6 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:math' as math;
+import 'package:printing/printing.dart';
+import 'package:pizab_molah/screens/pdf/hafalan_pdf_generator.dart';
 
 import 'package:pizab_molah/screens/HafalanHistoryPage.dart';
 
@@ -118,17 +120,52 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
       pinned: true,
       elevation: 0,
       backgroundColor: Colors.transparent,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.print_rounded, color: Colors.white),
+          tooltip: 'Cetak Laporan',
+          onPressed: () async {
+            final filteredData = _getFilteredData();
+            if (filteredData.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Tidak ada data untuk dicetak')),
+              );
+              return;
+            }
+            
+            // Tampilkan dialog loading opsional jika perlu
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Menyiapkan dokumen PDF...')),
+            );
+
+            try {
+              final pdfBytes = await HafalanPdfGenerator.generate(
+                nisn: widget.nisn,
+                namaSantri: widget.namaSantri,
+                hafalanList: filteredData,
+              );
+              
+              await Printing.layoutPdf(
+                onLayout: (format) async => pdfBytes,
+                name: 'Laporan_Hafalan_${widget.namaSantri.replaceAll(' ', '_')}.pdf',
+              );
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Gagal membuat PDF: $e')),
+                );
+              }
+            }
+          },
+        ),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFFDC2626),
-                Color(0xFFB91C1C),
-                Color(0xFF991B1B),
-              ],
+              colors: [Color(0xFFDC2626), Color(0xFFB91C1C), Color(0xFF991B1B)],
             ),
           ),
           child: Stack(
@@ -142,7 +179,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                   height: 200,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.1),
+                    color: Colors.white.withValues(alpha: 0.1),
                   ),
                 ),
               ),
@@ -154,7 +191,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                   height: 150,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.05),
+                    color: Colors.white.withValues(alpha: 0.05),
                   ),
                 ),
               ),
@@ -169,13 +206,10 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white,
-                            width: 3,
-                          ),
+                          border: Border.all(color: Colors.white, width: 3),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
+                              color: Colors.black.withValues(alpha: 0.2),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
@@ -183,7 +217,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                         ),
                         child: CircleAvatar(
                           radius: 35,
-                          backgroundColor: Colors.white.withOpacity(0.3),
+                          backgroundColor: Colors.white.withValues(alpha: 0.3),
                           child: Text(
                             widget.namaSantri[0].toUpperCase(),
                             style: const TextStyle(
@@ -216,7 +250,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                                color: Colors.white.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Row(
@@ -231,7 +265,9 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                                   Text(
                                     "NISN: ${widget.nisn}",
                                     style: TextStyle(
-                                      color: Colors.white.withOpacity(0.95),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.95,
+                                      ),
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -246,7 +282,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: const Icon(
@@ -307,7 +343,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
               ],
             );
           }
-          
+
           // Layout normal untuk layar standar
           return Row(
             children: [
@@ -367,7 +403,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -378,7 +414,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: Colors.white, size: 22),
@@ -403,7 +439,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 10,
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -414,7 +450,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
               subtitle,
               style: TextStyle(
                 fontSize: 9,
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
               ),
             ),
           ),
@@ -432,7 +468,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -511,7 +547,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -549,7 +585,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
             ],
           ),
           const SizedBox(height: 20),
-          
+
           // Layout responsif untuk chart dan legend
           LayoutBuilder(
             builder: (context, constraints) {
@@ -658,7 +694,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                   ],
                 );
               }
-              
+
               // Layout horizontal untuk layar lebih lebar
               return Row(
                 children: [
@@ -773,13 +809,18 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
     );
   }
 
-  Widget _buildNilaiLegendModern(String label, int count, Color color, IconData icon) {
+  Widget _buildNilaiLegendModern(
+    String label,
+    int count,
+    Color color,
+    IconData icon,
+  ) {
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: color, size: 18),
@@ -799,7 +840,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
           constraints: const BoxConstraints(minWidth: 35),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
@@ -846,7 +887,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -885,10 +926,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
           const SizedBox(height: 8),
           Text(
             'Grafik menunjukkan konsistensi setoran hafalan',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
           ),
           const SizedBox(height: 24),
           SizedBox(
@@ -919,8 +957,10 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 30,
-                      interval:
-                          math.max(1, (spots.length / 5).ceil().toDouble()),
+                      interval: math.max(
+                        1,
+                        (spots.length / 5).ceil().toDouble(),
+                      ),
                       getTitlesWidget: (value, meta) {
                         int index = value.toInt();
                         if (index < 0 || index >= dates.length) {
@@ -964,7 +1004,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                   border: Border.all(color: Colors.grey[200]!, width: 1),
                 ),
                 minX: 0,
-                maxX: spots.length > 0 ? (spots.length - 1).toDouble() : 1,
+                maxX: spots.isNotEmpty ? (spots.length - 1).toDouble() : 1,
                 minY: 0,
                 maxY: (dailyCount.values.reduce(math.max) + 1).toDouble(),
                 lineBarsData: [
@@ -991,8 +1031,8 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                       show: true,
                       gradient: LinearGradient(
                         colors: [
-                          const Color(0xFF3B82F6).withOpacity(0.3),
-                          const Color(0xFF3B82F6).withOpacity(0.05),
+                          const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                          const Color(0xFF3B82F6).withValues(alpha: 0.05),
                         ],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
@@ -1037,7 +1077,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -1076,30 +1116,52 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
           const SizedBox(height: 8),
           Text(
             'Persentase perolehan nilai dari total setoran',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
           ),
           const SizedBox(height: 24),
-          _buildNilaiBar('A', nilaiCount['A']!, total, const Color(0xFF10B981),
-              Icons.sentiment_very_satisfied),
+          _buildNilaiBar(
+            'A',
+            nilaiCount['A']!,
+            total,
+            const Color(0xFF10B981),
+            Icons.sentiment_very_satisfied,
+          ),
           const SizedBox(height: 12),
-          _buildNilaiBar('B', nilaiCount['B']!, total, const Color(0xFF3B82F6),
-              Icons.sentiment_satisfied),
+          _buildNilaiBar(
+            'B',
+            nilaiCount['B']!,
+            total,
+            const Color(0xFF3B82F6),
+            Icons.sentiment_satisfied,
+          ),
           const SizedBox(height: 12),
-          _buildNilaiBar('C', nilaiCount['C']!, total, const Color(0xFFF59E0B),
-              Icons.sentiment_neutral),
+          _buildNilaiBar(
+            'C',
+            nilaiCount['C']!,
+            total,
+            const Color(0xFFF59E0B),
+            Icons.sentiment_neutral,
+          ),
           const SizedBox(height: 12),
-          _buildNilaiBar('D', nilaiCount['D']!, total, const Color(0xFFEF4444),
-              Icons.sentiment_dissatisfied),
+          _buildNilaiBar(
+            'D',
+            nilaiCount['D']!,
+            total,
+            const Color(0xFFEF4444),
+            Icons.sentiment_dissatisfied,
+          ),
         ],
       ),
     );
   }
 
   Widget _buildNilaiBar(
-      String label, int count, int total, Color color, IconData icon) {
+    String label,
+    int count,
+    int total,
+    Color color,
+    IconData icon,
+  ) {
     double percentage = (count / total) * 100;
     return Column(
       children: [
@@ -1108,7 +1170,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: color, size: 20),
@@ -1135,7 +1197,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
+                          color: color.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -1165,15 +1227,12 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                           height: 12,
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [
-                                color,
-                                color.withOpacity(0.7),
-                              ],
+                              colors: [color, color.withValues(alpha: 0.7)],
                             ),
                             borderRadius: BorderRadius.circular(6),
                             boxShadow: [
                               BoxShadow(
-                                color: color.withOpacity(0.3),
+                                color: color.withValues(alpha: 0.3),
                                 blurRadius: 4,
                                 offset: const Offset(0, 2),
                               ),
@@ -1208,8 +1267,9 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
       }
     }
 
-    int maxActivity =
-        activityMap.values.isEmpty ? 1 : activityMap.values.reduce(math.max);
+    int maxActivity = activityMap.values.isEmpty
+        ? 1
+        : activityMap.values.reduce(math.max);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -1219,7 +1279,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -1258,26 +1318,25 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
           const SizedBox(height: 8),
           Text(
             'Kalender aktivitas setoran harian',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
           ),
           const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
-                .map((day) => Expanded(
-                      child: Text(
-                        day,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF6B7280),
-                          fontWeight: FontWeight.w600,
-                        ),
+                .map(
+                  (day) => Expanded(
+                    child: Text(
+                      day,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF6B7280),
+                        fontWeight: FontWeight.w600,
                       ),
-                    ))
+                    ),
+                  ),
+                )
                 .toList(),
           ),
           const SizedBox(height: 12),
@@ -1299,8 +1358,9 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                     cellColor = Colors.grey[100]!;
                   } else {
                     double intensity = activity / maxActivity;
-                    cellColor = const Color(0xFFDC2626)
-                        .withOpacity(0.2 + (intensity * 0.8));
+                    cellColor = const Color(
+                      0xFFDC2626,
+                    ).withValues(alpha: 0.2 + (intensity * 0.8));
                     if (activity >= 3) {
                       cellIcon = Icons.local_fire_department;
                     }
@@ -1315,7 +1375,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: activity > 0
-                              ? const Color(0xFFDC2626).withOpacity(0.3)
+                              ? const Color(0xFFDC2626).withValues(alpha: 0.3)
                               : Colors.grey[200]!,
                           width: 1,
                         ),
@@ -1324,11 +1384,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                         alignment: Alignment.center,
                         children: [
                           if (cellIcon != null)
-                            Icon(
-                              cellIcon,
-                              color: Colors.white,
-                              size: 12,
-                            ),
+                            Icon(cellIcon, color: Colors.white, size: 12),
                           if (activity > 0)
                             Positioned(
                               bottom: 2,
@@ -1338,7 +1394,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                                   vertical: 1,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.9),
+                                  color: Colors.white.withValues(alpha: 0.9),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
@@ -1378,13 +1434,14 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                   decoration: BoxDecoration(
                     color: index == 0
                         ? Colors.grey[100]
-                        : const Color(0xFFDC2626)
-                            .withOpacity(0.2 + (index * 0.2)),
+                        : const Color(
+                            0xFFDC2626,
+                          ).withValues(alpha: 0.2 + (index * 0.2)),
                     borderRadius: BorderRadius.circular(4),
                     border: Border.all(
                       color: index == 0
                           ? Colors.grey[300]!
-                          : const Color(0xFFDC2626).withOpacity(0.3),
+                          : const Color(0xFFDC2626).withValues(alpha: 0.3),
                       width: 1,
                     ),
                   ),
@@ -1428,7 +1485,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -1470,7 +1527,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF8B5CF6).withOpacity(0.1),
+                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -1487,10 +1544,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
           const SizedBox(height: 8),
           Text(
             'Surah yang paling sering disetorkan',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
           ),
           const SizedBox(height: 20),
           ...topSurah.asMap().entries.map((entry) {
@@ -1512,13 +1566,13 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    colors[rank].withOpacity(0.1),
-                    colors[rank].withOpacity(0.05),
+                    colors[rank].withValues(alpha: 0.1),
+                    colors[rank].withValues(alpha: 0.05),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: colors[rank].withOpacity(0.3),
+                  color: colors[rank].withValues(alpha: 0.3),
                   width: 2,
                 ),
               ),
@@ -1529,7 +1583,10 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                     height: 40,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [colors[rank], colors[rank].withOpacity(0.7)],
+                        colors: [
+                          colors[rank],
+                          colors[rank].withValues(alpha: 0.7),
+                        ],
                       ),
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -1598,7 +1655,10 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                                 height: 8,
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
-                                    colors: [colors[rank], colors[rank].withOpacity(0.7)],
+                                    colors: [
+                                      colors[rank],
+                                      colors[rank].withValues(alpha: 0.7),
+                                    ],
                                   ),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
@@ -1620,7 +1680,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );

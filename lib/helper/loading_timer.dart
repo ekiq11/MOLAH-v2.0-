@@ -59,7 +59,7 @@ class LoadingTimeoutDialog {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
+                  color: Colors.black.withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -132,7 +132,7 @@ class LoadingTimeoutDialog {
     return Container(
       padding: EdgeInsets.all(screenSize.width * 0.04),
       decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.1),
+        color: Colors.orange.withValues(alpha: 0.1),
         shape: BoxShape.circle,
       ),
       child: Stack(

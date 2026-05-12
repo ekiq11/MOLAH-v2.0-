@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- ===============================
@@ -8,6 +9,13 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <!-- Android 12+ (API 31+): Required for foreground services used by WorkManager -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+    <!-- Android 12+ (API 31+): Required for exact alarm scheduling -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <!-- Android 13+ (API 33+): Required for showing notifications -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
 
     <!-- ===============================
          Application
@@ -19,7 +27,16 @@
 
         <!-- ===========================
              Main Flutter Activity
-             =========================== -->
+             ===========================
+
+             FIX NOTES:
+             - android:theme="@style/LaunchTheme" → styles.xml sudah diperbaiki
+               agar tidak conflict dengan setStatusBarColor (deprecated)
+             - Tidak ada android:statusBarColor / android:navigationBarColor di theme
+               karena Flutter + WindowCompat yang handle via MainActivity.kt
+             - configChanges sudah lengkap termasuk 'navigation' untuk handle
+               gesture navigation di Samsung One UI / MIUI
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -39,11 +56,22 @@
                 fontScale|
                 screenLayout|
                 density|
-                uiMode">
+                uiMode|
+                navigation">
 
+            <!--
+                NormalTheme: Dipakai setelah Flutter engine siap.
+                Ini override LaunchTheme tanpa menyentuh statusBarColor.
+            -->
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme"/>
+
+            <!--
+                FIX: Tambahkan SplashScreenDrawable untuk mencegah white flash
+                saat transisi launch → Flutter di Samsung/OPPO/Xiaomi.
+                Pastikan @drawable/launch_background ada di res/drawable/.
+            -->
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>

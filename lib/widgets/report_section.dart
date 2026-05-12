@@ -90,7 +90,7 @@ class ReportSection extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.red.withOpacity(0.3),
+                      color: Colors.red.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: Offset(0, 4),
                     ),
@@ -214,13 +214,13 @@ class ReportSection extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: cardData.gradientColors[1].withOpacity(0.15),
+            color: cardData.gradientColors[1].withValues(alpha: 0.15),
             blurRadius: 12,
             offset: const Offset(0, 4),
             spreadRadius: 0,
           ),
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 20,
             offset: const Offset(0, 8),
             spreadRadius: -5,
@@ -238,7 +238,7 @@ class ReportSection extends StatelessWidget {
               height: 100,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: cardData.bgColor.withOpacity(0.3),
+                color: cardData.bgColor.withValues(alpha: 0.3),
               ),
             ),
           ),
@@ -262,7 +262,7 @@ class ReportSection extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: cardData.gradientColors[1].withOpacity(0.3),
+                        color: cardData.gradientColors[1].withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: Offset(0, 4),
                       ),

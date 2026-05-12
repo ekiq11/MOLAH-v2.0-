@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'dart:async';
 
 class PaymentPage extends StatefulWidget {
@@ -24,7 +23,7 @@ class PaymentPage extends StatefulWidget {
 class _PaymentPageState extends State<PaymentPage>
     with TickerProviderStateMixin {
   String _selectedPaymentType = 'SPP';
-  
+
   // Animation controllers - nullable untuk mencegah late initialization error
   AnimationController? _fadeController;
   Animation<double>? _fadeAnimation;
@@ -83,15 +82,13 @@ class _PaymentPageState extends State<PaymentPage>
       parent: _fadeController!,
       curve: Curves.easeOut,
     );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _slideController!,
-        curve: Curves.easeOutCubic,
-      ),
-    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _slideController!,
+            curve: Curves.easeOutCubic,
+          ),
+        );
   }
 
   Future<void> _loadPaymentData() async {
@@ -121,10 +118,12 @@ class _PaymentPageState extends State<PaymentPage>
       } on TimeoutException catch (e) {
         retryCount++;
         debugPrint('Attempt $retryCount failed to fetch data: $e');
-        
+
         if (retryCount >= maxRetries) {
           if (mounted) {
-            _showErrorDialog('Gagal memuat data setelah $maxRetries percobaan. Silakan periksa koneksi internet Anda.');
+            _showErrorDialog(
+              'Gagal memuat data setelah $maxRetries percobaan. Silakan periksa koneksi internet Anda.',
+            );
           }
         } else {
           // Tunggu sebentar sebelum retry
@@ -133,10 +132,12 @@ class _PaymentPageState extends State<PaymentPage>
       } catch (e) {
         retryCount++;
         debugPrint('Error loading payment data: $e');
-        
+
         if (retryCount >= maxRetries) {
           if (mounted) {
-            _showErrorDialog('Terjadi kesalahan saat memuat data: ${e.toString()}');
+            _showErrorDialog(
+              'Terjadi kesalahan saat memuat data: ${e.toString()}',
+            );
           }
         } else {
           await Future.delayed(Duration(seconds: 2));
@@ -213,7 +214,9 @@ class _PaymentPageState extends State<PaymentPage>
         _sppStatus = lunasMonth >= 12 ? 'Lunas' : 'Belum Lunas';
 
         debugPrint('SPP Data Found - NISN: ${widget.username}');
-        debugPrint('Iuran YTD: $iuranYtd, Lunas Month: $lunasMonth, Monthly: $_sppAmount');
+        debugPrint(
+          'Iuran YTD: $iuranYtd, Lunas Month: $lunasMonth, Monthly: $_sppAmount',
+        );
         break;
       }
     }
@@ -228,8 +231,12 @@ class _PaymentPageState extends State<PaymentPage>
       final columns = _parseCSVRow(row);
 
       if (columns.length > 9 && columns[1].trim() == widget.username) {
-        final iuranPerBulan = _parseAmount(columns[5]); // Kolom F (index 5) untuk iuran per bulan
-        final iuranTahunan = _parseAmount(columns[6]); // Kolom G (index 6) untuk iuran tahunan
+        final iuranPerBulan = _parseAmount(
+          columns[5],
+        ); // Kolom F (index 5) untuk iuran per bulan
+        final iuranTahunan = _parseAmount(
+          columns[6],
+        ); // Kolom G (index 6) untuk iuran tahunan
         final lunasMonth = int.tryParse(columns[9].trim()) ?? 0;
 
         _ekskulAmount = iuranPerBulan; // Langsung ambil dari kolom F
@@ -242,9 +249,11 @@ class _PaymentPageState extends State<PaymentPage>
         };
 
         _ekskulStatus = lunasMonth >= 11 ? 'Lunas' : 'Belum Lunas';
-        
+
         debugPrint('Ekskul Data Found - NISN: ${widget.username}');
-        debugPrint('Iuran Per Bulan (F): $iuranPerBulan, Iuran Tahunan (G): $iuranTahunan, Lunas Month: $lunasMonth');
+        debugPrint(
+          'Iuran Per Bulan (F): $iuranPerBulan, Iuran Tahunan (G): $iuranTahunan, Lunas Month: $lunasMonth',
+        );
         break;
       }
     }
@@ -279,8 +288,18 @@ class _PaymentPageState extends State<PaymentPage>
 
   String _getNextSppMonth(int lunasMonth) {
     const sppMonths = [
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
     ];
 
     if (lunasMonth >= 12) return 'Lunas';
@@ -289,8 +308,17 @@ class _PaymentPageState extends State<PaymentPage>
 
   String _getNextEkskulMonth(int lunasMonth) {
     const ekskulMonths = [
-      'Agustus', 'September', 'Oktober', 'November', 'Desember',
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
     ];
 
     if (lunasMonth >= 11) return 'Lunas';
@@ -323,18 +351,30 @@ class _PaymentPageState extends State<PaymentPage>
                   ),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.check_rounded, color: Colors.white, size: 40),
+                child: const Icon(
+                  Icons.check_rounded,
+                  color: Colors.white,
+                  size: 40,
+                ),
               ),
               const SizedBox(height: 24),
               const Text(
                 'Berhasil Dikirim!',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF111827)),
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF111827),
+                ),
               ),
               const SizedBox(height: 16),
               Text(
                 'Konfirmasi pembayaran telah dikirim via WhatsApp. Silakan tunggu verifikasi dari bendahara.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 15, color: Colors.grey[600], height: 1.5),
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.grey[600],
+                  height: 1.5,
+                ),
               ),
               const SizedBox(height: 32),
               SizedBox(
@@ -345,10 +385,15 @@ class _PaymentPageState extends State<PaymentPage>
                     backgroundColor: accentGreen,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     elevation: 0,
                   ),
-                  child: const Text('Kembali ke Beranda', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                  child: const Text(
+                    'Kembali ke Beranda',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                  ),
                 ),
               ),
             ],
@@ -381,7 +426,9 @@ class _PaymentPageState extends State<PaymentPage>
           ),
           backgroundColor: accentGreen,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           margin: const EdgeInsets.all(16),
           duration: const Duration(seconds: 2),
         ),
@@ -425,12 +472,16 @@ class _PaymentPageState extends State<PaymentPage>
 
     final List<Map<String, dynamic>> urlConfigs = [
       {
-        'uri': Uri.parse('whatsapp://send?phone=$cleanNumber&text=$encodedMessage'),
+        'uri': Uri.parse(
+          'whatsapp://send?phone=$cleanNumber&text=$encodedMessage',
+        ),
         'mode': LaunchMode.externalApplication,
         'description': 'WhatsApp App Direct',
       },
       {
-        'uri': Uri.parse('intent://send?phone=$cleanNumber&text=$encodedMessage#Intent;scheme=whatsapp;package=com.whatsapp;end'),
+        'uri': Uri.parse(
+          'intent://send?phone=$cleanNumber&text=$encodedMessage#Intent;scheme=whatsapp;package=com.whatsapp;end',
+        ),
         'mode': LaunchMode.externalApplication,
         'description': 'WhatsApp Intent',
       },
@@ -465,7 +516,9 @@ class _PaymentPageState extends State<PaymentPage>
 
     try {
       debugPrint('Fallback ke WhatsApp Web');
-      final Uri webUri = Uri.parse('https://web.whatsapp.com/send?phone=$cleanNumber&text=$encodedMessage');
+      final Uri webUri = Uri.parse(
+        'https://web.whatsapp.com/send?phone=$cleanNumber&text=$encodedMessage',
+      );
       return await launchUrl(webUri, mode: LaunchMode.inAppWebView);
     } catch (e) {
       debugPrint('Fallback juga gagal: $e');
@@ -512,11 +565,18 @@ class _PaymentPageState extends State<PaymentPage>
                   color: Colors.orange[50],
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.warning_amber_rounded, color: Colors.orange[700], size: 24),
+                child: Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.orange[700],
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 16),
               const Expanded(
-                child: Text('Buka WhatsApp Manual', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                child: Text(
+                  'Buka WhatsApp Manual',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
               ),
             ],
           ),
@@ -529,9 +589,9 @@ class _PaymentPageState extends State<PaymentPage>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: accentBlue.withOpacity(0.1),
+                  color: accentBlue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: accentBlue.withOpacity(0.3)),
+                  border: Border.all(color: accentBlue.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
@@ -540,18 +600,36 @@ class _PaymentPageState extends State<PaymentPage>
                     const Expanded(
                       child: Text(
                         'Pesan sudah otomatis disalin ke clipboard',
-                        style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 20),
-              const Text('Langkah manual:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+              const Text(
+                'Langkah manual:',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+              ),
               const SizedBox(height: 12),
-              _buildManualStep('1', 'Buka aplikasi WhatsApp', Icons.apps_rounded),
-              _buildManualStep('2', 'Cari kontak: $_whatsappNumber', Icons.search_rounded),
-              _buildManualStep('3', 'Paste pesan & kirim bukti transfer', Icons.send_rounded),
+              _buildManualStep(
+                '1',
+                'Buka aplikasi WhatsApp',
+                Icons.apps_rounded,
+              ),
+              _buildManualStep(
+                '2',
+                'Cari kontak: $_whatsappNumber',
+                Icons.search_rounded,
+              ),
+              _buildManualStep(
+                '3',
+                'Paste pesan & kirim bukti transfer',
+                Icons.send_rounded,
+              ),
             ],
           ),
         ),
@@ -560,13 +638,16 @@ class _PaymentPageState extends State<PaymentPage>
             children: [
               Expanded(
                 child: TextButton.icon(
-                  onPressed: () => _copyToClipboard(_whatsappNumber, 'Nomor WhatsApp'),
+                  onPressed: () =>
+                      _copyToClipboard(_whatsappNumber, 'Nomor WhatsApp'),
                   icon: const Icon(Icons.copy_rounded, size: 18),
                   label: const Text('Copy Nomor'),
                   style: TextButton.styleFrom(
                     foregroundColor: accentBlue,
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
@@ -580,7 +661,9 @@ class _PaymentPageState extends State<PaymentPage>
                     backgroundColor: accentGreen,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     elevation: 0,
                   ),
                 ),
@@ -606,16 +689,33 @@ class _PaymentPageState extends State<PaymentPage>
           Container(
             width: 28,
             height: 28,
-            decoration: const BoxDecoration(color: primaryRed, shape: BoxShape.circle),
+            decoration: const BoxDecoration(
+              color: primaryRed,
+              shape: BoxShape.circle,
+            ),
             child: Center(
-              child: Text(number, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+              child: Text(
+                number,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 16),
           Icon(icon, size: 18, color: Colors.grey[600]),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(text, style: TextStyle(fontSize: 14, color: Colors.grey[700], fontWeight: FontWeight.w500)),
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[700],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         ],
       ),
@@ -630,8 +730,12 @@ class _PaymentPageState extends State<PaymentPage>
     return Scaffold(
       backgroundColor: backgroundGray,
       appBar: _buildModernAppBar(),
-      body: _isLoading ? _buildLoadingScreen() : _buildMainContent(isSmallScreen),
-      bottomNavigationBar: _isLoading ? null : _buildBottomButton(isSmallScreen),
+      body: _isLoading
+          ? _buildLoadingScreen()
+          : _buildMainContent(isSmallScreen),
+      bottomNavigationBar: _isLoading
+          ? null
+          : _buildBottomButton(isSmallScreen),
     );
   }
 
@@ -639,13 +743,29 @@ class _PaymentPageState extends State<PaymentPage>
     return AppBar(
       title: Text(
         'Tagihan Pembayaran',
-        style: TextStyle(color: Colors.grey[800], fontSize: 20, fontWeight: FontWeight.w600),
+        style: TextStyle(
+          color: Colors.grey[800],
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       backgroundColor: cardWhite,
       elevation: 0,
       centerTitle: true,
       iconTheme: IconThemeData(color: Colors.grey[700]),
-      systemOverlayStyle: SystemUiOverlayStyle.dark,
+      // ✅ FIX: Gunakan style eksplisit, bukan SystemUiOverlayStyle.dark
+      // SystemUiOverlayStyle.dark tidak set navigationBarColor sehingga
+      // beberapa OEM (Samsung, OPPO) menggunakan warna default mereka sendiri
+      systemOverlayStyle: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark, // ikon gelap untuk bg putih
+        statusBarBrightness: Brightness.light,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarDividerColor: Colors.transparent,
+        systemNavigationBarIconBrightness: Brightness.dark,
+        systemNavigationBarContrastEnforced: false,
+        systemStatusBarContrastEnforced: false,
+      ),
     );
   }
 
@@ -660,15 +780,26 @@ class _PaymentPageState extends State<PaymentPage>
               color: cardWhite,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 10)),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
               ],
             ),
-            child: const CircularProgressIndicator(color: primaryRed, strokeWidth: 3),
+            child: const CircularProgressIndicator(
+              color: primaryRed,
+              strokeWidth: 3,
+            ),
           ),
           const SizedBox(height: 24),
           Text(
             'Memuat data pembayaran...',
-            style: TextStyle(fontSize: 16, color: Colors.grey[600], fontWeight: FontWeight.w500),
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
@@ -707,13 +838,15 @@ class _PaymentPageState extends State<PaymentPage>
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [    Color(0xFFDC2626),
-                Color(0xFFB91C1C),
-                Color(0xFF991B1B),],
+          colors: [Color(0xFFDC2626), Color(0xFFB91C1C), Color(0xFF991B1B)],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: primaryRed.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 8)),
+          BoxShadow(
+            color: primaryRed.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
         ],
       ),
       child: Row(
@@ -721,10 +854,14 @@ class _PaymentPageState extends State<PaymentPage>
           Container(
             padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(Icons.person_rounded, color: Colors.white, size: isSmallScreen ? 24 : 28),
+            child: Icon(
+              Icons.person_rounded,
+              color: Colors.white,
+              size: isSmallScreen ? 24 : 28,
+            ),
           ),
           SizedBox(width: isSmallScreen ? 12 : 16),
           Expanded(
@@ -744,7 +881,7 @@ class _PaymentPageState extends State<PaymentPage>
                 Text(
                   'NISN: ${widget.username}',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                     fontSize: isSmallScreen ? 13 : 14,
                     fontWeight: FontWeight.w500,
                   ),
@@ -756,14 +893,21 @@ class _PaymentPageState extends State<PaymentPage>
                     vertical: isSmallScreen ? 4 : 6,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.verified_user_rounded, color: Colors.white, size: isSmallScreen ? 12 : 14),
+                      Icon(
+                        Icons.verified_user_rounded,
+                        color: Colors.white,
+                        size: isSmallScreen ? 12 : 14,
+                      ),
                       SizedBox(width: isSmallScreen ? 4 : 6),
                       Text(
                         'Siswa Aktif',
@@ -792,7 +936,11 @@ class _PaymentPageState extends State<PaymentPage>
         color: cardWhite,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 8)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
         ],
       ),
       child: Column(
@@ -803,15 +951,23 @@ class _PaymentPageState extends State<PaymentPage>
               Container(
                 padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
                 decoration: BoxDecoration(
-                  color: accentGreen.withOpacity(0.1),
+                  color: accentGreen.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.account_balance_wallet_rounded, color: accentGreen, size: isSmallScreen ? 18 : 20),
+                child: Icon(
+                  Icons.account_balance_wallet_rounded,
+                  color: accentGreen,
+                  size: isSmallScreen ? 18 : 20,
+                ),
               ),
               SizedBox(width: isSmallScreen ? 10 : 12),
               Text(
                 'Tagihan Pembayaran',
-                style: TextStyle(fontSize: isSmallScreen ? 16 : 18, fontWeight: FontWeight.w700, color: Colors.grey[800]),
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 16 : 18,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey[800],
+                ),
               ),
             ],
           ),
@@ -862,9 +1018,9 @@ class _PaymentPageState extends State<PaymentPage>
     return Container(
       padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
+        color: color.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -876,29 +1032,61 @@ class _PaymentPageState extends State<PaymentPage>
               Expanded(
                 child: Text(
                   type,
-                  style: TextStyle(fontSize: isSmallScreen ? 13 : 14, fontWeight: FontWeight.w600, color: Colors.grey[700]),
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 13 : 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[700],
+                  ),
                 ),
               ),
             ],
           ),
           SizedBox(height: isSmallScreen ? 8 : 12),
           if (!isLunas) ...[
-            Text(amount, style: TextStyle(fontSize: isSmallScreen ? 16 : 18, fontWeight: FontWeight.bold, color: color)),
+            Text(
+              amount,
+              style: TextStyle(
+                fontSize: isSmallScreen ? 16 : 18,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
             SizedBox(height: isSmallScreen ? 4 : 6),
             Text(
               'Bulan: $month',
-              style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: Colors.grey[600], fontWeight: FontWeight.w500),
+              style: TextStyle(
+                fontSize: isSmallScreen ? 11 : 12,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ] else ...[
             Container(
-              padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 8 : 10, vertical: isSmallScreen ? 4 : 6),
-              decoration: BoxDecoration(color: accentGreen.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+              padding: EdgeInsets.symmetric(
+                horizontal: isSmallScreen ? 8 : 10,
+                vertical: isSmallScreen ? 4 : 6,
+              ),
+              decoration: BoxDecoration(
+                color: accentGreen.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.check_circle_rounded, color: accentGreen, size: isSmallScreen ? 12 : 14),
+                  Icon(
+                    Icons.check_circle_rounded,
+                    color: accentGreen,
+                    size: isSmallScreen ? 12 : 14,
+                  ),
                   SizedBox(width: isSmallScreen ? 4 : 6),
-                  Text('Lunas', style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: accentGreen, fontWeight: FontWeight.w600)),
+                  Text(
+                    'Lunas',
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 11 : 12,
+                      color: accentGreen,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -916,7 +1104,11 @@ class _PaymentPageState extends State<PaymentPage>
         color: cardWhite,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 8)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
         ],
       ),
       child: Column(
@@ -926,13 +1118,24 @@ class _PaymentPageState extends State<PaymentPage>
             children: [
               Container(
                 padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
-                decoration: BoxDecoration(color: lightRed, borderRadius: BorderRadius.circular(12)),
-                child: Icon(Icons.category_rounded, color: primaryRed, size: isSmallScreen ? 18 : 20),
+                decoration: BoxDecoration(
+                  color: lightRed,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.category_rounded,
+                  color: primaryRed,
+                  size: isSmallScreen ? 18 : 20,
+                ),
               ),
               SizedBox(width: isSmallScreen ? 10 : 12),
               Text(
                 'Pilih Jenis Pembayaran',
-                style: TextStyle(fontSize: isSmallScreen ? 16 : 18, fontWeight: FontWeight.w700, color: Colors.grey[800]),
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 16 : 18,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey[800],
+                ),
               ),
             ],
           ),
@@ -991,19 +1194,25 @@ class _PaymentPageState extends State<PaymentPage>
           color: isLunas
               ? Colors.grey[100]
               : isSelected
-                  ? primaryRed
-                  : cardWhite,
+              ? primaryRed
+              : cardWhite,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isLunas
                 ? Colors.grey[300]!
                 : isSelected
-                    ? primaryRed
-                    : Colors.grey[200]!,
+                ? primaryRed
+                : Colors.grey[200]!,
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected && !isLunas
-              ? [BoxShadow(color: primaryRed.withOpacity(0.2), blurRadius: 12, offset: const Offset(0, 4))]
+              ? [
+                  BoxShadow(
+                    color: primaryRed.withValues(alpha: 0.2),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
               : null,
         ),
         child: Column(
@@ -1013,8 +1222,8 @@ class _PaymentPageState extends State<PaymentPage>
               color: isLunas
                   ? Colors.grey[400]
                   : isSelected
-                      ? Colors.white
-                      : Colors.grey[600],
+                  ? Colors.white
+                  : Colors.grey[600],
               size: isSmallScreen ? 20 : 24,
             ),
             SizedBox(height: isSmallScreen ? 6 : 8),
@@ -1024,8 +1233,8 @@ class _PaymentPageState extends State<PaymentPage>
                 color: isLunas
                     ? Colors.grey[500]
                     : isSelected
-                        ? Colors.white
-                        : Colors.grey[700],
+                    ? Colors.white
+                    : Colors.grey[700],
                 fontWeight: FontWeight.w600,
                 fontSize: isSmallScreen ? 13 : 14,
               ),
@@ -1033,9 +1242,22 @@ class _PaymentPageState extends State<PaymentPage>
             SizedBox(height: isSmallScreen ? 4 : 6),
             if (isLunas) ...[
               Container(
-                padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 6 : 8, vertical: isSmallScreen ? 2 : 4),
-                decoration: BoxDecoration(color: accentGreen.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                child: Text('Lunas', style: TextStyle(fontSize: isSmallScreen ? 10 : 11, color: accentGreen, fontWeight: FontWeight.w600)),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 6 : 8,
+                  vertical: isSmallScreen ? 2 : 4,
+                ),
+                decoration: BoxDecoration(
+                  color: accentGreen.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Lunas',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 10 : 11,
+                    color: accentGreen,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ] else ...[
               Text(
@@ -1049,7 +1271,9 @@ class _PaymentPageState extends State<PaymentPage>
               Text(
                 month,
                 style: TextStyle(
-                  color: isSelected ? Colors.white.withOpacity(0.8) : Colors.grey[600],
+                  color: isSelected
+                      ? Colors.white.withValues(alpha: 0.8)
+                      : Colors.grey[600],
                   fontSize: isSmallScreen ? 10 : 11,
                   fontWeight: FontWeight.w500,
                 ),
@@ -1069,7 +1293,11 @@ class _PaymentPageState extends State<PaymentPage>
         color: cardWhite,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 8)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
         ],
       ),
       child: Column(
@@ -1079,13 +1307,24 @@ class _PaymentPageState extends State<PaymentPage>
             children: [
               Container(
                 padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
-                decoration: BoxDecoration(color: accentGreen.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                child: Icon(Icons.account_balance_rounded, color: accentGreen, size: isSmallScreen ? 18 : 20),
+                decoration: BoxDecoration(
+                  color: accentGreen.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.account_balance_rounded,
+                  color: accentGreen,
+                  size: isSmallScreen ? 18 : 20,
+                ),
               ),
               SizedBox(width: isSmallScreen ? 10 : 12),
               Text(
                 'Informasi Rekening',
-                style: TextStyle(fontSize: isSmallScreen ? 16 : 18, fontWeight: FontWeight.w700, color: Colors.grey[800]),
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 16 : 18,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey[800],
+                ),
               ),
             ],
           ),
@@ -1095,9 +1334,19 @@ class _PaymentPageState extends State<PaymentPage>
             children: [
               _buildBankInfoRow('Bank', _bankName, false, isSmallScreen),
               Divider(height: 24, thickness: 1, color: Colors.grey.shade200),
-              _buildBankInfoRow('No. Rekening', _bankAccount, true, isSmallScreen),
+              _buildBankInfoRow(
+                'No. Rekening',
+                _bankAccount,
+                true,
+                isSmallScreen,
+              ),
               Divider(height: 24, thickness: 1, color: Colors.grey.shade200),
-              _buildBankInfoRow('Atas Nama', _accountName, false, isSmallScreen),
+              _buildBankInfoRow(
+                'Atas Nama',
+                _accountName,
+                false,
+                isSmallScreen,
+              ),
             ],
           ),
         ],
@@ -1105,24 +1354,43 @@ class _PaymentPageState extends State<PaymentPage>
     );
   }
 
-  Widget _buildBankInfoRow(String label, String value, bool canCopy, bool isSmallScreen) {
+  Widget _buildBankInfoRow(
+    String label,
+    String value,
+    bool canCopy,
+    bool isSmallScreen,
+  ) {
     return Row(
       children: [
         SizedBox(
           width: isSmallScreen ? 80 : 100,
           child: Text(
             label,
-            style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[700], fontSize: isSmallScreen ? 13 : 14),
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+              fontSize: isSmallScreen ? 13 : 14,
+            ),
           ),
         ),
-        Text(': ', style: TextStyle(color: Colors.grey[600], fontSize: isSmallScreen ? 13 : 14)),
+        Text(
+          ': ',
+          style: TextStyle(
+            color: Colors.grey[600],
+            fontSize: isSmallScreen ? 13 : 14,
+          ),
+        ),
         Expanded(
           child: Row(
             children: [
               Expanded(
                 child: Text(
                   value,
-                  style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black87, fontSize: isSmallScreen ? 13 : 14),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                    fontSize: isSmallScreen ? 13 : 14,
+                  ),
                 ),
               ),
               if (canCopy)
@@ -1130,8 +1398,15 @@ class _PaymentPageState extends State<PaymentPage>
                   onTap: () => _copyToClipboard(value, label),
                   child: Container(
                     padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
-                    decoration: BoxDecoration(color: accentBlue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                    child: Icon(Icons.copy_rounded, size: isSmallScreen ? 14 : 16, color: accentBlue),
+                    decoration: BoxDecoration(
+                      color: accentBlue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.copy_rounded,
+                      size: isSmallScreen ? 14 : 16,
+                      color: accentBlue,
+                    ),
                   ),
                 ),
             ],
@@ -1149,7 +1424,11 @@ class _PaymentPageState extends State<PaymentPage>
         color: cardWhite,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 6)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
         ],
       ),
       child: Column(
@@ -1159,40 +1438,79 @@ class _PaymentPageState extends State<PaymentPage>
             children: [
               Container(
                 padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
-                decoration: BoxDecoration(color: accentGreen.withOpacity(0.1), shape: BoxShape.circle),
-                child: Icon(Icons.list_alt_rounded, color: accentGreen, size: isSmallScreen ? 20 : 22),
+                decoration: BoxDecoration(
+                  color: accentGreen.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.list_alt_rounded,
+                  color: accentGreen,
+                  size: isSmallScreen ? 20 : 22,
+                ),
               ),
               SizedBox(width: isSmallScreen ? 10 : 12),
               Text(
                 'Cara Pembayaran',
-                style: TextStyle(fontSize: isSmallScreen ? 16 : 18, fontWeight: FontWeight.w700, color: Colors.black87),
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 16 : 18,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                ),
               ),
             ],
           ),
           SizedBox(height: isSmallScreen ? 16 : 20),
-          _InstructionStep(1, 'Transfer ke rekening BSI yang tertera di atas', Icons.account_balance_wallet_rounded, isSmallScreen),
+          _InstructionStep(
+            1,
+            'Transfer ke rekening BSI yang tertera di atas',
+            Icons.account_balance_wallet_rounded,
+            isSmallScreen,
+          ),
           Divider(height: 28, thickness: 1, color: Colors.grey.shade200),
-          _InstructionStep(2, 'Screenshot atau simpan bukti transfer', Icons.screenshot_rounded, isSmallScreen),
+          _InstructionStep(
+            2,
+            'Screenshot atau simpan bukti transfer',
+            Icons.screenshot_rounded,
+            isSmallScreen,
+          ),
           Divider(height: 28, thickness: 1, color: Colors.grey.shade200),
-          _InstructionStep(3, 'Klik tombol "Konfirmasi WhatsApp" di bawah', Icons.message_rounded, isSmallScreen),
+          _InstructionStep(
+            3,
+            'Klik tombol "Konfirmasi WhatsApp" di bawah',
+            Icons.message_rounded,
+            isSmallScreen,
+          ),
           Divider(height: 28, thickness: 1, color: Colors.grey.shade200),
-          _InstructionStep(4, 'Kirim bukti transfer beserta data Santri', Icons.send_rounded, isSmallScreen),
+          _InstructionStep(
+            4,
+            'Kirim bukti transfer beserta data Santri',
+            Icons.send_rounded,
+            isSmallScreen,
+          ),
         ],
       ),
     );
   }
 
   Widget _buildBottomButton(bool isSmallScreen) {
-    final currentAmount = _selectedPaymentType == 'SPP' ? _sppAmount : _ekskulAmount;
+    final currentAmount = _selectedPaymentType == 'SPP'
+        ? _sppAmount
+        : _ekskulAmount;
     final isPaymentAvailable = currentAmount > 0;
-    final isLunas = _selectedPaymentType == 'SPP' ? _sppStatus == 'Lunas' : _ekskulStatus == 'Lunas';
+    final isLunas = _selectedPaymentType == 'SPP'
+        ? _sppStatus == 'Lunas'
+        : _ekskulStatus == 'Lunas';
 
     return Container(
       padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
       decoration: BoxDecoration(
         color: cardWhite,
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, -8)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, -8),
+          ),
         ],
       ),
       child: SafeArea(
@@ -1201,16 +1519,30 @@ class _PaymentPageState extends State<PaymentPage>
           children: [
             if (isPaymentAvailable && !isLunas) ...[
               Container(
-                padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16, vertical: isSmallScreen ? 8 : 12),
-                decoration: BoxDecoration(color: primaryRed.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 12 : 16,
+                  vertical: isSmallScreen ? 8 : 12,
+                ),
+                decoration: BoxDecoration(
+                  color: primaryRed.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_rounded, color: primaryRed, size: isSmallScreen ? 16 : 18),
+                    Icon(
+                      Icons.info_rounded,
+                      color: primaryRed,
+                      size: isSmallScreen ? 16 : 18,
+                    ),
                     SizedBox(width: isSmallScreen ? 8 : 12),
                     Expanded(
                       child: Text(
                         'Tagihan $_selectedPaymentType: ${_formatCurrency(currentAmount)}',
-                        style: TextStyle(fontSize: isSmallScreen ? 13 : 14, fontWeight: FontWeight.w600, color: primaryRed),
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 13 : 14,
+                          fontWeight: FontWeight.w600,
+                          color: primaryRed,
+                        ),
                       ),
                     ),
                   ],
@@ -1231,15 +1563,27 @@ class _PaymentPageState extends State<PaymentPage>
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: isLunas || !isPaymentAvailable
                     ? null
-                    : [BoxShadow(color: accentGreen.withOpacity(0.3), blurRadius: 16, offset: const Offset(0, 8))],
+                    : [
+                        BoxShadow(
+                          color: accentGreen.withValues(alpha: 0.3),
+                          blurRadius: 16,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
               ),
               child: ElevatedButton(
-                onPressed: (isLunas || !isPaymentAvailable || _isProcessing) ? null : _sendWhatsAppMessage,
+                onPressed: (isLunas || !isPaymentAvailable || _isProcessing)
+                    ? null
+                    : _sendWhatsAppMessage,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
-                  padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 16 : 18),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  padding: EdgeInsets.symmetric(
+                    vertical: isSmallScreen ? 16 : 18,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
                 child: _isProcessing
                     ? Row(
@@ -1250,13 +1594,19 @@ class _PaymentPageState extends State<PaymentPage>
                             height: isSmallScreen ? 18 : 20,
                             child: const CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           ),
                           SizedBox(width: isSmallScreen ? 10 : 12),
                           Text(
                             'Membuka WhatsApp...',
-                            style: TextStyle(fontSize: isSmallScreen ? 14 : 16, fontWeight: FontWeight.w700, color: Colors.white),
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 14 : 16,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
                           ),
                         ],
                       )
@@ -1273,9 +1623,13 @@ class _PaymentPageState extends State<PaymentPage>
                             isLunas
                                 ? 'Pembayaran Sudah Lunas'
                                 : !isPaymentAvailable
-                                    ? 'Data Pembayaran Tidak Ditemukan'
-                                    : 'Konfirmasi via WhatsApp',
-                            style: TextStyle(fontSize: isSmallScreen ? 14 : 16, fontWeight: FontWeight.w700, color: Colors.white),
+                                ? 'Data Pembayaran Tidak Ditemukan'
+                                : 'Konfirmasi via WhatsApp',
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 14 : 16,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
                           ),
                         ],
                       ),
@@ -1286,7 +1640,11 @@ class _PaymentPageState extends State<PaymentPage>
               isLunas
                   ? 'Terima kasih, pembayaran $_selectedPaymentType sudah lunas'
                   : 'Pastikan transfer sudah dilakukan sebelum konfirmasi',
-              style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: Colors.grey[600], fontStyle: FontStyle.italic),
+              style: TextStyle(
+                fontSize: isSmallScreen ? 11 : 12,
+                color: Colors.grey[600],
+                fontStyle: FontStyle.italic,
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -1310,14 +1668,26 @@ class _InstructionStep extends StatelessWidget {
       children: [
         Container(
           padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
-          decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-          child: Icon(icon, color: Colors.red[600], size: isSmallScreen ? 18 : 20),
+          decoration: BoxDecoration(
+            color: Colors.red.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            icon,
+            color: Colors.red[600],
+            size: isSmallScreen ? 18 : 20,
+          ),
         ),
         SizedBox(width: isSmallScreen ? 10 : 12),
         Expanded(
           child: Text(
             "$step. $text",
-            style: TextStyle(fontSize: isSmallScreen ? 14 : 15, fontWeight: FontWeight.w500, color: Colors.black87, height: 1.4),
+            style: TextStyle(
+              fontSize: isSmallScreen ? 14 : 15,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+              height: 1.4,
+            ),
           ),
         ),
       ],

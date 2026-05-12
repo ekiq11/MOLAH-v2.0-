@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'dart:math' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -15,6 +14,8 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 // Import custom components
 import 'dialogs/topup_dialog.dart';
 import 'dialogs/notification_dialog.dart';
+import 'utils/fcm_service.dart';
+import 'utils/offline_cache_service.dart';
 import 'screens/pembayaran.dart';
 import 'utils/fetcher_data.dart';
 import 'login.dart';
@@ -192,6 +193,27 @@ class _HomeScreenState extends State<HomeScreen>
       // Check if cache is still valid, if not fetch new data
       await _checkCacheAndRefresh();
       _startPolling();
+      // Subscribe ke FCM untuk notifikasi real-time
+      await FCMService.subscribeForUser(
+        username: widget.username,
+        kelas: _santriData['kelas'],
+        asrama: _santriData['asrama'],
+      );
+
+      // Setup auto-sync saat online
+      OfflineCacheService.setOnBackOnlineCallback(() {
+        if (mounted) {
+          _fetchSantriData(silent: true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Koneksi pulih. Sinkronisasi data...'),
+              backgroundColor: Colors.blue,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      });
+
       // Cancel timeout jika berhasil load
       LoadingTimeoutDialog.cancelTimeout();
     } catch (e) {
@@ -245,7 +267,7 @@ class _HomeScreenState extends State<HomeScreen>
       final cachedDataKey = 'santri_${widget.username}';
       final timestampKey = 'last_update_${widget.username}';
       final cachedData = _mmkv!.decodeString(cachedDataKey) ?? '';
-      final lastUpdate = _mmkv!.decodeInt(timestampKey) ?? 0;
+      final lastUpdate = _mmkv!.decodeInt(timestampKey, defaultValue: 0);
       if (cachedData.isNotEmpty) {
         final decodedData = json.decode(cachedData) as Map<String, dynamic>;
         _previousData = Map<String, dynamic>.from(decodedData);
@@ -291,7 +313,7 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _checkCacheAndRefresh() async {
     if (_mmkv == null) return;
     final timestampKey = 'last_update_${widget.username}';
-    final lastUpdate = _mmkv!.decodeInt(timestampKey) ?? 0;
+    final lastUpdate = _mmkv!.decodeInt(timestampKey, defaultValue: 0);
     final now = DateTime.now().millisecondsSinceEpoch;
     // If cache is older than valid duration, fetch new data
     if (now - lastUpdate > _cacheValidDuration.inMilliseconds) {
@@ -317,14 +339,22 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _performDataFetch({bool silent = false}) async {
-    // --- TAMBAHAN BARU: Cek koneksi sebelum mulai fetch ---
-    if (!_isNetworkAvailable) {
+    // --- Cek koneksi sebelum mulai fetch ---
+    if (!_isNetworkAvailable || !OfflineCacheService.isOnline) {
       if (!silent && mounted) {
-        _showNoInternetNotification();
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'Tidak ada koneksi internet';
-        });
+        LoadingTimeoutDialog.cancelTimeout();
+        
+        // Coba baca dari cache offline
+        final cachedData = OfflineCacheService.getSantriData(widget.username);
+        if (cachedData != null) {
+          await _processNewData(cachedData, fromCache: true);
+          _showNoInternetNotification();
+        } else {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = 'Tidak ada koneksi internet dan belum ada data tersimpan.';
+          });
+        }
       }
       return;
     }
@@ -446,7 +476,15 @@ class _HomeScreenState extends State<HomeScreen>
     }
     // Cancel timeout sebelum handle error
     LoadingTimeoutDialog.cancelTimeout();
-    await _handleFetchError('Semua sumber data gagal diakses', silent);
+    
+    // Fallback terakhir: Coba ambil dari cache offline
+    final cachedData = OfflineCacheService.getSantriData(widget.username);
+    if (cachedData != null) {
+      debugPrint('⚠️ Fetch gagal. Membaca data dari Offline Cache');
+      await _processNewData(cachedData, fromCache: true);
+    } else {
+      await _handleFetchError('Semua sumber data gagal diakses', silent);
+    }
   }
 
   Future<void> _handleFetchError(dynamic error, bool silent) async {
@@ -693,7 +731,7 @@ class _HomeScreenState extends State<HomeScreen>
     return formatted;
   }
 
-  Future<void> _processNewData(Map<String, dynamic> newData) async {
+  Future<void> _processNewData(Map<String, dynamic> newData, {bool fromCache = false}) async {
     final hasChanges = _checkChanges(newData);
     if (_shimmerController.isAnimating) {
       _shimmerController.stop();
@@ -708,10 +746,16 @@ class _HomeScreenState extends State<HomeScreen>
         _animationController.forward();
       }
     }
-    if (hasChanges && mounted) {
+    
+    if (!fromCache) {
+      // Simpan ke offline cache jika data ini berasal dari internet
+      OfflineCacheService.saveSantriData(widget.username, newData);
+      await _saveData(newData);
+    }
+
+    if (hasChanges && mounted && !fromCache) {
       _showUpdateSnackBar();
     }
-    await _saveData(newData);
   }
 
   bool _checkChanges(Map<String, dynamic> newData) {
@@ -914,7 +958,7 @@ class _HomeScreenState extends State<HomeScreen>
                 Container(
                   padding: EdgeInsets.all(screenSize.width * 0.04),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                    color: Colors.red.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -1045,16 +1089,28 @@ class _HomeScreenState extends State<HomeScreen>
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: SafeArea(
-        child: IndexedStack(
-          index: _currentIndex,
+        child: Column(
           children: [
-            _isLoading && _santriData.isEmpty
-                ? _buildLoadingState(screenSize)
-                : _buildMainContent(screenSize),
-            _buildEnhancedNotificationPage(screenSize),
-            PaymentPage(
-              username: widget.username,
-              studentName: _santriData['nama'] ?? 'Santri',
+            // Banner Offline
+            if (!_isNetworkAvailable || !OfflineCacheService.isOnline)
+              OfflineBanner(
+                lastUpdated: OfflineCacheService.getLastCacheLabel(widget.username),
+              ),
+              
+            Expanded(
+              child: IndexedStack(
+                index: _currentIndex,
+                children: [
+                  _isLoading && _santriData.isEmpty
+                      ? _buildLoadingState(screenSize)
+                      : _buildMainContent(screenSize),
+                  _buildEnhancedNotificationPage(screenSize),
+                  PaymentPage(
+                    username: widget.username,
+                    studentName: _santriData['nama'] ?? 'Santri',
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -1069,7 +1125,7 @@ class _HomeScreenState extends State<HomeScreen>
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha: 0.2),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -1124,7 +1180,7 @@ class _HomeScreenState extends State<HomeScreen>
             ),
             label: 'Notifikasi',
           ),
-          
+
           const BottomNavigationBarItem(
             icon: Icon(Icons.receipt_long, color: Colors.grey),
             activeIcon: Icon(Icons.receipt_long_rounded),
@@ -1387,7 +1443,7 @@ class _HomeScreenState extends State<HomeScreen>
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1579,7 +1635,7 @@ class _HomeScreenState extends State<HomeScreen>
         borderRadius: BorderRadius.circular(screenSize.width * 0.06),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha: 0.2),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -1674,7 +1730,7 @@ class _HomeScreenState extends State<HomeScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -1724,7 +1780,7 @@ class _HomeScreenState extends State<HomeScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -1792,7 +1848,7 @@ class _HomeScreenState extends State<HomeScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),

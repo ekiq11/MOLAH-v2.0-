@@ -3,10 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:pizab_molah/home.dart';
 import 'package:pizab_molah/utils/login_preferences.dart';
+import 'package:pizab_molah/utils/analytics_service.dart';
 import 'package:csv/csv.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
+import 'dart:ui';
 
 // ==================== Login Screen ====================
 class LoginScreen extends StatefulWidget {
@@ -334,6 +336,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (mounted) {
           print('🏠 Navigasi ke HomeScreen dengan username: $username');
+          // 📊 Log analytics login event
+          await AnalyticsService.logLogin(username);
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (_) => HomeScreen(username: username)),
             (route) => false,
@@ -451,14 +455,28 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(fontSize: 16, color: Colors.white70),
                   ),
                   const SizedBox(height: 40),
-                  Card(
-                    elevation: 8,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.all(24),
-                      child: Form(
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      child: Container(
+                        padding: const EdgeInsets.all(32),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.85),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 20,
+                              spreadRadius: -5,
+                            ),
+                          ],
+                        ),
+                        child: Form(
                         key: _formKey,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -568,18 +586,33 @@ class _LoginScreenState extends State<LoginScreen> {
                               },
                             ),
                             const SizedBox(height: 24),
-                            SizedBox(
+                            Container(
                               width: double.infinity,
-                              height: 50,
+                              height: 55,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFFE53E3E), Color(0xFFD53F8C)],
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFE53E3E).withValues(alpha: 0.4),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
+                              ),
                               child: ElevatedButton(
                                 onPressed: _isLoading ? null : _login,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFE53E3E),
+                                  backgroundColor: Colors.transparent,
                                   foregroundColor: Colors.white,
+                                  shadowColor: Colors.transparent,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(16),
                                   ),
-                                  elevation: 3,
                                 ),
                                 child: _isLoading
                                     ? const Row(
@@ -611,7 +644,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.blue.withOpacity(0.1),
+                                color: Colors.blue.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
@@ -624,7 +657,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      'Masukkan nomor NISN sebagai username dan NIS sebagai password (hanya angka)',
+                                      'Silahkan tanyakan username dan password jika ada yang salah ke Admin',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: Colors.blue[700],
@@ -634,7 +667,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ],
                               ),
                             ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),

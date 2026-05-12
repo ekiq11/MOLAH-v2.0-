@@ -3,7 +3,9 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  audioplayers_linux
   mmkv_linux
+  printing
   url_launcher_linux
 )
 

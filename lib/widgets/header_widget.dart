@@ -37,23 +37,19 @@ class CombinedHeader extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFFDC2626),
-                Color(0xFFB91C1C),
-                Color(0xFF991B1B),
-              ],
+              colors: [Color(0xFFDC2626), Color(0xFFB91C1C), Color(0xFF991B1B)],
               stops: [0.0, 0.5, 1.0],
             ),
             borderRadius: BorderRadius.circular(28),
             boxShadow: [
               BoxShadow(
-                color: Color(0xFFDC2626).withOpacity(0.4),
+                color: Color(0xFFDC2626).withValues(alpha: 0.4),
                 blurRadius: 20,
                 offset: Offset(0, 8),
                 spreadRadius: 0,
               ),
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 40,
                 offset: Offset(0, 12),
                 spreadRadius: -5,
@@ -67,56 +63,56 @@ class CombinedHeader extends StatelessWidget {
                 children: [
                   // Avatar dengan Glow Effect
                   GestureDetector(
-  onTap: () {
-    HapticFeedback.lightImpact();
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ProfilePage(
-          nisn: santriData['nisn'] ?? '',
-          santriData: santriData,
-        ),
-      ),
-    );
-  },
-  child: Container(
-    width: isSmallScreen ? 56 : 64,
-    height: isSmallScreen ? 56 : 64,
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          Colors.white.withOpacity(0.25),
-          Colors.white.withOpacity(0.1),
-        ],
-      ),
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(
-        color: Colors.white.withOpacity(0.3),
-        width: 2.5,
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.white.withOpacity(0.2),
-          blurRadius: 12,
-          spreadRadius: 2,
-        ),
-        BoxShadow(
-          color: Colors.black.withOpacity(0.2),
-          blurRadius: 8,
-          offset: Offset(0, 4),
-        ),
-      ],
-    ),
-    child: Icon(
-      Icons.school_rounded,
-      color: Colors.white,
-      size: isSmallScreen ? 28 : 32,
-    ),
-  ),
-),
-                  
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ProfilePage(
+                            nisn: santriData['nisn'] ?? '',
+                            santriData: santriData,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      width: isSmallScreen ? 56 : 64,
+                      height: isSmallScreen ? 56 : 64,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white.withValues(alpha: 0.25),
+                            Colors.white.withValues(alpha: 0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          width: 2.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            blurRadius: 12,
+                            spreadRadius: 2,
+                          ),
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            blurRadius: 8,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.school_rounded,
+                        color: Colors.white,
+                        size: isSmallScreen ? 28 : 32,
+                      ),
+                    ),
+                  ),
+
                   SizedBox(width: isSmallScreen ? 16 : 20),
 
                   // User Info dengan Animation
@@ -132,10 +128,10 @@ class CombinedHeader extends StatelessWidget {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                                color: Colors.white.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                  color: Colors.white.withOpacity(0.3),
+                                  color: Colors.white.withValues(alpha: 0.3),
                                   width: 1,
                                 ),
                               ),
@@ -173,7 +169,7 @@ class CombinedHeader extends StatelessWidget {
                             letterSpacing: -0.5,
                             shadows: [
                               Shadow(
-                                color: Colors.black.withOpacity(0.3),
+                                color: Colors.black.withValues(alpha: 0.3),
                                 offset: Offset(0, 2),
                                 blurRadius: 4,
                               ),
@@ -187,7 +183,7 @@ class CombinedHeader extends StatelessWidget {
                           santriData['nama'] ?? 'Memuat data...',
                           style: TextStyle(
                             fontSize: isSmallScreen ? 13 : 15,
-                            color: Colors.white.withOpacity(0.95),
+                            color: Colors.white.withValues(alpha: 0.95),
                             fontWeight: FontWeight.w500,
                             letterSpacing: 0.2,
                           ),
@@ -205,10 +201,10 @@ class CombinedHeader extends StatelessWidget {
                       child: Container(
                         padding: EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
+                          color: Colors.white.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.3),
+                            color: Colors.white.withValues(alpha: 0.3),
                             width: 1.5,
                           ),
                         ),
@@ -235,7 +231,7 @@ class CombinedHeader extends StatelessWidget {
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.amber.withOpacity(0.5),
+                                        color: Colors.amber.withValues(alpha: 0.5),
                                         blurRadius: 8,
                                         spreadRadius: 1,
                                       ),
@@ -247,8 +243,8 @@ class CombinedHeader extends StatelessWidget {
                                   ),
                                   child: Center(
                                     child: Text(
-                                      notificationCount > 9 
-                                          ? '9+' 
+                                      notificationCount > 9
+                                          ? '9+'
                                           : notificationCount.toString(),
                                       style: TextStyle(
                                         color: Color(0xFFDC2626),
@@ -276,18 +272,18 @@ class CombinedHeader extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Colors.white.withOpacity(0.2),
-                      Colors.white.withOpacity(0.1),
+                      Colors.white.withValues(alpha: 0.2),
+                      Colors.white.withValues(alpha: 0.1),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(22),
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                     width: 1.5,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 10,
                       offset: Offset(0, 4),
                     ),
@@ -301,7 +297,7 @@ class CombinedHeader extends StatelessWidget {
                         Container(
                           padding: EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
@@ -315,7 +311,7 @@ class CombinedHeader extends StatelessWidget {
                           'Saldo Santri',
                           style: TextStyle(
                             fontSize: isSmallScreen ? 13 : 14,
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.5,
                           ),
@@ -326,14 +322,14 @@ class CombinedHeader extends StatelessWidget {
                           child: Container(
                             padding: EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
+                              color: Colors.white.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Icon(
                               isSaldoVisible
                                   ? Icons.visibility_off_rounded
                                   : Icons.visibility_rounded,
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                               size: 18,
                             ),
                           ),
@@ -359,7 +355,7 @@ class CombinedHeader extends StatelessWidget {
                               height: 1.1,
                               shadows: [
                                 Shadow(
-                                  color: Colors.black.withOpacity(0.2),
+                                  color: Colors.black.withValues(alpha: 0.2),
                                   offset: Offset(0, 2),
                                   blurRadius: 4,
                                 ),
@@ -386,18 +382,18 @@ class CombinedHeader extends StatelessWidget {
                                 end: Alignment.bottomRight,
                                 colors: [
                                   Colors.white,
-                                  Colors.white.withOpacity(0.95),
+                                  Colors.white.withValues(alpha: 0.95),
                                 ],
                               ),
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.white.withOpacity(0.3),
+                                  color: Colors.white.withValues(alpha: 0.3),
                                   blurRadius: 12,
                                   spreadRadius: 1,
                                 ),
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
+                                  color: Colors.black.withValues(alpha: 0.2),
                                   blurRadius: 8,
                                   offset: Offset(0, 4),
                                 ),

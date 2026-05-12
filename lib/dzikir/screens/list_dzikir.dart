@@ -26,22 +26,21 @@ class _DzikirListPageState extends State<DzikirListPage> {
 
   Future<void> _loadDzikirs() async {
     try {
-      final String response = await rootBundle.loadString('assets/json/dzikir.json');
+      final String response = await rootBundle.loadString(
+        'assets/json/dzikir.json',
+      );
       final List<dynamic> data = json.decode(response);
-      
+
       setState(() {
-        _dzikirs = data
-            .map((json) => Dzikir.fromJson(json))
-            .where((dzikir) {
-              // Filter berdasarkan type
-              if (widget.type == 'pagi') {
-                return dzikir.isForMorning;
-              } else if (widget.type == 'petang') {
-                return dzikir.isForEvening;
-              }
-              return true;
-            })
-            .toList();
+        _dzikirs = data.map((json) => Dzikir.fromJson(json)).where((dzikir) {
+          // Filter berdasarkan type
+          if (widget.type == 'pagi') {
+            return dzikir.isForMorning;
+          } else if (widget.type == 'petang') {
+            return dzikir.isForEvening;
+          }
+          return true;
+        }).toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -60,21 +59,17 @@ class _DzikirListPageState extends State<DzikirListPage> {
   }
 
   Color get _primaryColor {
-    return widget.type == 'pagi' 
+    return widget.type == 'pagi'
         ? Color(0xFF059669) // Hijau untuk pagi
         : Color(0xFF1E293B); // Abu gelap untuk sore
   }
 
   IconData get _iconType {
-    return widget.type == 'pagi' 
-        ? Icons.wb_sunny 
-        : Icons.nights_stay;
+    return widget.type == 'pagi' ? Icons.wb_sunny : Icons.nights_stay;
   }
 
   String get _title {
-    return widget.type == 'pagi' 
-        ? 'Dzikir Pagi' 
-        : 'Dzikir Petang';
+    return widget.type == 'pagi' ? 'Dzikir Pagi' : 'Dzikir Petang';
   }
 
   double _getResponsiveFontSize(double screenWidth, {required double base}) {
@@ -102,7 +97,7 @@ class _DzikirListPageState extends State<DzikirListPage> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     return Scaffold(
       backgroundColor: Color(0xFFF8F9FA),
       body: CustomScrollView(
@@ -153,14 +148,13 @@ class _DzikirListPageState extends State<DzikirListPage> {
             )
           else
             SliverPadding(
-              padding: EdgeInsets.all(_getResponsivePadding(screenWidth, base: 16)),
+              padding: EdgeInsets.all(
+                _getResponsivePadding(screenWidth, base: 16),
+              ),
               sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    return _buildDzikirCard(_dzikirs[index], index, screenWidth);
-                  },
-                  childCount: _dzikirs.length,
-                ),
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  return _buildDzikirCard(_dzikirs[index], index, screenWidth);
+                }, childCount: _dzikirs.length),
               ),
             ),
         ],
@@ -172,7 +166,7 @@ class _DzikirListPageState extends State<DzikirListPage> {
     final titleFontSize = _getResponsiveFontSize(screenWidth, base: 18);
     final iconSize = screenWidth < 360 ? 100.0 : 120.0;
     final expandedHeight = screenWidth < 360 ? 110.0 : 120.0;
-    
+
     return SliverAppBar(
       expandedHeight: expandedHeight,
       floating: false,
@@ -195,7 +189,10 @@ class _DzikirListPageState extends State<DzikirListPage> {
               end: Alignment.bottomRight,
               colors: widget.type == 'pagi'
                   ? [Color(0xFF10B981), Color(0xFF059669)] // Gradient hijau
-                  : [Color(0xFF334155), Color(0xFF1E293B)], // Gradient abu gelap
+                  : [
+                      Color(0xFF334155),
+                      Color(0xFF1E293B),
+                    ], // Gradient abu gelap
             ),
           ),
           child: Stack(
@@ -206,7 +203,7 @@ class _DzikirListPageState extends State<DzikirListPage> {
                 child: Icon(
                   _iconType,
                   size: iconSize,
-                  color: Colors.white.withOpacity(0.1),
+                  color: Colors.white.withValues(alpha: 0.1),
                 ),
               ),
             ],
@@ -228,7 +225,7 @@ class _DzikirListPageState extends State<DzikirListPage> {
     final titleFontSize = _getResponsiveFontSize(screenWidth, base: 14);
     final subtitleFontSize = _getResponsiveFontSize(screenWidth, base: 12);
     final spacing = screenWidth < 360 ? 12.0 : 16.0;
-    
+
     return Container(
       margin: EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -236,7 +233,7 @@ class _DzikirListPageState extends State<DzikirListPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: Offset(0, 2),
           ),
@@ -269,8 +266,14 @@ class _DzikirListPageState extends State<DzikirListPage> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: widget.type == 'pagi'
-                        ? [Color(0xFF10B981), Color(0xFF059669)] // Gradient hijau
-                        : [Color(0xFF334155), Color(0xFF1E293B)], // Gradient abu gelap
+                        ? [
+                            Color(0xFF10B981),
+                            Color(0xFF059669),
+                          ] // Gradient hijau
+                        : [
+                            Color(0xFF334155),
+                            Color(0xFF1E293B),
+                          ], // Gradient abu gelap
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -309,7 +312,7 @@ class _DzikirListPageState extends State<DzikirListPage> {
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: _primaryColor.withOpacity(0.1),
+                            color: _primaryColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(

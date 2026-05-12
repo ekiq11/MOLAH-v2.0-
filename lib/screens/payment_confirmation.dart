@@ -108,7 +108,7 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen>
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Icon(
@@ -557,7 +557,7 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen>
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF000000).withOpacity(0.05),
+                    color: const Color(0xFF000000).withValues(alpha: 0.05),
                     offset: const Offset(0, 1),
                     blurRadius: 3,
                   ),
@@ -639,7 +639,7 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF000000).withOpacity(0.04),
+            color: const Color(0xFF000000).withValues(alpha: 0.04),
             offset: const Offset(0, 1),
             blurRadius: 3,
           ),
@@ -719,7 +719,7 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF000000).withOpacity(0.3),
+            color: const Color(0xFF000000).withValues(alpha: 0.3),
             offset: const Offset(0, 10),
             blurRadius: 20,
             spreadRadius: 1,
@@ -730,7 +730,7 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen>
         children: [
           Icon(
             Icons.payment_rounded,
-            color: const Color(0xFF9CA3AF).withOpacity(0.7),
+            color: const Color(0xFF9CA3AF).withValues(alpha: 0.7),
             size: 28,
           ),
           const SizedBox(height: 16),
@@ -772,7 +772,7 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFF1F2937).withOpacity(0.7),
+              color: const Color(0xFF1F2937).withValues(alpha: 0.7),
               borderRadius: BorderRadius.circular(12),
             ),
             child: RichText(
@@ -819,7 +819,7 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF000000).withOpacity(0.04),
+            color: const Color(0xFF000000).withValues(alpha: 0.04),
             offset: const Offset(0, 1),
             blurRadius: 3,
           ),
@@ -995,7 +995,7 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen>
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF000000).withOpacity(0.05),
+            color: const Color(0xFF000000).withValues(alpha: 0.05),
             offset: const Offset(0, -1),
             blurRadius: 3,
           ),

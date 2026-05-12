@@ -1,18 +1,68 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Theme applied to the Android Window while the process is starting when the OS's Dark Mode setting is off -->
-    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
-        <!-- Show a splash screen on the activity. Automatically removed when
-             the Flutter engine draws its first frame -->
-        <item name="android:windowBackground">@drawable/launch_background</item>
-    </style>
-    <!-- Theme applied to the Android Window as soon as the process has started.
-         This theme determines the color of the Android Window while your
-         Flutter UI initializes, as well as behind your Flutter UI while its
-         running.
+<!--
+    styles.xml — Kompatibel untuk semua OEM Android:
+    Samsung One UI, OPPO ColorOS, Xiaomi MIUI, Realme UI, Vivo FuntouchOS, dll.
 
-         This Theme is only used starting with V2 of Flutter's Android embedding. -->
-    <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
-        <item name="android:windowBackground">?android:colorBackground</item>
+    PENTING:
+    - Jangan gunakan android:statusBarColor / android:navigationBarColor langsung di sini
+      karena ini yang menyebabkan bug di berbagai device.
+    - Gunakan windowTranslucentStatus + windowDrawsSystemBarBackgrounds sebagai gantinya.
+    - Flutter akan mengontrol warna via SystemChrome.setSystemUIOverlayStyle di Dart.
+-->
+<resources>
+
+    <!-- =============================================
+         LaunchTheme: Dipakai saat splash/startup
+         ============================================= -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <!--
+            windowBackground: Warna latar saat app loading.
+            Ganti dengan warna brand kamu atau @drawable/launch_background.
+        -->
+        <item name="android:windowBackground">@drawable/launch_background</item>
+
+        <!-- Penting: Biarkan Flutter menggambar di bawah system bars -->
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+
+        <!--
+            windowDrawsSystemBarBackgrounds = true → Flutter bisa mengontrol warna system bar.
+            Ini WAJIB ada agar tidak crash di Samsung/OPPO/Xiaomi.
+        -->
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+
+        <!-- Sembunyikan title bar bawaan Android -->
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+
+        <!-- Hardware acceleration — penting untuk animasi Flutter -->
+        <item name="android:hardwareAccelerated">true</item>
+
+        <!-- Untuk Android 12+ Splash Screen: warna icon launcher -->
+        <!-- <item name="android:windowSplashScreenBackground">@color/splash_bg</item> -->
     </style>
+
+
+    <!-- =============================================
+         NormalTheme: Dipakai setelah app fully loaded
+         ============================================= -->
+    <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <!-- Background hitam mencegah white flash saat navigasi -->
+        <item name="android:windowBackground">@android:color/black</item>
+
+        <!-- Translucent = false → Flutter handle sendiri warnanya -->
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+
+        <!--
+            KUNCI FIX: windowDrawsSystemBarBackgrounds harus true.
+            Tanpa ini, Samsung/OPPO/Xiaomi mengabaikan perintah setStatusBarColor dari Flutter.
+        -->
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:hardwareAccelerated">true</item>
+    </style>
+
 </resources>

@@ -1,18 +1,28 @@
-// screens/quran_read_page.dart - FIXED AUTO SCROLL VERSION
+// screens/quran_read_page.dart - FIXED: Highlight when marking as last read
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:pizab_molah/quran/helper/jump_ayat.dart';
+import 'package:pizab_molah/quran/helper/overlay.dart';
+import 'package:pizab_molah/quran/helper/scroll_helper.dart';
+import 'package:pizab_molah/quran/helper/theme.dart';
 import 'package:pizab_molah/quran/model/surah_model.dart';
+import 'package:pizab_molah/quran/service/audio_service.dart';
 import 'package:pizab_molah/quran/service/quran_service.dart';
+import 'package:pizab_molah/quran/widget/ayat_list_item.dart';
+import 'package:pizab_molah/quran/widget/quran_app_bar.dart';
+import 'package:pizab_molah/quran/widget/quran_dialog.dart';
 
 class QuranReadPage extends StatefulWidget {
   final int surahNumber;
   final int? initialAyah;
+  final bool autoScrollToLastRead;
 
   const QuranReadPage({
-    Key? key,
+    super.key,
     required this.surahNumber,
     this.initialAyah,
-  }) : super(key: key);
+    this.autoScrollToLastRead = true,
+  });
 
   @override
   State<QuranReadPage> createState() => _QuranReadPageState();
@@ -20,484 +30,151 @@ class QuranReadPage extends StatefulWidget {
 
 class _QuranReadPageState extends State<QuranReadPage> {
   final QuranService _quranService = QuranService();
+  final QuranAudioService _audioService = QuranAudioService();
   final ScrollController _scrollController = ScrollController();
   final Map<int, GlobalKey> _ayahKeys = {};
-  
+
   SurahModel? _surah;
   bool _isLoading = true;
   double _fontSize = 28.0;
   bool _showTranslation = true;
+  bool _showTransliteration = true;
+  bool _showTajwid = false;
+  bool _isDarkMode = false;
   Set<int> _bookmarkedAyahs = {};
-  bool _hasScrolledToInitial = false;
   bool _hasReachedEnd = false;
+  bool _showLastReadBanner = true;
+  bool _hasShownDialog = false;
+  bool _showNavigationFABs = false;
+  String? _nextSurahName;
+  String? _previousSurahName;
+
+  int? _lastReadAyah;
+  int? _targetAyah;
+  bool _isFromLastRead = false;
+  bool _hasScrolledToTarget = false;
+  bool _isScrolling = false;
+
+  bool _isAudioPlaying = false;
+  String? _currentPlayingAyah;
+
+  int? _currentVisibleAyah;
+  DateTime? _lastVisibleTime;
 
   @override
   void initState() {
     super.initState();
+    _initializeApp();
+  }
+
+  void _initializeApp() {
     _loadData();
     _scrollController.addListener(_onScroll);
+    _setupAudioListener();
+  }
+
+  void _setupAudioListener() {
+    _audioService.playerStateStream.listen((state) {
+      if (mounted) {
+        setState(() {
+          _isAudioPlaying = state == PlayerState.playing;
+          if (state == PlayerState.completed || state == PlayerState.stopped) {
+            _currentPlayingAyah = null;
+          }
+        });
+      }
+    });
   }
 
   void _onScroll() {
     if (!_scrollController.hasClients || _surah == null) return;
-    
-    // Cek apakah sudah scroll sampai bawah (dengan threshold)
+
     final maxScroll = _scrollController.position.maxScrollExtent;
     final currentScroll = _scrollController.position.pixels;
-    final threshold = 100.0; // 100px dari bawah
-    
-    if (currentScroll >= (maxScroll - threshold) && !_hasReachedEnd) {
-      _hasReachedEnd = true;
-      _showNextSurahDialog();
-    }
-  }
+    const threshold = 100.0;
 
-  void _showNextSurahDialog() {
-    if (!mounted || _surah == null) return;
-    
-    final currentSurahNumber = widget.surahNumber;
-    final nextSurahNumber = currentSurahNumber + 1;
-    
-    // Cek apakah ada surah berikutnya (total 114 surah)
-    if (nextSurahNumber > 114) {
-      // Sudah surah terakhir (An-Nas)
+    if (currentScroll >= (maxScroll - threshold) && !_hasReachedEnd) {
+      setState(() => _hasReachedEnd = true);
       _showCompletionDialog();
-      return;
     }
-    
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Color(0xFF059669).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                Icons.check_circle,
-                color: Color(0xFF059669),
-                size: 28,
-              ),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Selesai!',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1F2937),
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Anda telah menyelesaikan ${_surah!.nameLatin}.',
-              style: TextStyle(
-                fontSize: 15,
-                color: Color(0xFF4B5563),
-                height: 1.5,
-              ),
-            ),
-            SizedBox(height: 16),
-            Container(
-              padding: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xFF059669).withOpacity(0.1),
-                    Color(0xFF047857).withOpacity(0.05),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Color(0xFF059669).withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.arrow_forward,
-                    color: Color(0xFF059669),
-                    size: 24,
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Lanjut ke surah berikutnya?',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF059669),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // Tutup dialog
-              Navigator.pop(context); // Kembali ke list
-            },
-            child: Text(
-              'Kembali',
-              style: TextStyle(
-                color: Color(0xFF6B7280),
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context); // Tutup dialog
-              // Navigate ke surah berikutnya
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => QuranReadPage(
-                    surahNumber: nextSurahNumber,
-                    initialAyah: 1, // Mulai dari ayat pertama
-                  ),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF059669),
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              elevation: 0,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Lanjutkan',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(width: 8),
-                Icon(Icons.arrow_forward, size: 18),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+
+    if (currentScroll < (maxScroll - 300) && _hasReachedEnd) {
+      setState(() => _hasReachedEnd = false);
+    }
+
+    _detectVisibleAyahAndSave();
   }
 
   void _showCompletionDialog() {
-    if (!mounted) return;
-    
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFFFBBF24), Color(0xFFF59E0B)],
-                ),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                Icons.emoji_events,
-                color: Colors.white,
-                size: 28,
-              ),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Alhamdulillah!',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1F2937),
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Anda telah menyelesaikan Al-Qur\'an surah An-Nas, surah terakhir dalam Al-Qur\'an.',
-              style: TextStyle(
-                fontSize: 15,
-                color: Color(0xFF4B5563),
-                height: 1.6,
-              ),
-            ),
-            SizedBox(height: 16),
-            Container(
-              padding: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xFFFBBF24).withOpacity(0.1),
-                    Color(0xFFF59E0B).withOpacity(0.05),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                'Semoga bacaan Al-Qur\'an menjadi cahaya dan petunjuk dalam hidup Anda. 🤲',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontStyle: FontStyle.italic,
-                  color: Color(0xFF92400E),
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context); // Tutup dialog
-              Navigator.pop(context); // Kembali ke list
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF059669),
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              elevation: 0,
-            ),
-            child: Text(
-              'Kembali ke Daftar Surah',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _loadData() async {
-    try {
-      setState(() => _isLoading = true);
-      
-      final surah = await _quranService.loadSurah(widget.surahNumber);
-      final fontSize = await _quranService.getFontSize();
-      final showTranslation = await _quranService.getShowTranslation();
-      final bookmarks = await _quranService.getBookmarks();
-      
-      // Filter bookmarks untuk surah ini
-      final bookmarkedAyahs = bookmarks
-          .where((b) => b.surahNumber == widget.surahNumber)
-          .map((b) => b.ayahNumber)
-          .toSet();
-      
-      // Generate keys untuk setiap ayat
-      if (surah != null) {
-        _ayahKeys.clear();
-        for (var i = 1; i <= int.parse(surah.numberOfAyah); i++) {
-          _ayahKeys[i] = GlobalKey();
-        }
-      }
-      
-      if (mounted) {
-        setState(() {
-          _surah = surah;
-          _fontSize = fontSize;
-          _showTranslation = showTranslation;
-          _bookmarkedAyahs = bookmarkedAyahs;
-          _isLoading = false;
-        });
-
-        // Auto scroll ke initial ayah jika ada
-        if (widget.initialAyah != null && !_hasScrolledToInitial) {
-          _hasScrolledToInitial = true;
-          
-          // Tunggu hingga layout selesai di-render
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _performAutoScroll();
-          });
-        }
-      }
-    } catch (e) {
-      debugPrint('Error loading data: $e');
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  void _performAutoScroll() {
-    if (!mounted || widget.initialAyah == null || _surah == null) return;
-    
-    // Tunggu scroll controller siap
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(Duration(milliseconds: 300), () {
-        if (!mounted || !_scrollController.hasClients) return;
-        
-        final targetAyah = widget.initialAyah!;
-        
-        // Estimasi tinggi per ayat
-        final estimatedAyahHeight = _showTranslation ? 350.0 : 200.0;
-        
-        // Estimasi posisi scroll
-        final estimatedPosition = (targetAyah - 1) * estimatedAyahHeight;
-        
-        // Pastikan tidak melebihi max scroll extent yang tersedia saat ini
-        final maxScroll = _scrollController.position.maxScrollExtent;
-        final safePosition = estimatedPosition.clamp(0.0, maxScroll);
-        
-        debugPrint('Jumping to estimated position: $safePosition (target ayah: $targetAyah, max: $maxScroll)');
-        
-        // Jump ke posisi estimasi
-        _scrollController.jumpTo(safePosition);
-        
-        // Tunggu lebih lama untuk render
-        Future.delayed(Duration(milliseconds: 500), () {
-          if (!mounted) return;
-          
-          // Cek apakah masih perlu scroll lebih jauh
-          // Jika estimatedPosition > maxScroll, scroll ke bawah maksimal dulu
-          if (estimatedPosition > maxScroll) {
-            debugPrint('Need to scroll further, scrolling to max extent');
-            _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-            
-            // Tunggu lagi untuk render lebih banyak widget
-            Future.delayed(Duration(milliseconds: 500), () {
-              _attemptScroll(0);
-            });
-          } else {
-            // Langsung coba scroll halus
-            _attemptScroll(0);
-          }
-        });
-      });
-    });
-  }
-
-  void _attemptScroll(int attempt) {
-    if (!mounted || widget.initialAyah == null || attempt > 8) {
-      if (attempt > 8) {
-        debugPrint('Scroll completed after max attempts - showing notification anyway');
-      }
-      // Tetap tampilkan notifikasi
-      _showScrollNotification();
+    if (!mounted ||
+        _surah == null ||
+        _hasShownDialog ||
+        widget.surahNumber >= 114) {
       return;
     }
 
-    final key = _ayahKeys[widget.initialAyah!];
-    final context = key?.currentContext;
-    
-    if (context != null) {
-      try {
-        debugPrint('Attempt $attempt: Context found! Scrolling to ayah ${widget.initialAyah}');
-        
-        // Scroll halus ke posisi exact
-        Scrollable.ensureVisible(
-          context,
-          duration: Duration(milliseconds: 600),
-          curve: Curves.easeInOutCubic,
-          alignment: 0.15,
-        ).then((_) {
-          debugPrint('✓ Successfully scrolled to ayah ${widget.initialAyah}');
-          _showScrollNotification();
-        }).catchError((e) {
-          debugPrint('Error in ensureVisible: $e');
-          _showScrollNotification();
-        });
-      } catch (e) {
-        debugPrint('Error scrolling attempt $attempt: $e');
-        // Retry
-        Future.delayed(Duration(milliseconds: 200), () {
-          _attemptScroll(attempt + 1);
-        });
-      }
-    } else {
-      debugPrint('Attempt $attempt: Context not ready for ayah ${widget.initialAyah}');
-      
-      // Coba scroll sedikit lebih jauh untuk trigger rendering
-      if (attempt == 3 && _scrollController.hasClients) {
-        final currentPosition = _scrollController.offset;
-        final maxPosition = _scrollController.position.maxScrollExtent;
-        
-        if (currentPosition < maxPosition) {
-          debugPrint('Attempt 3: Scrolling further to trigger more rendering');
-          _scrollController.jumpTo((currentPosition + 500).clamp(0.0, maxPosition));
-        }
-      }
-      
-      // Retry dengan delay lebih lama
-      Future.delayed(Duration(milliseconds: 250), () {
-        _attemptScroll(attempt + 1);
-      });
-    }
-  }
-  
-  void _showScrollNotification() {
-    if (!mounted) return;
-    
-    Future.delayed(Duration(milliseconds: 300), () {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.location_on, color: Colors.white, size: 20),
-                SizedBox(width: 12),
-                Text('Lanjut dari Ayat ${widget.initialAyah}'),
-              ],
-            ),
-            duration: Duration(seconds: 2),
-            backgroundColor: Color(0xFF3B82F6),
-            behavior: SnackBarBehavior.floating,
-            margin: EdgeInsets.only(
-              bottom: MediaQuery.of(context).size.height - 150,
-              left: 20,
-              right: 20,
-            ),
-          ),
-        );
-      }
-    });
+    setState(() => _hasShownDialog = true);
+
+    QuranDialogs.showNextSurahDialog(
+      context: context,
+      currentSurahName: _surah!.nameLatin,
+      currentSurahNumber: widget.surahNumber,
+      onContinue: _goToNextSurah,
+      onLater: () {
+        setState(() => _showNavigationFABs = true);
+      },
+    );
   }
 
-  Future<void> _saveLastRead(int ayahNumber) async {
-    if (_surah != null) {
+  void _detectVisibleAyahAndSave() {
+    if (_surah == null || !_scrollController.hasClients) return;
+
+    final scrollOffset = _scrollController.offset;
+    final viewportHeight = _scrollController.position.viewportDimension;
+
+    int? visibleAyah;
+
+    for (var ayahNum = 1; ayahNum <= _surah!.len; ayahNum++) {
+      final key = _ayahKeys[ayahNum];
+      final context = key?.currentContext;
+
+      if (context != null) {
+        try {
+          final RenderBox? box = context.findRenderObject() as RenderBox?;
+          if (box != null && box.hasSize) {
+            final position = box.localToGlobal(Offset.zero);
+            final ayahTop = position.dy;
+
+            if (ayahTop >= 0 && ayahTop <= viewportHeight * 0.4) {
+              visibleAyah = ayahNum;
+              break;
+            }
+          }
+        } catch (e) {
+          // Ignore render errors
+        }
+      }
+    }
+
+    if (visibleAyah != null && visibleAyah != _currentVisibleAyah) {
+      _currentVisibleAyah = visibleAyah;
+      _lastVisibleTime = DateTime.now();
+    } else if (visibleAyah != null &&
+        _currentVisibleAyah == visibleAyah &&
+        _lastVisibleTime != null) {
+      final duration = DateTime.now().difference(_lastVisibleTime!);
+
+      if (duration.inSeconds >= 2 && !_hasScrolledToTarget) {
+        _autoSaveLastRead(visibleAyah);
+        _lastVisibleTime = null;
+      }
+    }
+  }
+
+  Future<void> _autoSaveLastRead(int ayahNumber) async {
+    if (_surah == null || ayahNumber == _lastReadAyah) return;
+
+    try {
       final bookmark = BookmarkModel(
         surahNumber: widget.surahNumber,
         ayahNumber: ayahNumber,
@@ -505,24 +182,248 @@ class _QuranReadPageState extends State<QuranReadPage> {
         lastRead: DateTime.now(),
       );
       await _quranService.saveLastRead(bookmark);
+
+      setState(() {
+        _lastReadAyah = ayahNumber;
+      });
+
+      debugPrint('💾 Auto-saved: Ayat $ayahNumber');
+    } catch (e) {
+      debugPrint('❌ Error auto-saving: $e');
+    }
+  }
+
+  void _goToNextSurah() {
+    if (widget.surahNumber >= 114) {
+      _showErrorSnackbar('Ini sudah surah terakhir');
+      return;
+    }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => QuranReadPage(
+          surahNumber: widget.surahNumber + 1,
+          initialAyah: 1,
+          autoScrollToLastRead: false,
+        ),
+      ),
+    );
+  }
+
+  void _goToPreviousSurah() {
+    if (widget.surahNumber <= 1) {
+      _showErrorSnackbar('Ini sudah surah pertama');
+      return;
+    }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => QuranReadPage(
+          surahNumber: widget.surahNumber - 1,
+          autoScrollToLastRead: false,
+        ),
+      ),
+    );
+  }
+
+  void _showJumpToAyahDialog() {
+    if (_surah == null) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => JumpAyahDialog(
+        currentAyah: _currentVisibleAyah ?? 1,
+        totalAyahs: _surah!.len,
+        surahNumber: widget.surahNumber,
+        surahName: _surah!.nameLatin,
+        isDarkMode: _isDarkMode,
+        onJump: (ayahNumber) {
+          setState(() {
+            _targetAyah = ayahNumber;
+            _isFromLastRead = false;
+            _showLastReadBanner = false;
+          });
+          _performAutoScroll();
+        },
+      ),
+    );
+  }
+
+  Future<void> _loadData() async {
+    try {
+      setState(() => _isLoading = true);
+
+      final results = await Future.wait([
+        _quranService.loadSurah(widget.surahNumber),
+        _quranService.getFontSize(),
+        _quranService.getShowTranslation(),
+        _quranService.getShowTransliteration(),
+        _quranService.getBookmarks(),
+        _quranService.getLastRead(),
+        _quranService.getShowTajwid(),
+        _quranService.getDarkMode(),
+        if (widget.surahNumber < 114)
+          _quranService.loadSurah(widget.surahNumber + 1),
+        if (widget.surahNumber > 1)
+          _quranService.loadSurah(widget.surahNumber - 1),
+      ]);
+
+      final surah = results[0] as SurahModel?;
+      final fontSize = results[1] as double;
+      final showTranslation = results[2] as bool;
+      final showTransliteration = results[3] as bool;
+      final bookmarks = results[4] as List<BookmarkModel>;
+      final lastReadBookmark = results[5] as BookmarkModel?;
+      final showTajwid = results[6] as bool;
+      final isDarkMode = results[7] as bool;
+
+      SurahModel? nextSurah;
+      SurahModel? prevSurah;
+      if (widget.surahNumber < 114 && results.length > 8) {
+        nextSurah = results[8] as SurahModel?;
+      }
+      if (widget.surahNumber > 1 && results.length > 9) {
+        prevSurah = results[9] as SurahModel?;
+      }
+
+      final bookmarkedAyahs = bookmarks
+          .where((b) => b.surahNumber == widget.surahNumber)
+          .map((b) => b.ayahNumber)
+          .toSet();
+
+      int? targetAyah;
+      bool isFromLastRead = false;
+
+      if (widget.initialAyah != null) {
+        targetAyah = widget.initialAyah;
+        isFromLastRead = false;
+      } else if (widget.autoScrollToLastRead &&
+          lastReadBookmark != null &&
+          lastReadBookmark.surahNumber == widget.surahNumber &&
+          lastReadBookmark.ayahNumber > 1) {
+        targetAyah = lastReadBookmark.ayahNumber;
+        isFromLastRead = true;
+      }
+
+      if (surah != null) {
+        _ayahKeys.clear();
+        for (var i = 1; i <= surah.len; i++) {
+          _ayahKeys[i] = GlobalKey();
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _surah = surah;
+          _fontSize = fontSize;
+          _showTranslation = showTranslation;
+          _showTransliteration = showTransliteration;
+          _showTajwid = showTajwid;
+          _isDarkMode = isDarkMode;
+          _bookmarkedAyahs = bookmarkedAyahs;
+          _targetAyah = targetAyah;
+          _isFromLastRead = isFromLastRead;
+          _lastReadAyah = lastReadBookmark?.surahNumber == widget.surahNumber
+              ? lastReadBookmark?.ayahNumber
+              : null;
+          _nextSurahName = nextSurah?.nameLatin;
+          _previousSurahName = prevSurah?.nameLatin;
+          _isLoading = false;
+        });
+
+        if (targetAyah != null && targetAyah > 1) {
+          _performAutoScroll();
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading data: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showErrorSnackbar('Gagal memuat data surah');
+      }
+    }
+  }
+
+  void _performAutoScroll() {
+    if (!mounted || _targetAyah == null || _surah == null) return;
+
+    debugPrint(
+      '🚀 Auto scroll ke ayat $_targetAyah (isFromLastRead: $_isFromLastRead)',
+    );
+
+    setState(() {
+      _hasScrolledToTarget = true;
+      _isScrolling = true;
+    });
+
+    ScrollHelper.scrollToAyah(
+      scrollController: _scrollController,
+      ayahKeys: _ayahKeys,
+      targetAyah: _targetAyah!,
+      showTranslation: _showTranslation,
+      onComplete: () {
+        if (mounted) {
+          setState(() {
+            _isScrolling = false;
+            _showLastReadBanner = false;
+          });
+
+          Future.delayed(Duration(milliseconds: 300), () {
+            if (mounted) {
+              _hasScrolledToTarget = false;
+            }
+          });
+        }
+      },
+    );
+  }
+
+  // ✅ FIXED: Highlight ayah immediately when marked as last read
+  Future<void> _saveLastRead(int ayahNumber) async {
+    if (_surah == null) return;
+
+    try {
+      final bookmark = BookmarkModel(
+        surahNumber: widget.surahNumber,
+        ayahNumber: ayahNumber,
+        surahName: _surah!.nameLatin,
+        lastRead: DateTime.now(),
+      );
+      await _quranService.saveLastRead(bookmark);
+
+      // ✅ FIX: Update state dan set sebagai target untuk trigger highlight
+      setState(() {
+        _lastReadAyah = ayahNumber;
+        _targetAyah =
+            ayahNumber; // ✅ Set sebagai target ayah (ini yang bikin highlight!)
+        _isFromLastRead = true; // ✅ Mark sebagai dari last read (warna hijau)
+        _showLastReadBanner = false; // Hide banner karena sudah di posisi
+      });
+
+      if (mounted) {
+        _showSuccessSnackbar('Tersimpan sebagai terakhir dibaca');
+      }
+
+      debugPrint('✅ Last read saved: Ayat $ayahNumber (highlighted)');
+    } catch (e) {
+      debugPrint('❌ Error saving last read: $e');
+      if (mounted) {
+        _showErrorSnackbar('Gagal menyimpan posisi terakhir');
+      }
     }
   }
 
   Future<void> _toggleBookmark(int ayahNumber) async {
-    if (_surah != null) {
+    if (_surah == null) return;
+
+    try {
       if (_bookmarkedAyahs.contains(ayahNumber)) {
         await _quranService.removeBookmark(widget.surahNumber, ayahNumber);
         setState(() => _bookmarkedAyahs.remove(ayahNumber));
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Bookmark dihapus'),
-              duration: Duration(seconds: 2),
-              backgroundColor: Color(0xFFEF4444),
-            ),
-          );
-        }
+        if (mounted) _showErrorSnackbar('Bookmark dihapus');
       } else {
         final bookmark = BookmarkModel(
           surahNumber: widget.surahNumber,
@@ -532,125 +433,140 @@ class _QuranReadPageState extends State<QuranReadPage> {
         );
         await _quranService.addBookmark(bookmark);
         setState(() => _bookmarkedAyahs.add(ayahNumber));
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Bookmark ditambahkan'),
-              duration: Duration(seconds: 2),
-              backgroundColor: Color(0xFF059669),
+        if (mounted) _showSuccessSnackbar('Bookmark ditambahkan');
+      }
+    } catch (e) {
+      debugPrint('❌ Error toggling bookmark: $e');
+      if (mounted) _showErrorSnackbar('Gagal mengubah bookmark');
+    }
+  }
+
+  Future<void> _playAyahAudio(int ayahNumber) async {
+    try {
+      if (_audioService.isAyahPlaying(widget.surahNumber, ayahNumber)) {
+        await _audioService.pause();
+        setState(() {
+          _currentPlayingAyah = null;
+          _isAudioPlaying = false;
+        });
+        return;
+      }
+
+      if (_audioService.isPlaying && _currentPlayingAyah != null) {
+        await _audioService.stop();
+        await Future.delayed(Duration(milliseconds: 200));
+      }
+
+      setState(() {
+        _currentPlayingAyah = '$ayahNumber';
+        _isAudioPlaying = true;
+      });
+
+      await _audioService.playAyah(
+        surahNumber: widget.surahNumber,
+        ayahNumber: ayahNumber,
+      );
+
+      if (mounted) {
+        _showSuccessSnackbar('Memutar ayat $ayahNumber');
+      }
+    } catch (e) {
+      debugPrint('❌ Error playing audio: $e');
+
+      setState(() {
+        _currentPlayingAyah = null;
+        _isAudioPlaying = false;
+      });
+
+      if (mounted) {
+        String errorMessage = e.toString().replaceAll('Exception: ', '');
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.white),
+                SizedBox(width: 12),
+                Expanded(child: Text(errorMessage)),
+              ],
             ),
-          );
-        }
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+            action: SnackBarAction(
+              label: 'Coba Lagi',
+              textColor: Colors.white,
+              onPressed: () => _playAyahAudio(ayahNumber),
+            ),
+          ),
+        );
       }
     }
   }
 
   void _showSettings() {
-    showModalBottomSheet(
+    QuranDialogs.showSettings(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _buildSettingsSheet(),
+      fontSize: _fontSize,
+      showTranslation: _showTranslation,
+      showTransliteration: _showTransliteration,
+      showTajwid: _showTajwid,
+      isDarkMode: _isDarkMode,
+      onFontSizeChanged: (value) {
+        setState(() => _fontSize = value);
+        _quranService.saveFontSize(value);
+      },
+      onTranslationToggled: (value) {
+        setState(() => _showTranslation = value);
+        _quranService.saveShowTranslation(value);
+      },
+      onTransliterationToggled: (value) {
+        setState(() => _showTransliteration = value);
+        _quranService.saveShowTransliteration(value);
+      },
+      onTajwidToggled: (value) {
+        setState(() => _showTajwid = value);
+        _quranService.saveShowTajwid(value);
+      },
+      onDarkModeToggled: (value) {
+        setState(() => _isDarkMode = value);
+        _quranService.saveDarkMode(value);
+      },
     );
   }
 
-  Widget _buildSettingsSheet() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isTablet = screenWidth > 600;
+  void _showSuccessSnackbar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.white, size: 20),
+            SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        duration: Duration(seconds: 2),
+        backgroundColor: Color(0xFF059669),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
 
-    return StatefulBuilder(
-      builder: (context, setModalState) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: EdgeInsets.all(isTablet ? 28 : 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              SizedBox(height: 20),
-              Text(
-                'Pengaturan',
-                style: TextStyle(
-                  fontSize: isTablet ? 24 : 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1F2937),
-                ),
-              ),
-              SizedBox(height: isTablet ? 28 : 24),
-              
-              Text(
-                'Ukuran Teks Arab',
-                style: TextStyle(
-                  fontSize: isTablet ? 16 : 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF374151),
-                ),
-              ),
-              SizedBox(height: 12),
-              Row(
-                children: [
-                  Icon(Icons.text_fields, size: isTablet ? 22 : 18),
-                  Expanded(
-                    child: Slider(
-                      value: _fontSize,
-                      min: 20.0,
-                      max: 40.0,
-                      divisions: 20,
-                      activeColor: Color(0xFF059669),
-                      label: _fontSize.round().toString(),
-                      onChanged: (value) {
-                        setModalState(() => _fontSize = value);
-                        setState(() => _fontSize = value);
-                        _quranService.saveFontSize(value);
-                      },
-                    ),
-                  ),
-                  Icon(Icons.text_fields, size: isTablet ? 32 : 28),
-                ],
-              ),
-              SizedBox(height: isTablet ? 20 : 16),
-              
-              Container(
-                decoration: BoxDecoration(
-                  color: Color(0xFFF3F4F6),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: SwitchListTile(
-                  title: Text(
-                    'Tampilkan Terjemahan',
-                    style: TextStyle(
-                      fontSize: isTablet ? 16 : 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF374151),
-                    ),
-                  ),
-                  value: _showTranslation,
-                  activeColor: Color(0xFF059669),
-                  onChanged: (value) {
-                    setModalState(() => _showTranslation = value);
-                    setState(() => _showTranslation = value);
-                    _quranService.saveShowTranslation(value);
-                  },
-                ),
-              ),
-              SizedBox(height: isTablet ? 24 : 20),
-            ],
-          ),
-        );
-      },
+  void _showErrorSnackbar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.white, size: 20),
+            SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        duration: Duration(seconds: 2),
+        backgroundColor: Color(0xFFEF4444),
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
@@ -658,1119 +574,279 @@ class _QuranReadPageState extends State<QuranReadPage> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isTablet = screenWidth > 600;
+    final theme = QuranTheme(isDark: _isDarkMode);
 
     return Scaffold(
-      backgroundColor: Color(0xFFF8F9FA),
+      backgroundColor: theme.scaffoldBackground,
       body: _isLoading
-          ? Center(
-              child: CircularProgressIndicator(
-                color: Color(0xFF059669),
-              ),
+          ? _buildLoadingState(theme)
+          : _buildContent(isTablet, theme),
+      floatingActionButton: !_isLoading && _surah != null
+          ? JumpAyahFAB(
+              scrollController: _scrollController,
+              onTap: _showJumpToAyahDialog,
+              isDarkMode: _isDarkMode,
             )
-          : CustomScrollView(
-              controller: _scrollController,
-              slivers: [
-                _buildAppBar(context, isTablet),
-                _buildAyahList(isTablet),
-              ],
-            ),
+          : null,
     );
   }
 
-  Widget _buildAppBar(BuildContext context, bool isTablet) {
-    return SliverAppBar(
-      expandedHeight: isTablet ? 380 : 320,
-      floating: false,
-      pinned: true,
-      backgroundColor: Color(0xFF059669),
-      leading: Container(
-        margin: EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
+  void _performManualJump() {
+    if (_targetAyah == null) return;
+
+    setState(() {
+      _showLastReadBanner = false;
+      _isScrolling = true;
+    });
+
+    _hasScrolledToTarget = true;
+
+    ScrollHelper.scrollToAyah(
+      scrollController: _scrollController,
+      ayahKeys: _ayahKeys,
+      targetAyah: _targetAyah!,
+      showTranslation: _showTranslation,
+      onComplete: () {
+        if (mounted) {
+          setState(() {
+            _isScrolling = false;
+            _showLastReadBanner = false;
+          });
+
+          Future.delayed(Duration(milliseconds: 300), () {
+            if (mounted) {
+              _hasScrolledToTarget = false;
+            }
+          });
+        }
+      },
+    );
+  }
+
+  Widget _buildLoadingState(QuranTheme theme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(color: Color(0xFF059669)),
+          SizedBox(height: 16),
+          Text(
+            'Memuat surah...',
+            style: TextStyle(color: theme.secondaryText, fontSize: 14),
+          ),
+        ],
       ),
-      actions: [
-        Container(
-          margin: EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: IconButton(
-            icon: Icon(
-              _showTranslation ? Icons.visibility : Icons.visibility_off,
-              color: Colors.white,
-              size: 22,
+    );
+  }
+
+  Widget _buildContent(bool isTablet, QuranTheme theme) {
+    return Stack(
+      children: [
+        CustomScrollView(
+          controller: _scrollController,
+          cacheExtent: 3000,
+          slivers: [
+            QuranAppBar(
+              surah: _surah,
+              showTranslation: _showTranslation,
+              showTransliteration: _showTransliteration,
+              isTablet: isTablet,
+              isDarkMode: _isDarkMode,
+              onBackPressed: () {
+                _audioService.stop();
+                Navigator.pop(context);
+              },
+              onSettingsPressed: _showSettings,
+              onTranslationToggled: () {},
+              onTransliterationToggled: () {},
             ),
-            onPressed: () {
-              setState(() {
-                _showTranslation = !_showTranslation;
-                _quranService.saveShowTranslation(_showTranslation);
-              });
-            },
-            tooltip: _showTranslation ? 'Sembunyikan Terjemahan' : 'Tampilkan Terjemahan',
-          ),
+            _buildAyahList(isTablet, theme),
+          ],
         ),
-        Container(
-          margin: EdgeInsets.only(right: 8, top: 8, bottom: 8),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: IconButton(
-            icon: Icon(Icons.tune, color: Colors.white, size: 22),
-            onPressed: _showSettings,
-          ),
+
+        if (_targetAyah != null && _targetAyah! > 3 && _showLastReadBanner)
+          _buildLastReadBanner(isTablet),
+
+        SimpleScrollLoading(
+          targetAyah: _targetAyah ?? 1,
+          isVisible: _isScrolling,
+        ),
+
+        SurahNavigationFABs(
+          scrollController: _scrollController,
+          isVisible: _showNavigationFABs,
+          isDarkMode: _isDarkMode,
+          nextSurahName: _nextSurahName,
+          previousSurahName: _previousSurahName,
+          onNextSurah: widget.surahNumber < 114 ? _goToNextSurah : null,
+          onPreviousSurah: widget.surahNumber > 1 ? _goToPreviousSurah : null,
         ),
       ],
-      // Tambahkan title yang muncul saat collapsed
-      title: _surah != null
-          ? AnimatedOpacity(
-              opacity: 1.0,
-              duration: Duration(milliseconds: 200),
-              child: Text(
-                _surah!.nameLatin,
-                style: TextStyle(
-                  fontSize: isTablet ? 20 : 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            )
-          : null,
-      flexibleSpace: FlexibleSpaceBar(
-        centerTitle: true,
-        // Title akan hilang saat expanded, muncul saat collapsed
-        titlePadding: EdgeInsets.zero,
-        background: Stack(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color(0xFF059669),
-                    Color(0xFF047857),
-                    Color(0xFF065F46),
-                  ],
-                ),
-              ),
+    );
+  }
+
+  Widget _buildLastReadBanner(bool isTablet) {
+    return Positioned(
+      top: kToolbarHeight + 60,
+      left: 16,
+      right: 16,
+      child: Material(
+        elevation: 8,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: _isFromLastRead
+                  ? [Color(0xFF059669), Color(0xFF047857)]
+                  : [Color(0xFF3B82F6), Color(0xFF2563EB)],
             ),
-            
-            Positioned(
-              right: -80,
-              top: -80,
-              child: Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.05),
-                ),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: (_isFromLastRead ? Color(0xFF059669) : Color(0xFF3B82F6))
+                    .withValues(alpha: 0.3),
+                blurRadius: 12,
+                offset: Offset(0, 4),
               ),
-            ),
-            Positioned(
-              left: -50,
-              top: 100,
-              child: Container(
-                width: 150,
-                height: 150,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.03),
-                ),
-              ),
-            ),
-            Positioned(
-              right: 30,
-              bottom: 50,
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.04),
-                ),
-              ),
-            ),
-            
-            if (_surah != null)
-              Positioned.fill(
-                top: isTablet ? 100 : 85,
-                child: SingleChildScrollView(
-                  physics: NeverScrollableScrollPhysics(),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: isTablet ? 80 : 60,
-                          height: 3,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.transparent,
-                                Colors.white.withOpacity(0.5),
-                                Colors.transparent,
-                              ],
+            ],
+          ),
+          child: Stack(
+            children: [
+              InkWell(
+                onTap: _performManualJump,
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: EdgeInsets.all(isTablet ? 16 : 14),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          _isFromLastRead ? Icons.bookmark : Icons.location_on,
+                          color: Colors.white,
+                          size: isTablet ? 22 : 20,
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _isFromLastRead
+                                  ? 'Terakhir Dibaca'
+                                  : 'Target Ayat',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontSize: isTablet ? 12 : 11,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                            borderRadius: BorderRadius.circular(2),
+                            SizedBox(height: 2),
+                            Text(
+                              'Ayat $_targetAyah',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: isTablet ? 16 : 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'Ketuk',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: isTablet ? 13 : 12,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        SizedBox(height: isTablet ? 18 : 14),
-                        
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: isTablet ? 28 : 20,
-                            vertical: isTablet ? 16 : 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.2),
-                              width: 1,
-                            ),
-                          ),
-                          child: Column(
-                            children: [
-                              SizedBox(
-                                height: isTablet ? 50 : 40,
-                                child: Image.asset(
-                                  'assets/image/sname_${widget.surahNumber}.png',
-                                  color: Colors.white,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Text(
-                                      _surah!.name,
-                                      style: TextStyle(
-                                        fontFamily: 'Utsmani',
-                                        fontSize: isTablet ? 32 : 26,
-                                        color: Colors.white,
-                                        shadows: [
-                                          Shadow(
-                                            color: Colors.black.withOpacity(0.3),
-                                            offset: Offset(0, 2),
-                                            blurRadius: 8,
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              SizedBox(height: 10),
-                              
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: isTablet ? 14 : 10,
-                                  vertical: isTablet ? 6 : 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.menu_book_rounded,
-                                      color: Colors.white,
-                                      size: isTablet ? 15 : 13,
-                                    ),
-                                    SizedBox(width: 5),
-                                    Text(
-                                      '${_surah!.numberOfAyah} Ayat',
-                                      style: TextStyle(
-                                        fontSize: isTablet ? 13 : 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                        letterSpacing: 0.3,
-                                      ),
-                                    ),
-                                    SizedBox(width: 6),
-                                    Container(
-                                      width: 3,
-                                      height: 3,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.6),
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                    SizedBox(width: 6),
-                                    Flexible(
-                                      child: Text(
-                                        _surah!.nameLatin,
-                                        style: TextStyle(
-                                          fontSize: isTablet ? 13 : 11,
-                                          fontWeight: FontWeight.w500,
-                                          color: Colors.white.withOpacity(0.95),
-                                          letterSpacing: 0.2,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        
-                        SizedBox(height: isTablet ? 18 : 14),
-                        
-                        if (_surah!.nameLatin != 'Al-Fatihah')
-                          Container(
-                            padding: EdgeInsets.all(isTablet ? 16 : 12),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Colors.white.withOpacity(0.15),
-                                  Colors.white.withOpacity(0.05),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.2),
-                                width: 1,
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                Container(
-                                  height: _surah!.nameLatin == 'At-Taubah'
-                                      ? (isTablet ? 48 : 38)
-                                      : (isTablet ? 38 : 30),
-                                  child: _surah!.nameLatin == 'At-Taubah'
-                                      ? Image.asset(
-                                          'assets/image/taawuz.png',
-                                          color: Colors.white,
-                                          errorBuilder: (context, error, stackTrace) {
-                                            return Text(
-                                              'أَعُوذُ بِاللَّهِ مِنَ الشَّيْطَانِ الرَّجِيمِ',
-                                              style: TextStyle(
-                                                fontFamily: 'Utsmani',
-                                                fontSize: isTablet ? 18 : 14,
-                                                color: Colors.white,
-                                                height: 1.6,
-                                              ),
-                                              textAlign: TextAlign.center,
-                                            );
-                                          },
-                                        )
-                                      : Image.asset(
-                                          'assets/image/bismillah.png',
-                                          color: Colors.white,
-                                          errorBuilder: (context, error, stackTrace) {
-                                            return Text(
-                                              'بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ',
-                                              style: TextStyle(
-                                                fontFamily: 'Utsmani',
-                                                fontSize: isTablet ? 18 : 14,
-                                                color: Colors.white,
-                                                height: 1.6,
-                                              ),
-                                              textAlign: TextAlign.center,
-                                            );
-                                          },
-                                        ),
-                                ),
-                                
-                                Padding(
-                                  padding: EdgeInsets.only(top: 8),
-                                  child: Text(
-                                    _surah!.nameLatin == 'At-Taubah'
-                                        ? "Aku berlindung kepada Allah dari godaan syaitan yang terkutuk"
-                                        : "Dengan menyebut nama Allah yang maha pengasih lagi maha penyayang",
-                                    style: TextStyle(
-                                      fontSize: isTablet ? 12 : 10,
-                                      color: Colors.white.withOpacity(0.85),
-                                      fontStyle: FontStyle.italic,
-                                      letterSpacing: 0.2,
-                                      height: 1.3,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        
-                        SizedBox(height: isTablet ? 14 : 10),
-                        
-                        Container(
-                          width: isTablet ? 80 : 60,
-                          height: 3,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.transparent,
-                                Colors.white.withOpacity(0.5),
-                                Colors.transparent,
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                      ],
-                    ),
+                      ),
+                      SizedBox(width: 40),
+                    ],
                   ),
                 ),
               ),
-          ],
+              Positioned(
+                top: 4,
+                right: 4,
+                child: IconButton(
+                  icon: Icon(
+                    Icons.close,
+                    color: Colors.white.withValues(alpha: 0.8),
+                    size: 20,
+                  ),
+                  onPressed: () => setState(() => _showLastReadBanner = false),
+                  padding: EdgeInsets.all(4),
+                  constraints: BoxConstraints(),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildAyahList(bool isTablet) {
+  Widget _buildAyahList(bool isTablet, QuranTheme theme) {
     if (_surah == null) return SliverToBoxAdapter(child: SizedBox());
 
-    final ayahCount = int.parse(_surah!.numberOfAyah);
-    
+    final topPadding =
+        _targetAyah != null && _targetAyah! > 3 && _showLastReadBanner
+        ? (isTablet ? 100.0 : 90.0)
+        : (isTablet ? 24.0 : 20.0);
+
     return SliverPadding(
       padding: EdgeInsets.only(
         left: isTablet ? 24 : 16,
         right: isTablet ? 24 : 16,
-        bottom: isTablet ? 24 : 16,
+        top: topPadding,
+        bottom: 100,
       ),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
           (context, index) {
             final ayahNumber = index + 1;
-            return _buildAyahItem(ayahNumber, isTablet);
+            return AyahListItem(
+              key: _ayahKeys[ayahNumber],
+              ayahNumber: ayahNumber,
+              surah: _surah!,
+              fontSize: _fontSize,
+              showTranslation: _showTranslation,
+              showTransliteration: _showTransliteration,
+              showTajwid: _showTajwid,
+              isDarkMode: _isDarkMode,
+              isBookmarked: _bookmarkedAyahs.contains(ayahNumber),
+              isTargetAyah:
+                  _targetAyah == ayahNumber, // ✅ Ini yang trigger highlight!
+              isPlayingThis: _audioService.isAyahPlaying(
+                widget.surahNumber,
+                ayahNumber,
+              ),
+              isTablet: isTablet,
+              onPlayAudio: () => _playAyahAudio(ayahNumber),
+              onToggleBookmark: () => _toggleBookmark(ayahNumber),
+              onSaveLastRead: () => _saveLastRead(ayahNumber),
+            );
           },
-          childCount: ayahCount,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAyahItem(int ayahNumber, bool isTablet) {
-    final ayahText = _surah!.text[ayahNumber.toString()] ?? '';
-    final translation = _surah!.translations.id.text[ayahNumber.toString()] ?? '';
-    final tafsir = _surah!.tafsir?.id?.kemenag?.text?[ayahNumber.toString()] ?? '';
-    final isBookmarked = _bookmarkedAyahs.contains(ayahNumber);
-    final isTargetAyah = widget.initialAyah == ayahNumber;
-
-    return Container(
-      key: _ayahKeys[ayahNumber],
-      margin: EdgeInsets.only(bottom: isTablet ? 20 : 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: isBookmarked
-            ? Border.all(color: Color(0xFF059669), width: 2)
-            : isTargetAyah
-                ? Border.all(color: Color(0xFF3B82F6), width: 2)
-                : null,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: isTablet ? 20 : 16,
-              vertical: isTablet ? 14 : 12,
-            ),
-            decoration: BoxDecoration(
-              color: isBookmarked 
-                  ? Color(0xFF059669).withOpacity(0.1)
-                  : isTargetAyah
-                      ? Color(0xFF3B82F6).withOpacity(0.1)
-                      : Color(0xFFF3F4F6),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-            ),
-            child: Row(
-              children: [
-                // Ganti bagian nomor ayat di method _buildAyahItem dengan kode ini:
-
-Container(
-  width: isTablet ? 36 : 32,
-  height: isTablet ? 36 : 32,
-  child: Stack(
-    alignment: Alignment.center,
-    children: [
-      // Background image ornamen
-      Image.asset(
-        'assets/other/img_number.png',
-        width: isTablet ? 36 : 32,
-        height: isTablet ? 36 : 32,
-        fit: BoxFit.contain,
-        color: isTargetAyah
-            ? Color(0xFF3B82F6)
-            : Color(0xFF059669),
-        colorBlendMode: BlendMode.srcIn,
-      ),
-      // Nomor ayat di tengah
-      Text(
-        '$ayahNumber',
-        style: TextStyle(
-            color: Color(0xFF059669),
-          fontSize: isTablet ? 13 : 12,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    ],
-  ),
-),
-                if (isBookmarked)
-                  Padding(
-                    padding: EdgeInsets.only(left: 8),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Color(0xFF059669),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'Bookmark',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: isTablet ? 11 : 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                if (isTargetAyah)
-                  Padding(
-                    padding: EdgeInsets.only(left: 8),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Color(0xFF3B82F6),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'Terakhir Dibaca',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: isTablet ? 11 : 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                Spacer(),
-                IconButton(
-                  icon: Icon(
-                    isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                    color: Color(0xFF059669),
-                    size: isTablet ? 26 : 22,
-                  ),
-                  onPressed: () {
-                    HapticFeedback.lightImpact();
-                    _toggleBookmark(ayahNumber);
-                  },
-                  tooltip: isBookmarked ? 'Hapus Bookmark' : 'Tambah Bookmark',
-                ),
-                // Tombol Tafsir
-                if (tafsir.isNotEmpty)
-                  IconButton(
-                    icon: Icon(
-                      Icons.menu_book,
-                      color: Color(0xFFD97706),
-                      size: isTablet ? 24 : 20,
-                    ),
-                    onPressed: () {
-                      HapticFeedback.lightImpact();
-                      _showTafsirDialog(ayahNumber, ayahText, translation, tafsir, isTablet);
-                    },
-                    tooltip: 'Lihat Tafsir',
-                  ),
-                IconButton(
-                  icon: Icon(
-                    Icons.share,
-                    color: Color(0xFF6B7280),
-                    size: isTablet ? 24 : 20,
-                  ),
-                  onPressed: () {
-                    HapticFeedback.lightImpact();
-                    Clipboard.setData(
-                      ClipboardData(
-                        text: '$ayahText\n\n$translation\n\n(${_surah!.nameLatin} ayat $ayahNumber)',
-                      ),
-                    );
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Row(
-                          children: [
-                            Icon(Icons.check_circle, color: Colors.white),
-                            SizedBox(width: 12),
-                            Text('Ayat disalin ke clipboard'),
-                          ],
-                        ),
-                        duration: Duration(seconds: 2),
-                        backgroundColor: Color(0xFF059669),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  },
-                  tooltip: 'Bagikan Ayat',
-                ),
-              ],
-            ),
-          ),
-          
-          // Long press untuk tandai terakhir dibaca
-          InkWell(
-            onTap: () {
-              HapticFeedback.selectionClick();
-            },
-            onLongPress: () {
-              HapticFeedback.mediumImpact();
-              _showLastReadConfirmation(ayahNumber);
-            },
-            child: 
-
-Container(
-  padding: EdgeInsets.all(isTablet ? 24 : 20),
-  child: Text(
-    ayahText,
-    textAlign: TextAlign.right,
-    textDirection: TextDirection.rtl,
-    style: TextStyle(
-      fontFamily: 'Utsmani',
-      fontSize: _fontSize,
-      height: 2.0,
-      letterSpacing: 0,
-      wordSpacing: 0,
-      color: Color(0xFF1F2937),
-      fontWeight: FontWeight.w400,
-    ),
-  ),
-),
-          ),
-          
-          if (_showTranslation)
-            Container(
-              padding: EdgeInsets.only(
-                left: isTablet ? 24 : 20,
-                right: isTablet ? 24 : 20,
-                bottom: isTablet ? 24 : 20,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    translation,
-                    textAlign: TextAlign.justify,
-                    style: TextStyle(
-                      fontSize: isTablet ? 16 : 14,
-                      height: 1.7,
-                      color: Color(0xFF4B5563),
-                    ),
-                  ),
-                  // Hint untuk long press
-                  SizedBox(height: 12),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: Color(0xFFE5E7EB),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.touch_app,
-                          size: isTablet ? 16 : 14,
-                          color: Color(0xFF6B7280),
-                        ),
-                        SizedBox(width: 6),
-                        Text(
-                          'Tekan tahan untuk tandai terakhir dibaca',
-                          style: TextStyle(
-                            fontSize: isTablet ? 12 : 11,
-                            color: Color(0xFF6B7280),
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  void _showLastReadConfirmation(int ayahNumber) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF059669), Color(0xFF047857)],
-                ),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                Icons.bookmark_add,
-                color: Colors.white,
-                size: 24,
-              ),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Tandai Terakhir Dibaca',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1F2937),
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          'Tandai ayat $ayahNumber dari ${_surah!.nameLatin} sebagai terakhir dibaca?',
-          style: TextStyle(
-            fontSize: 14,
-            color: Color(0xFF4B5563),
-            height: 1.5,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Batal',
-              style: TextStyle(
-                color: Color(0xFF6B7280),
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _saveLastRead(ayahNumber);
-              
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Row(
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.white, size: 20),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text('Tersimpan sebagai terakhir dibaca'),
-                      ),
-                    ],
-                  ),
-                  duration: Duration(seconds: 2),
-                  backgroundColor: Color(0xFF059669),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF059669),
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              elevation: 0,
-            ),
-            child: Text(
-              'Tandai',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showTafsirDialog(int ayahNumber, String ayahText, String translation, String tafsir, bool isTablet) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(28),
-        ),
-        child: Container(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.88,
-            maxWidth: isTablet ? 650 : double.infinity,
-          ),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 30,
-                offset: Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header with gradient
-              Container(
-                padding: EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF059669),
-                      Color(0xFF047857),
-                      Color(0xFF065F46),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.25),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.3),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.menu_book_rounded,
-                                color: Colors.white,
-                                size: 18,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Ayat $ayahNumber',
-                                style: TextStyle(
-                                  fontSize: isTablet ? 15 : 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  letterSpacing: 0.3,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Spacer(),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: IconButton(
-                            icon: Icon(Icons.close_rounded, color: Colors.white, size: 24),
-                            onPressed: () => Navigator.pop(context),
-                            padding: EdgeInsets.all(8),
-                            constraints: BoxConstraints(),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      _surah!.nameLatin,
-                      style: TextStyle(
-                        fontSize: isTablet ? 24 : 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    SizedBox(height: 6),
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        'Tafsir Kementerian Agama RI',
-                        style: TextStyle(
-                          fontSize: isTablet ? 13 : 12,
-                          color: Colors.white.withOpacity(0.95),
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Content with beautiful sections
-              Flexible(
-                child: Container(
-                  color: Color(0xFFFAFAFA),
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Ayat Arab dengan ornamen
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Color(0xFF059669).withOpacity(0.08),
-                                blurRadius: 20,
-                                offset: Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              // Top ornament
-                              Container(
-                                height: 6,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Color(0xFF059669),
-                                      Color(0xFF10B981),
-                                      Color(0xFF059669),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                                ),
-                              ),
-                              Padding(
-                                padding: EdgeInsets.all(isTablet ? 28 : 24),
-                                child: Text(
-                                  ayahText,
-                                  textAlign: TextAlign.justify,
-                                  textDirection: TextDirection.rtl,
-                                  style: TextStyle(
-                                    fontFamily: 'Utsmani',
-                                    fontSize: isTablet ? 28 : 24,
-                                    height: 2.3,
-                                    letterSpacing: 0,
-                                    wordSpacing: 2.0,
-                                    color: Color(0xFF0F172A),
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        
-                        SizedBox(height: 24),
-                        
-                        // Terjemahan dengan icon
-                        Container(
-                          padding: EdgeInsets.all(isTablet ? 22 : 20),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(
-                              color: Color(0xFF059669).withOpacity(0.15),
-                              width: 1.5,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.03),
-                                blurRadius: 10,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [Color(0xFF059669), Color(0xFF047857)],
-                                      ),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Icon(
-                                      Icons.translate_rounded,
-                                      size: 18,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  SizedBox(width: 12),
-                                  Text(
-                                    'Terjemahan',
-                                    style: TextStyle(
-                                      fontSize: isTablet ? 15 : 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF059669),
-                                      letterSpacing: 0.3,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 14),
-                              Text(
-                                translation,
-                                textAlign: TextAlign.justify,
-                                style: TextStyle(
-                                  fontSize: isTablet ? 15 : 14,
-                                  height: 1.75,
-                                  color: Color(0xFF334155),
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        
-                        SizedBox(height: 24),
-                        
-                        // Tafsir dengan background pattern
-                        Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Color(0xFFFFFBEB),
-                                Color(0xFFFEF3C7),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(
-                              color: Color(0xFFF59E0B).withOpacity(0.3),
-                              width: 1.5,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Color(0xFFF59E0B).withOpacity(0.1),
-                                blurRadius: 15,
-                                offset: Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Stack(
-                            children: [
-                              // Pattern background
-                              Positioned(
-                                right: -20,
-                                bottom: -20,
-                                child: Icon(
-                                  Icons.auto_stories_rounded,
-                                  size: 120,
-                                  color: Colors.white.withOpacity(0.4),
-                                ),
-                              ),
-                              Padding(
-                                padding: EdgeInsets.all(isTablet ? 22 : 20),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                            color: Color(0xFFF59E0B),
-                                            borderRadius: BorderRadius.circular(10),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Color(0xFFF59E0B).withOpacity(0.3),
-                                                blurRadius: 8,
-                                                offset: Offset(0, 2),
-                                              ),
-                                            ],
-                                          ),
-                                          child: Icon(
-                                            Icons.auto_stories_rounded,
-                                            size: 18,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        SizedBox(width: 12),
-                                        Text(
-                                          'Tafsir',
-                                          style: TextStyle(
-                                            fontSize: isTablet ? 15 : 14,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFFD97706),
-                                            letterSpacing: 0.3,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    SizedBox(height: 14),
-                                    Text(
-                                      tafsir,
-                                      textAlign: TextAlign.justify,
-                                      style: TextStyle(
-                                        fontSize: isTablet ? 15 : 14,
-                                        height: 1.8,
-                                        color: Color(0xFF92400E),
-                                        letterSpacing: 0.2,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        
-                        SizedBox(height: 8),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+          childCount: _surah!.len,
+          addAutomaticKeepAlives: true,
+          addRepaintBoundaries: true,
         ),
       ),
     );
@@ -1778,8 +854,22 @@ Container(
 
   @override
   void dispose() {
+    debugPrint('🗑️  Disposing QuranReadPage...');
+
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+
+    _audioService
+        .stop()
+        .then((_) {
+          debugPrint('✅ Audio stopped on page dispose');
+        })
+        .catchError((e) {
+          debugPrint('⚠️ Audio stop error on dispose (ignored): $e');
+        });
+
+    debugPrint('✅ QuranReadPage disposed');
+
     super.dispose();
   }
 }

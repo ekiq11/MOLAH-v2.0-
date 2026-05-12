@@ -43,7 +43,7 @@ Widget buildStudentHeader(
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Color(0xFFDC2626).withOpacity(0.4),
+                  color: Color(0xFFDC2626).withValues(alpha: 0.4),
                   blurRadius: 20,
                   offset: Offset(0, 10),
                 ),
@@ -61,7 +61,7 @@ Widget buildStudentHeader(
                       height: 120,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white.withOpacity(0.1),
+                        color: Colors.white.withValues(alpha: 0.1),
                       ),
                     ),
                   ),
@@ -73,7 +73,7 @@ Widget buildStudentHeader(
                       height: 100,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white.withOpacity(0.08),
+                        color: Colors.white.withValues(alpha: 0.08),
                       ),
                     ),
                   ),
@@ -86,7 +86,7 @@ Widget buildStudentHeader(
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: LinearGradient(
-                              colors: [Colors.white, Colors.white.withOpacity(0.7)],
+                              colors: [Colors.white, Colors.white.withValues(alpha: 0.7)],
                             ),
                           ),
                           child: Container(
@@ -98,8 +98,8 @@ Widget buildStudentHeader(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                                 colors: [
-                                  Colors.white.withOpacity(0.9),
-                                  Colors.white.withOpacity(0.7),
+                                  Colors.white.withValues(alpha: 0.9),
+                                  Colors.white.withValues(alpha: 0.7),
                                 ],
                               ),
                             ),
@@ -154,7 +154,7 @@ Widget buildStudentHeader(
                               Container(
                                 padding: EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
+                                  color: Colors.white.withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Icon(Icons.cloud_off, color: Colors.white, size: 18),
@@ -165,7 +165,7 @@ Widget buildStudentHeader(
                               child: Container(
                                 padding: EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
+                                  color: Colors.white.withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Icon(Icons.refresh, color: Colors.white, size: 18),
@@ -191,7 +191,7 @@ Widget buildInfoChip(IconData icon, String text) {
     constraints: BoxConstraints(maxWidth: 160),
     padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.25),
+      color: Colors.white.withValues(alpha: 0.25),
       borderRadius: BorderRadius.circular(20),
     ),
     child: Row(
@@ -244,7 +244,7 @@ Widget buildTabButton(
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: isSelected ? activeColor.withOpacity(0.3) : Colors.black.withOpacity(0.05),
+              color: isSelected ? activeColor.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.05),
               blurRadius: isSelected ? 12 : 4,
               offset: Offset(0, isSelected ? 6 : 2),
             ),
@@ -274,7 +274,7 @@ Widget buildTabButton(
             Container(
               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.white.withOpacity(0.3) : Colors.grey[100],
+                color: isSelected ? Colors.white.withValues(alpha: 0.3) : Colors.grey[100],
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
@@ -323,7 +323,7 @@ Widget buildDataCard(RewardPelanggaranData data, int index, DateTime? parsedDate
               border: isToday ? Border.all(color: primaryColor, width: 2) : null,
               boxShadow: [
                 BoxShadow(
-                  color: isToday ? primaryColor.withOpacity(0.2) : Colors.black.withOpacity(0.06),
+                  color: isToday ? primaryColor.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.06),
                   blurRadius: 15,
                   offset: Offset(0, 5),
                 ),
@@ -340,8 +340,8 @@ Widget buildDataCard(RewardPelanggaranData data, int index, DateTime? parsedDate
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: isReward
-                            ? [Color(0xFF4CAF50).withOpacity(0.1), Colors.white]
-                            : [Color(0xFFFF5252).withOpacity(0.1), Colors.white],
+                            ? [Color(0xFF4CAF50).withValues(alpha: 0.1), Colors.white]
+                            : [Color(0xFFFF5252).withValues(alpha: 0.1), Colors.white],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -356,7 +356,7 @@ Widget buildDataCard(RewardPelanggaranData data, int index, DateTime? parsedDate
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
-                                  color: primaryColor.withOpacity(0.3),
+                                  color: primaryColor.withValues(alpha: 0.3),
                                   blurRadius: 8,
                                   offset: Offset(0, 4),
                                 ),
@@ -422,7 +422,7 @@ Widget buildDataCard(RewardPelanggaranData data, int index, DateTime? parsedDate
                             child: Container(
                               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                color: primaryColor.withOpacity(0.15),
+                                color: primaryColor.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Row(
@@ -450,7 +450,7 @@ Widget buildDataCard(RewardPelanggaranData data, int index, DateTime? parsedDate
                             child: Container(
                               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                color: primaryColor.withOpacity(0.15),
+                                color: primaryColor.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Row(
@@ -487,7 +487,7 @@ Widget buildDataCard(RewardPelanggaranData data, int index, DateTime? parsedDate
                             width: double.infinity,
                             padding: EdgeInsets.all(14),
                             decoration: BoxDecoration(
-                              color: primaryColor.withOpacity(0.08),
+                              color: primaryColor.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -544,7 +544,7 @@ Widget buildDetailRow(IconData icon, String text, Color color) {
       Container(
         padding: EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(icon, size: 16, color: color),

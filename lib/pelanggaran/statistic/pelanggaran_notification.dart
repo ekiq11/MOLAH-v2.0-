@@ -112,7 +112,7 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: bgColor.withOpacity(0.3),
+                          color: bgColor.withValues(alpha: 0.3),
                           blurRadius: 20,
                           offset: Offset(0, 10),
                         ),
@@ -138,7 +138,7 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                                 Container(
                                   padding: EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.3),
+                                    color: Colors.white.withValues(alpha: 0.3),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Icon(icon, color: Colors.white, size: 24),
@@ -159,7 +159,7 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                                       Text(
                                         widget.data.hariTanggal,
                                         style: TextStyle(
-                                          color: Colors.white.withOpacity(0.9),
+                                          color: Colors.white.withValues(alpha: 0.9),
                                           fontSize: 12,
                                         ),
                                       ),
@@ -205,9 +205,9 @@ class _NotificationWidgetState extends State<_NotificationWidget>
                                   width: double.infinity,
                                   padding: EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: bgColor.withOpacity(0.1),
+                                    color: bgColor.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: bgColor.withOpacity(0.3)),
+                                    border: Border.all(color: bgColor.withValues(alpha: 0.3)),
                                   ),
                                   child: Text(
                                     widget.data.jenisEtika,

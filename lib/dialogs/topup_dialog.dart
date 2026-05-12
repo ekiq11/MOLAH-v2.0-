@@ -67,7 +67,7 @@ class TopUpDialog {
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           spreadRadius: 0,
                           blurRadius: 30,
                           offset: Offset(0, 15),
@@ -94,7 +94,7 @@ class TopUpDialog {
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.green.withOpacity(0.3),
+                                  color: Colors.green.withValues(alpha: 0.3),
                                   spreadRadius: 0,
                                   blurRadius: 15,
                                   offset: Offset(0, 5),
@@ -174,7 +174,7 @@ class TopUpDialog {
                                 ),
                                 SizedBox(height: 4),
                                 Text(
-                                  '$currentBalance',
+                                  currentBalance,
                                   style: TextStyle(
                                     fontSize: isSmallScreen ? 16 : 20,
                                     fontWeight: FontWeight.w700,
@@ -242,7 +242,7 @@ class TopUpDialog {
                                       boxShadow: isSelected
                                           ? [
                                               BoxShadow(
-                                                color: Colors.green.withOpacity(
+                                                color: Colors.green.withValues(alpha: 
                                                   0.2,
                                                 ),
                                                 spreadRadius: 0,
@@ -364,7 +364,7 @@ class TopUpDialog {
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     shadowColor: isValidInput()
-                                        ? Colors.green.withOpacity(0.3)
+                                        ? Colors.green.withValues(alpha: 0.3)
                                         : null,
                                   ),
                                   child: Text(

@@ -1,7 +1,8 @@
 // screens/doa_detail_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:pizab_molah/doa/model/model_doa.dart';
+import 'package:pizab_molah/doa/model/model_doa_sehari.dart';
+import 'package:pizab_molah/doa/screens/share_doa.dart';
 
 class DoaDetailPage extends StatefulWidget {
   final List<Doa> doas;
@@ -38,7 +39,7 @@ class _DoaDetailPageState extends State<DoaDetailPage> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final titleFontSize = _getResponsiveFontSize(screenWidth, base: 14);
-    
+
     return Scaffold(
       backgroundColor: Color(0xFFF8F9FA),
       appBar: AppBar(
@@ -59,11 +60,20 @@ class _DoaDetailPageState extends State<DoaDetailPage> {
         ),
         centerTitle: true,
         actions: [
+          // ✅ TOMBOL SHARE
+          IconButton(
+            icon: Icon(Icons.share, color: Colors.white),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              _openSharePage();
+            },
+          ),
+          // ✅ TOMBOL COPY
           IconButton(
             icon: Icon(Icons.copy, color: Colors.white),
             onPressed: () {
               HapticFeedback.lightImpact();
-              _shareDoa();
+              _copyDoa();
             },
           ),
         ],
@@ -121,7 +131,7 @@ class _DoaDetailPageState extends State<DoaDetailPage> {
     final bodyFontSize = _getResponsiveFontSize(screenWidth, base: 12);
     final labelFontSize = _getResponsiveFontSize(screenWidth, base: 9);
     final infoFontSize = _getResponsiveFontSize(screenWidth, base: 11);
-    
+
     return SingleChildScrollView(
       padding: EdgeInsets.symmetric(
         horizontal: horizontalPadding,
@@ -139,7 +149,7 @@ class _DoaDetailPageState extends State<DoaDetailPage> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withValues(alpha: 0.04),
                   blurRadius: 10,
                   offset: Offset(0, 2),
                 ),
@@ -148,12 +158,9 @@ class _DoaDetailPageState extends State<DoaDetailPage> {
             child: Column(
               children: [
                 Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Color(0xFF059669).withOpacity(0.1),
+                    color: Color(0xFF059669).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -195,7 +202,7 @@ class _DoaDetailPageState extends State<DoaDetailPage> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withValues(alpha: 0.04),
                   blurRadius: 10,
                   offset: Offset(0, 2),
                 ),
@@ -206,12 +213,18 @@ class _DoaDetailPageState extends State<DoaDetailPage> {
               textAlign: TextAlign.right,
               textDirection: TextDirection.rtl,
               style: TextStyle(
+                fontFamily: 'Arabic',
                 fontSize: arabicFontSize,
-                height: screenWidth < 360 ? 2.2 : 2.4,
-                fontWeight: FontWeight.w400,
-                color: Color(0xFF111827),
-                fontFamily: 'Amiri',
+
+                height: 1.85, // ✅ Line height lebih lega untuk readability
+                color: Color(0xFF1F2937),
+                fontWeight: FontWeight.w500,
+
                 letterSpacing: 0,
+                fontFeatures: [
+                  FontFeature.enable('kern'),
+                  FontFeature.enable('liga'),
+                ],
               ),
             ),
           ),
@@ -227,7 +240,7 @@ class _DoaDetailPageState extends State<DoaDetailPage> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withValues(alpha: 0.04),
                   blurRadius: 10,
                   offset: Offset(0, 2),
                 ),
@@ -258,10 +271,7 @@ class _DoaDetailPageState extends State<DoaDetailPage> {
                 SizedBox(height: screenWidth < 360 ? 20 : 24),
 
                 // Divider
-                Container(
-                  height: 1,
-                  color: Color(0xFFF3F4F6),
-                ),
+                Container(height: 1, color: Color(0xFFF3F4F6)),
 
                 SizedBox(height: screenWidth < 360 ? 16 : 20),
 
@@ -336,11 +346,7 @@ class _DoaDetailPageState extends State<DoaDetailPage> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          icon,
-          size: fontSize + 3,
-          color: Color(0xFF059669),
-        ),
+        Icon(icon, size: fontSize + 3, color: Color(0xFF059669)),
         SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -376,7 +382,7 @@ class _DoaDetailPageState extends State<DoaDetailPage> {
     final indicatorFontSize = _getResponsiveFontSize(screenWidth, base: 14);
     final buttonPadding = screenWidth < 360 ? 12.0 : 14.0;
     final horizontalPadding = _getResponsivePadding(screenWidth, base: 16);
-    
+
     return Container(
       padding: EdgeInsets.fromLTRB(
         horizontalPadding,
@@ -388,7 +394,7 @@ class _DoaDetailPageState extends State<DoaDetailPage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: Offset(0, -2),
           ),
@@ -421,13 +427,13 @@ class _DoaDetailPageState extends State<DoaDetailPage> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Color(0xFF059669).withOpacity(0.08),
-                      Color(0xFF059669).withOpacity(0.12),
+                      Color(0xFF059669).withValues(alpha: 0.08),
+                      Color(0xFF059669).withValues(alpha: 0.12),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Color(0xFF059669).withOpacity(0.2),
+                    color: Color(0xFF059669).withValues(alpha: 0.2),
                     width: 1,
                   ),
                 ),
@@ -481,7 +487,7 @@ class _DoaDetailPageState extends State<DoaDetailPage> {
         boxShadow: isEnabled
             ? [
                 BoxShadow(
-                  color: Color(0xFF059669).withOpacity(0.3),
+                  color: Color(0xFF059669).withValues(alpha: 0.3),
                   blurRadius: 8,
                   offset: Offset(0, 2),
                 ),
@@ -498,9 +504,22 @@ class _DoaDetailPageState extends State<DoaDetailPage> {
     );
   }
 
-  void _shareDoa() {
+  // ✅ FUNGSI UNTUK MEMBUKA HALAMAN SHARE
+  void _openSharePage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            DoaShareFullScreenPage(doa: widget.doas[_currentIndex]),
+      ),
+    );
+  }
+
+  // ✅ FUNGSI COPY DOA (RENAME dari _shareDoa)
+  void _copyDoa() {
     final doa = widget.doas[_currentIndex];
-    final text = '''
+    final text =
+        '''
 ${doa.nama}
 
 ${doa.lafal}
@@ -512,7 +531,7 @@ Artinya: ${doa.arti}
 Riwayat: ${doa.riwayat}
 ${doa.keterangan != null && doa.keterangan!.isNotEmpty ? '\n\nKeterangan: ${doa.keterangan}' : ''}
 ''';
-    
+
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -520,16 +539,12 @@ ${doa.keterangan != null && doa.keterangan!.isNotEmpty ? '\n\nKeterangan: ${doa.
           children: [
             Icon(Icons.check_circle, color: Colors.white, size: 20),
             SizedBox(width: 12),
-            Expanded(
-              child: Text('Doa berhasil disalin ke clipboard'),
-            ),
+            Expanded(child: Text('Doa berhasil disalin ke clipboard')),
           ],
         ),
         backgroundColor: Color(0xFF059669),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         margin: EdgeInsets.all(16),
         duration: Duration(seconds: 2),
       ),

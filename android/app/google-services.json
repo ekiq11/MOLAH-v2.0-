@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1071069789393",
+    "project_id": "molah-16b64",
+    "storage_bucket": "molah-16b64.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1071069789393:android:0e628e5392508c99ff59f0",
+        "android_client_info": {
+          "package_name": "com.pizab_molah"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAvB0BJ_PT0lM7vB5r775hszSfHLWbTkLM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

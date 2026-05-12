@@ -1,21 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 class ProfilePage extends StatefulWidget {
   final String nisn;
   final Map<String, dynamic>? santriData;
 
-  const ProfilePage({
-    super.key,
-    required this.nisn,
-    this.santriData,
-  });
+  const ProfilePage({super.key, required this.nisn, this.santriData});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStateMixin {
+class _ProfilePageState extends State<ProfilePage>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -36,10 +32,13 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
       CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: Offset(0, 0.1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic));
+    _slideAnimation = Tween<Offset>(begin: Offset(0, 0.1), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
     _animationController.forward();
   }
@@ -72,7 +71,11 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
           ),
         ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new, color: Color(0xFFDC2626), size: 20),
+          icon: Icon(
+            Icons.arrow_back_ios_new,
+            color: Color(0xFFDC2626),
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -88,21 +91,29 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                 children: [
                   // Profile Header Card
                   _buildProfileHeader(isSmallScreen),
-                  
+
                   SizedBox(height: 20),
-                  
+
                   // Academic Info Section
-                  _buildSectionHeader('Informasi Akademik', Icons.school_rounded, Colors.blue),
+                  _buildSectionHeader(
+                    'Informasi Akademik',
+                    Icons.school_rounded,
+                    Colors.blue,
+                  ),
                   SizedBox(height: 12),
                   _buildAcademicInfo(isSmallScreen),
-                  
+
                   SizedBox(height: 24),
-                  
+
                   // Status Section
-                  _buildSectionHeader('Status & Laporan', Icons.assessment_rounded, Colors.purple),
+                  _buildSectionHeader(
+                    'Status & Laporan',
+                    Icons.assessment_rounded,
+                    Colors.purple,
+                  ),
                   SizedBox(height: 12),
                   _buildStatusInfo(isSmallScreen),
-                  
+
                   SizedBox(height: 40),
                 ],
               ),
@@ -133,7 +144,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
             fontSize: isSmallScreen ? 18 : 20,
             shadows: [
               Shadow(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 offset: Offset(0, 2),
                 blurRadius: 4,
               ),
@@ -145,11 +156,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFFDC2626),
-                Color(0xFFB91C1C),
-                Color(0xFF991B1B),
-              ],
+              colors: [Color(0xFFDC2626), Color(0xFFB91C1C), Color(0xFF991B1B)],
             ),
           ),
           child: Stack(
@@ -162,7 +169,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                   height: 200,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.1),
+                    color: Colors.white.withValues(alpha: 0.1),
                   ),
                 ),
               ),
@@ -174,7 +181,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                   height: 150,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.08),
+                    color: Colors.white.withValues(alpha: 0.08),
                   ),
                 ),
               ),
@@ -197,15 +204,11 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFDC2626),
-            Color(0xFFB91C1C),
-            Color(0xFF991B1B),
-          ],
+          colors: [Color(0xFFDC2626), Color(0xFFB91C1C), Color(0xFF991B1B)],
         ),
         boxShadow: [
           BoxShadow(
-            color: Color(0xFFDC2626).withOpacity(0.4),
+            color: Color(0xFFDC2626).withValues(alpha: 0.4),
             blurRadius: 20,
             offset: Offset(0, 10),
           ),
@@ -223,7 +226,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                 height: 120,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.1),
+                  color: Colors.white.withValues(alpha: 0.1),
                 ),
               ),
             ),
@@ -235,7 +238,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                 height: 100,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.08),
+                  color: Colors.white.withValues(alpha: 0.08),
                 ),
               ),
             ),
@@ -248,7 +251,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
-                        colors: [Colors.white, Colors.white.withOpacity(0.7)],
+                        colors: [Colors.white, Colors.white.withValues(alpha: 0.7)],
                       ),
                     ),
                     child: Container(
@@ -260,8 +263,8 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            Colors.white.withOpacity(0.9),
-                            Colors.white.withOpacity(0.7),
+                            Colors.white.withValues(alpha: 0.9),
+                            Colors.white.withValues(alpha: 0.7),
                           ],
                         ),
                       ),
@@ -301,15 +304,22 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                           children: [
                             Container(
                               constraints: BoxConstraints(maxWidth: 160),
-                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.25),
+                                color: Colors.white.withValues(alpha: 0.25),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.badge_outlined, size: 14, color: Colors.white),
+                                  Icon(
+                                    Icons.badge_outlined,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
                                   SizedBox(width: 4),
                                   Flexible(
                                     child: Text(
@@ -326,18 +336,26 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                                 ],
                               ),
                             ),
-                            if (_data['kelas'] != null && _data['kelas'].toString().isNotEmpty)
+                            if (_data['kelas'] != null &&
+                                _data['kelas'].toString().isNotEmpty)
                               Container(
                                 constraints: BoxConstraints(maxWidth: 160),
-                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.25),
+                                  color: Colors.white.withValues(alpha: 0.25),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.school_outlined, size: 14, color: Colors.white),
+                                    Icon(
+                                      Icons.school_outlined,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
                                     SizedBox(width: 4),
                                     Flexible(
                                       child: Text(
@@ -375,16 +393,10 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            color.withOpacity(0.1),
-            Colors.white,
-          ],
+          colors: [color.withValues(alpha: 0.1), Colors.white],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: color.withOpacity(0.2),
-          width: 1,
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
       ),
       child: Row(
         children: [
@@ -394,12 +406,12 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [color, color.withOpacity(0.8)],
+                colors: [color, color.withValues(alpha: 0.8)],
               ),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: color.withOpacity(0.3),
+                  color: color.withValues(alpha: 0.3),
                   blurRadius: 8,
                   offset: Offset(0, 4),
                 ),
@@ -481,7 +493,11 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
           children: cards.map((cardData) {
             return SizedBox(
               width: itemWidth,
-              child: _buildFlexibleCard(cardData: cardData, itemWidth: itemWidth, isSmallScreen: isSmallScreen),
+              child: _buildFlexibleCard(
+                cardData: cardData,
+                itemWidth: itemWidth,
+                isSmallScreen: isSmallScreen,
+              ),
             );
           }).toList(),
         );
@@ -532,7 +548,11 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
           children: cards.map((cardData) {
             return SizedBox(
               width: itemWidth,
-              child: _buildFlexibleCard(cardData: cardData, itemWidth: itemWidth, isSmallScreen: isSmallScreen),
+              child: _buildFlexibleCard(
+                cardData: cardData,
+                itemWidth: itemWidth,
+                isSmallScreen: isSmallScreen,
+              ),
             );
           }).toList(),
         );
@@ -545,9 +565,13 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     required double itemWidth,
     required bool isSmallScreen,
   }) {
-    final double paddingValue = itemWidth < 160 ? 12 : (itemWidth < 200 ? 14 : 16);
+    final double paddingValue = itemWidth < 160
+        ? 12
+        : (itemWidth < 200 ? 14 : 16);
     final double iconSize = itemWidth < 160 ? 20 : (itemWidth < 200 ? 22 : 24);
-    final double titleFontSize = itemWidth < 160 ? 10 : (itemWidth < 200 ? 10.5 : 11);
+    final double titleFontSize = itemWidth < 160
+        ? 10
+        : (itemWidth < 200 ? 10.5 : 11);
 
     return Container(
       decoration: BoxDecoration(
@@ -555,13 +579,13 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: cardData.gradientColors[1].withOpacity(0.15),
+            color: cardData.gradientColors[1].withValues(alpha: 0.15),
             blurRadius: 12,
             offset: const Offset(0, 4),
             spreadRadius: 0,
           ),
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 20,
             offset: const Offset(0, 8),
             spreadRadius: -5,
@@ -578,7 +602,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
               height: 100,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: cardData.bgColor.withOpacity(0.3),
+                color: cardData.bgColor.withValues(alpha: 0.3),
               ),
             ),
           ),
@@ -599,13 +623,17 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: cardData.gradientColors[1].withOpacity(0.3),
+                        color: cardData.gradientColors[1].withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: Offset(0, 4),
                       ),
                     ],
                   ),
-                  child: Icon(cardData.icon, color: Colors.white, size: iconSize),
+                  child: Icon(
+                    cardData.icon,
+                    color: Colors.white,
+                    size: iconSize,
+                  ),
                 ),
                 SizedBox(height: 10),
                 Text(
@@ -654,13 +682,18 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
 
   String _getLembagaShortName(String? lembaga) {
     if (lembaga == null || lembaga.isEmpty) return 'Belum Ada';
-    return lembaga.length >= 3 ? lembaga.substring(0, 3).toUpperCase() : lembaga.toUpperCase();
+    return lembaga.length >= 3
+        ? lembaga.substring(0, 3).toUpperCase()
+        : lembaga.toUpperCase();
   }
 
   String _formatHafalan(dynamic hafalanData) {
     if (hafalanData == null) return 'Belum terdata';
     final hafalanString = hafalanData.toString().trim();
-    if (hafalanString.isEmpty || hafalanString == '-' || hafalanString.toLowerCase() == 'null' || hafalanString == '0') {
+    if (hafalanString.isEmpty ||
+        hafalanString == '-' ||
+        hafalanString.toLowerCase() == 'null' ||
+        hafalanString == '0') {
       return 'Belum terdata';
     }
     return '$hafalanString Juz';
@@ -669,7 +702,10 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
   String _formatIzinTerakhir(dynamic izinData) {
     if (izinData == null) return 'Belum Pernah Izin';
     final izinString = izinData.toString().trim();
-    if (izinString.isEmpty || izinString == '-' || izinString.toLowerCase() == 'null' || izinString.toLowerCase() == 'belum ada') {
+    if (izinString.isEmpty ||
+        izinString == '-' ||
+        izinString.toLowerCase() == 'null' ||
+        izinString.toLowerCase() == 'belum ada') {
       return 'Belum Pernah Izin';
     }
     return izinString;

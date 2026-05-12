@@ -1,7 +1,5 @@
 // ignore_for_file: deprecated_member_use
 
-import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:csv/csv.dart';
@@ -57,7 +55,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
   static const String _topUpHistoryUrl =
       'https://docs.google.com/spreadsheets/d/1BZbBczH2OY8SB2_1tDpKf_B8WvOyk8TJl4esfT-dgzw/export?format=csv&gid=995828092';
 
-  Map<String, int> _topUpData = {};
+  final Map<String, int> _topUpData = {};
 
   @override
   void initState() {
@@ -489,10 +487,12 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
       final header = headers[i];
       if (header.contains('nisn') || header.contains('no_induk')) nisnIndex = i;
       if (header.contains('nama')) namaIndex = i;
-      if (header.contains('total_masuk') || header.contains('masuk'))
+      if (header.contains('total_masuk') || header.contains('masuk')) {
         totalMasukIndex = i;
-      if (header.contains('total_keluar') || header.contains('keluar'))
+      }
+      if (header.contains('total_keluar') || header.contains('keluar')) {
         totalKeluarIndex = i;
+      }
     }
 
     if (nisnIndex == -1) nisnIndex = 0;
@@ -584,7 +584,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
       if (_isMatchingNisn(widget.nisn, csvNisn)) {
         try {
           final transaction = TransactionItem(
-            waktu: row.length > 0 ? row[0].toString().trim() : '',
+            waktu: row.isNotEmpty ? row[0].toString().trim() : '',
             tanggal: row.length > 1 ? row[1].toString().trim() : '',
             kodeTransaksi: row.length > 2 ? row[2].toString().trim() : '',
             nisn: csvNisn,
@@ -934,7 +934,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.red.withOpacity(0.3),
+            color: Colors.red.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -1007,7 +1007,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -1145,7 +1145,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1193,7 +1193,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${transaction.waktu}',
+                  transaction.waktu,
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
                 if (transaction.kodeTransaksi.isNotEmpty) ...[
@@ -1219,7 +1219,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.green.withOpacity(0.1),
+            color: Colors.green.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1263,7 +1263,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${topUp.waktu}',
+                  topUp.waktu,
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
                 Text(

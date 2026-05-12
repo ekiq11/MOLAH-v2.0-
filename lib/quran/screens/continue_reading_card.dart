@@ -1,12 +1,13 @@
 // widgets/continue_reading_card.dart - COMPLETE FIXED VERSION
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'package:pizab_molah/quran/model/surah_model.dart';
-import 'package:pizab_molah/quran/screens/read_page.dart';  // Pastikan nama file ini benar
+import 'package:pizab_molah/quran/screens/read_page.dart';
 import 'package:pizab_molah/quran/service/quran_service.dart';
 
 class ContinueReadingCard extends StatefulWidget {
-  const ContinueReadingCard({Key? key}) : super(key: key);
+  const ContinueReadingCard({super.key});
 
   @override
   State<ContinueReadingCard> createState() => _ContinueReadingCardState();
@@ -25,12 +26,12 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
 
   Future<void> _loadLastRead() async {
     if (!mounted) return;
-    
+
     setState(() => _isLoading = true);
-    
+
     try {
       final lastRead = await _quranService.getLastRead();
-      
+
       if (mounted) {
         setState(() {
           _lastRead = lastRead;
@@ -82,7 +83,7 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 10,
               offset: Offset(0, 4),
             ),
@@ -107,15 +108,12 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF059669),
-            Color(0xFF047857),
-          ],
+          colors: [Color(0xFF059669), Color(0xFF047857)],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Color(0xFF059669).withOpacity(0.3),
+            color: Color(0xFF059669).withValues(alpha: 0.3),
             blurRadius: 20,
             offset: Offset(0, 8),
           ),
@@ -126,7 +124,7 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
         child: InkWell(
           onTap: () async {
             HapticFeedback.lightImpact();
-            
+
             try {
               // Navigate ke halaman baca dengan initialAyah
               await Navigator.push(
@@ -138,7 +136,7 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
                   ),
                 ),
               );
-              
+
               // Refresh data setelah kembali dari halaman baca
               if (mounted) {
                 _loadLastRead();
@@ -156,7 +154,7 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
                   width: isTablet ? 64 : 56,
                   height: isTablet ? 64 : 56,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -174,7 +172,7 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
                         'Lanjutkan Membaca',
                         style: TextStyle(
                           fontSize: isTablet ? 14 : 12,
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -196,7 +194,7 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -214,7 +212,7 @@ class _ContinueReadingCardState extends State<ContinueReadingCard> {
                               '• ${_getTimeAgo(_lastRead!.lastRead)}',
                               style: TextStyle(
                                 fontSize: isTablet ? 12 : 11,
-                                color: Colors.white.withOpacity(0.8),
+                                color: Colors.white.withValues(alpha: 0.8),
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),

@@ -2,7 +2,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:pizab_molah/doa/model/model_doa.dart';
+import 'package:pizab_molah/doa/model/model_doa_sehari.dart';
 
 import 'doa_detail_page.dart';
 
@@ -34,9 +34,11 @@ class _DoaListPageState extends State<DoaListPage> {
 
   Future<void> _loadDoas() async {
     try {
-      final String response = await rootBundle.loadString('assets/json/doa.json');
+      final String response = await rootBundle.loadString(
+        'assets/json/doa.json',
+      );
       final List<dynamic> data = json.decode(response);
-      
+
       setState(() {
         _allDoas = data.map((json) => Doa.fromJson(json)).toList();
         _filteredDoas = _allDoas;
@@ -67,18 +69,20 @@ class _DoaListPageState extends State<DoaListPage> {
         _filteredDoas = _allDoas.where((doa) {
           // Cari di nama
           if (doa.nama.toLowerCase().contains(lowerQuery)) return true;
-          
+
           // Cari di transliterasi
           if (doa.transliterasi.toLowerCase().contains(lowerQuery)) return true;
-          
+
           // Cari di arti
           if (doa.arti.toLowerCase().contains(lowerQuery)) return true;
-          
+
           // Cari di kata kunci
-          if (doa.kataKunci.any((kata) => kata.toLowerCase().contains(lowerQuery))) {
+          if (doa.kataKunci.any(
+            (kata) => kata.toLowerCase().contains(lowerQuery),
+          )) {
             return true;
           }
-          
+
           return false;
         }).toList();
       }
@@ -110,7 +114,7 @@ class _DoaListPageState extends State<DoaListPage> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     return Scaffold(
       backgroundColor: Color(0xFFF8F9FA),
       body: CustomScrollView(
@@ -118,7 +122,9 @@ class _DoaListPageState extends State<DoaListPage> {
           _buildAppBar(screenWidth),
           SliverToBoxAdapter(
             child: Padding(
-              padding: EdgeInsets.all(_getResponsivePadding(screenWidth, base: 16)),
+              padding: EdgeInsets.all(
+                _getResponsivePadding(screenWidth, base: 16),
+              ),
               child: _buildSearchBar(screenWidth),
             ),
           ),
@@ -151,7 +157,7 @@ class _DoaListPageState extends State<DoaListPage> {
     final titleFontSize = _getResponsiveFontSize(screenWidth, base: 18);
     final iconSize = screenWidth < 360 ? 100.0 : 120.0;
     final expandedHeight = screenWidth < 360 ? 110.0 : 120.0;
-    
+
     return SliverAppBar(
       expandedHeight: expandedHeight,
       floating: false,
@@ -172,10 +178,7 @@ class _DoaListPageState extends State<DoaListPage> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF059669),
-                Color(0xFF047857),
-              ],
+              colors: [Color(0xFF059669), Color(0xFF047857)],
             ),
           ),
           child: Stack(
@@ -186,7 +189,7 @@ class _DoaListPageState extends State<DoaListPage> {
                 child: Icon(
                   Icons.menu_book_rounded,
                   size: iconSize,
-                  color: Colors.white.withOpacity(0.1),
+                  color: Colors.white.withValues(alpha: 0.1),
                 ),
               ),
             ],
@@ -205,14 +208,14 @@ class _DoaListPageState extends State<DoaListPage> {
     final hintFontSize = _getResponsiveFontSize(screenWidth, base: 14);
     final iconSize = screenWidth < 360 ? 20.0 : 24.0;
     final verticalPadding = screenWidth < 360 ? 12.0 : 14.0;
-    
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: Offset(0, 2),
           ),
@@ -260,9 +263,7 @@ class _DoaListPageState extends State<DoaListPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(
-                color: Color(0xFF059669),
-              ),
+              CircularProgressIndicator(color: Color(0xFF059669)),
               SizedBox(height: 16),
               Text(
                 'Memuat doa...',
@@ -303,7 +304,7 @@ class _DoaListPageState extends State<DoaListPage> {
                   horizontal: _getResponsivePadding(screenWidth, base: 24),
                 ),
                 child: Text(
-                  _searchQuery.isEmpty 
+                  _searchQuery.isEmpty
                       ? 'Silakan tambahkan doa di file JSON'
                       : 'Coba kata kunci lain',
                   textAlign: TextAlign.center,
@@ -327,13 +328,10 @@ class _DoaListPageState extends State<DoaListPage> {
         16,
       ),
       sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final doa = _filteredDoas[index];
-            return _buildDoaCard(doa, index, screenWidth);
-          },
-          childCount: _filteredDoas.length,
-        ),
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final doa = _filteredDoas[index];
+          return _buildDoaCard(doa, index, screenWidth);
+        }, childCount: _filteredDoas.length),
       ),
     );
   }
@@ -345,7 +343,7 @@ class _DoaListPageState extends State<DoaListPage> {
     final titleFontSize = _getResponsiveFontSize(screenWidth, base: 14);
     final subtitleFontSize = _getResponsiveFontSize(screenWidth, base: 12);
     final spacing = screenWidth < 360 ? 12.0 : 16.0;
-    
+
     return Container(
       margin: EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -353,7 +351,7 @@ class _DoaListPageState extends State<DoaListPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: Offset(0, 2),
           ),
@@ -365,10 +363,8 @@ class _DoaListPageState extends State<DoaListPage> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => DoaDetailPage(
-                doas: _filteredDoas,
-                initialIndex: index,
-              ),
+              builder: (context) =>
+                  DoaDetailPage(doas: _filteredDoas, initialIndex: index),
             ),
           );
         },
@@ -384,10 +380,7 @@ class _DoaListPageState extends State<DoaListPage> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF059669),
-                      Color(0xFF047857),
-                    ],
+                    colors: [Color(0xFF059669), Color(0xFF047857)],
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),

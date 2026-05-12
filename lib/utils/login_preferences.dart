@@ -6,10 +6,6 @@ class LoginPreferences {
   static MMKV? _getMMKV() {
     try {
       final mmkv = MMKV.defaultMMKV();
-      if (mmkv == null) {
-        print('❌ MMKV instance is null');
-        return null;
-      }
       return mmkv;
     } catch (e) {
       print('❌ Error getting MMKV instance: $e');

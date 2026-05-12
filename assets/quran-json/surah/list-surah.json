@@ -1,0 +1,1142 @@
+[
+    {
+      "id": 1,
+      "ar": "الفاتحة",
+      "ltn": "Al Fatihah",
+      "asma": "الفاتحة",
+      "len": 7,
+      "type": "Makkiyah",
+      "trl": "Al Fatihah",
+      "audio": "https://server8.mp3quran.net/afs/001.mp3"
+    },
+    {
+      "id": 2,
+      "ar": "البقرة",
+      "ltn": "Al Baqarah",
+      "asma": "البقرة",
+      "len": 286,
+      "type": "Madaniyah",
+      "trl": "Al Baqarah",
+      "audio": "https://server8.mp3quran.net/afs/002.mp3"
+    },
+    {
+      "id": 3,
+      "ar": "آل عمران",
+      "ltn": "Ali Imran",
+      "asma": "آل عمران",
+      "len": 200,
+      "type": "Madaniyah",
+      "trl": "Ali Imran",
+      "audio": "https://server8.mp3quran.net/afs/003.mp3"
+    },
+    {
+      "id": 4,
+      "ar": "النساء",
+      "ltn": "An Nisaa",
+      "asma": "النساء",
+      "len": 176,
+      "type": "Madaniyah",
+      "trl": "An Nisaa",
+      "audio": "https://server8.mp3quran.net/afs/004.mp3"
+    },
+    {
+      "id": 5,
+      "ar": "المائدة",
+      "ltn": "Al Maidah",
+      "asma": "المائدة",
+      "len": 120,
+      "type": "Madaniyah",
+      "trl": "Al Maidah",
+      "audio": "https://server8.mp3quran.net/afs/005.mp3"
+    },
+    {
+      "id": 6,
+      "ar": "الأنعام",
+      "ltn": "Al An'am",
+      "asma": "الأنعام",
+      "len": 165,
+      "type": "Makkiyah",
+      "trl": "Al An'am",
+      "audio": "https://server8.mp3quran.net/afs/006.mp3"
+    },
+    {
+      "id": 7,
+      "ar": "الأعراف",
+      "ltn": "Al A'raf",
+      "asma": "الأعراف",
+      "len": 206,
+      "type": "Makkiyah",
+      "trl": "Al A'raf",
+      "audio": "https://server8.mp3quran.net/afs/007.mp3"
+    },
+    {
+      "id": 8,
+      "ar": "الأنفال",
+      "ltn": "Al Anfaal",
+      "asma": "الأنفال",
+      "len": 75,
+      "type": "Madaniyah",
+      "trl": "Al Anfaal",
+      "audio": "https://server8.mp3quran.net/afs/008.mp3"
+    },
+    {
+      "id": 9,
+      "ar": "التوبة",
+      "ltn": "At Taubah",
+      "asma": "التوبة",
+      "len": 129,
+      "type": "Madaniyah",
+      "trl": "At Taubah",
+      "audio": "https://server8.mp3quran.net/afs/009.mp3"
+    },
+    {
+      "id": 10,
+      "ar": "يونس",
+      "ltn": "Yunus",
+      "asma": "يونس",
+      "len": 109,
+      "type": "Makkiyah",
+      "trl": "Yunus",
+      "audio": "https://server8.mp3quran.net/afs/010.mp3"
+    },
+    {
+      "id": 11,
+      "ar": "هود",
+      "ltn": "Huud",
+      "asma": "هود",
+      "len": 123,
+      "type": "Makkiyah",
+      "trl": "Huud",
+      "audio": "https://server8.mp3quran.net/afs/011.mp3"
+    },
+    {
+      "id": 12,
+      "ar": "يوسف",
+      "ltn": "Yusuf",
+      "asma": "يوسف",
+      "len": 111,
+      "type": "Makkiyah",
+      "trl": "Yusuf",
+      "audio": "https://server8.mp3quran.net/afs/012.mp3"
+    },
+    {
+      "id": 13,
+      "ar": "الرعد",
+      "ltn": "Ar Ra'du",
+      "asma": "الرعد",
+      "len": 43,
+      "type": "Madaniyah",
+      "trl": "Ar Ra'du",
+      "audio": "https://server8.mp3quran.net/afs/013.mp3"
+    },
+    {
+      "id": 14,
+      "ar": "ابراهيم",
+      "ltn": "Ibrahim",
+      "asma": "ابراهيم",
+      "len": 52,
+      "type": "Makkiyah",
+      "trl": "Ibrahim",
+      "audio": "https://server8.mp3quran.net/afs/014.mp3"
+    },
+    {
+      "id": 15,
+      "ar": "الحجر",
+      "ltn": "Al Hijr",
+      "asma": "الحجر",
+      "len": 99,
+      "type": "Makkiyah",
+      "trl": "Al Hijr",
+      "audio": "https://server8.mp3quran.net/afs/015.mp3"
+    },
+    {
+      "id": 16,
+      "ar": "النحل",
+      "ltn": "An Nahl",
+      "asma": "النحل",
+      "len": 128,
+      "type": "Makkiyah",
+      "trl": "An Nahl",
+      "audio": "https://server8.mp3quran.net/afs/016.mp3"
+    },
+    {
+      "id": 17,
+      "ar": "الإسراء",
+      "ltn": "Al Israa'",
+      "asma": "الإسراء",
+      "len": 111,
+      "type": "Makkiyah",
+      "trl": "Al Israa'",
+      "audio": "https://server8.mp3quran.net/afs/017.mp3"
+    },
+    {
+      "id": 18,
+      "ar": "الكهف",
+      "ltn": "Al Kahfi",
+      "asma": "الكهف",
+      "len": 110,
+      "type": "Makkiyah",
+      "trl": "Al Kahfi",
+      "audio": "https://server8.mp3quran.net/afs/018.mp3"
+    },
+    {
+      "id": 19,
+      "ar": "مريم",
+      "ltn": "Maryam",
+      "asma": "مريم",
+      "len": 98,
+      "type": "Makkiyah",
+      "trl": "Maryam",
+      "audio": "https://server8.mp3quran.net/afs/019.mp3"
+    },
+    {
+      "id": 20,
+      "ar": "طه",
+      "ltn": "Thaahaa",
+      "asma": "طه",
+      "len": 135,
+      "type": "Makkiyah",
+      "trl": "Thaahaa",
+      "audio": "https://server8.mp3quran.net/afs/020.mp3"
+    },
+    {
+      "id": 21,
+      "ar": "الأنبياء",
+      "ltn": "Al Anbiyaa",
+      "asma": "الأنبياء",
+      "len": 112,
+      "type": "Makkiyah",
+      "trl": "Al Anbiyaa",
+      "audio": "https://server8.mp3quran.net/afs/021.mp3"
+    },
+    {
+      "id": 22,
+      "ar": "الحج",
+      "ltn": "Al Hajj",
+      "asma": "الحج",
+      "len": 78,
+      "type": "Madaniyah",
+      "trl": "Al Hajj",
+      "audio": "https://server8.mp3quran.net/afs/022.mp3"
+    },
+    {
+      "id": 23,
+      "ar": "المؤمنون",
+      "ltn": "Al Mu'minun",
+      "asma": "المؤمنون",
+      "len": 118,
+      "type": "Makkiyah",
+      "trl": "Al Mu'minun",
+      "audio": "https://server8.mp3quran.net/afs/023.mp3"
+    },
+    {
+      "id": 24,
+      "ar": "النور",
+      "ltn": "An Nuur",
+      "asma": "النور",
+      "len": 64,
+      "type": "Madaniyah",
+      "trl": "An Nuur",
+      "audio": "https://server8.mp3quran.net/afs/024.mp3"
+    },
+    {
+      "id": 25,
+      "ar": "الفرقان",
+      "ltn": "Al Furqaan",
+      "asma": "الفرقان",
+      "len": 77,
+      "type": "Makkiyah",
+      "trl": "Al Furqaan",
+      "audio": "https://server8.mp3quran.net/afs/025.mp3"
+    },
+    {
+      "id": 26,
+      "ar": "الشعراء",
+      "ltn": "Asy Syu'ara",
+      "asma": "الشعراء",
+      "len": 227,
+      "type": "Makkiyah",
+      "trl": "Asy Syu'ara",
+      "audio": "https://server8.mp3quran.net/afs/026.mp3"
+    },
+    {
+      "id": 27,
+      "ar": "النمل",
+      "ltn": "An Naml",
+      "asma": "النمل",
+      "len": 93,
+      "type": "Makkiyah",
+      "trl": "An Naml",
+      "audio": "https://server8.mp3quran.net/afs/027.mp3"
+    },
+    {
+      "id": 28,
+      "ar": "القصص",
+      "ltn": "Al Qashash",
+      "asma": "القصص",
+      "len": 88,
+      "type": "Makkiyah",
+      "trl": "Al Qashash",
+      "audio": "https://server8.mp3quran.net/afs/028.mp3"
+    },
+    {
+      "id": 29,
+      "ar": "العنكبوت",
+      "ltn": "Al 'Ankabut",
+      "asma": "العنكبوت",
+      "len": 69,
+      "type": "Makkiyah",
+      "trl": "Al 'Ankabut",
+      "audio": "https://server8.mp3quran.net/afs/029.mp3"
+    },
+    {
+      "id": 30,
+      "ar": "الروم",
+      "ltn": "Ar Ruum",
+      "asma": "الروم",
+      "len": 60,
+      "type": "Makkiyah",
+      "trl": "Ar Ruum",
+      "audio": "https://server8.mp3quran.net/afs/030.mp3"
+    },
+    {
+      "id": 31,
+      "ar": "لقمان",
+      "ltn": "Luqman",
+      "asma": "لقمان",
+      "len": 34,
+      "type": "Makkiyah",
+      "trl": "Luqman",
+      "audio": "https://server8.mp3quran.net/afs/031.mp3"
+    },
+    {
+      "id": 32,
+      "ar": "السجدة",
+      "ltn": "As Sajdah",
+      "asma": "السجدة",
+      "len": 30,
+      "type": "Makkiyah",
+      "trl": "As Sajdah",
+      "audio": "https://server8.mp3quran.net/afs/032.mp3"
+    },
+    {
+      "id": 33,
+      "ar": "الأحزاب",
+      "ltn": "Al Ahzab",
+      "asma": "الأحزاب",
+      "len": 73,
+      "type": "Madaniyah",
+      "trl": "Al Ahzab",
+      "audio": "https://server8.mp3quran.net/afs/033.mp3"
+    },
+    {
+      "id": 34,
+      "ar": "سبإ",
+      "ltn": "Saba'",
+      "asma": "سبإ",
+      "len": 54,
+      "type": "Makkiyah",
+      "trl": "Saba'",
+      "audio": "https://server8.mp3quran.net/afs/034.mp3"
+    },
+    {
+      "id": 35,
+      "ar": "فاطر",
+      "ltn": "Faathir",
+      "asma": "فاطر",
+      "len": 45,
+      "type": "Makkiyah",
+      "trl": "Faathir",
+      "audio": "https://server8.mp3quran.net/afs/035.mp3"
+    },
+    {
+      "id": 36,
+      "ar": "يس",
+      "ltn": "Yaa Siin",
+      "asma": "يس",
+      "len": 83,
+      "type": "Makkiyah",
+      "trl": "Yaa Siin",
+      "audio": "https://server8.mp3quran.net/afs/036.mp3"
+    },
+    {
+      "id": 37,
+      "ar": "الصافات",
+      "ltn": "Ash Shaaffat",
+      "asma": "الصافات",
+      "len": 182,
+      "type": "Makkiyah",
+      "trl": "Ash Shaaffat",
+      "audio": "https://server8.mp3quran.net/afs/037.mp3"
+    },
+    {
+      "id": 38,
+      "ar": "ص",
+      "ltn": "Shaad",
+      "asma": "ص",
+      "len": 88,
+      "type": "Makkiyah",
+      "trl": "Shaad",
+      "audio": "https://server8.mp3quran.net/afs/038.mp3"
+    },
+    {
+      "id": 39,
+      "ar": "الزمر",
+      "ltn": "Az Zumar",
+      "asma": "الزمر",
+      "len": 75,
+      "type": "Makkiyah",
+      "trl": "Az Zumar",
+      "audio": "https://server8.mp3quran.net/afs/039.mp3"
+    },
+    {
+      "id": 40,
+      "ar": "غافر",
+      "ltn": "Al Ghaafir",
+      "asma": "غافر",
+      "len": 85,
+      "type": "Makkiyah",
+      "trl": "Al Ghaafir",
+      "audio": "https://server8.mp3quran.net/afs/040.mp3"
+    },
+    {
+      "id": 41,
+      "ar": "فصلت",
+      "ltn": "Al Fushilat",
+      "asma": "فصلت",
+      "len": 54,
+      "type": "Makkiyah",
+      "trl": "Al Fushilat",
+      "audio": "https://server8.mp3quran.net/afs/041.mp3"
+    },
+    {
+      "id": 42,
+      "ar": "الشورى",
+      "ltn": "Asy Syuura",
+      "asma": "الشورى",
+      "len": 53,
+      "type": "Makkiyah",
+      "trl": "Asy Syuura",
+      "audio": "https://server8.mp3quran.net/afs/042.mp3"
+    },
+    {
+      "id": 43,
+      "ar": "الزخرف",
+      "ltn": "Az Zukhruf",
+      "asma": "الزخرف",
+      "len": 89,
+      "type": "Makkiyah",
+      "trl": "Az Zukhruf",
+      "audio": "https://server8.mp3quran.net/afs/043.mp3"
+    },
+    {
+      "id": 44,
+      "ar": "الدخان",
+      "ltn": "Ad Dukhaan",
+      "asma": "الدخان",
+      "len": 59,
+      "type": "Makkiyah",
+      "trl": "Ad Dukhaan",
+      "audio": "https://server8.mp3quran.net/afs/044.mp3"
+    },
+    {
+      "id": 45,
+      "ar": "الجاثية",
+      "ltn": "Al Jaatsiyah",
+      "asma": "الجاثية",
+      "len": 37,
+      "type": "Makkiyah",
+      "trl": "Al Jaatsiyah",
+      "audio": "https://server8.mp3quran.net/afs/045.mp3"
+    },
+    {
+      "id": 46,
+      "ar": "الأحقاف",
+      "ltn": "Al Ahqaaf",
+      "asma": "الأحقاف",
+      "len": 35,
+      "type": "Makkiyah",
+      "trl": "Al Ahqaaf",
+      "audio": "https://server8.mp3quran.net/afs/046.mp3"
+    },
+    {
+      "id": 47,
+      "ar": "محمد",
+      "ltn": "Muhammad",
+      "asma": "محمد",
+      "len": 38,
+      "type": "Madaniyah",
+      "trl": "Muhammad",
+      "audio": "https://server8.mp3quran.net/afs/047.mp3"
+    },
+    {
+      "id": 48,
+      "ar": "الفتح",
+      "ltn": "Al Fath",
+      "asma": "الفتح",
+      "len": 29,
+      "type": "Madaniyah",
+      "trl": "Al Fath",
+      "audio": "https://server8.mp3quran.net/afs/048.mp3"
+    },
+    {
+      "id": 49,
+      "ar": "الحجرات",
+      "ltn": "Al Hujuraat",
+      "asma": "الحجرات",
+      "len": 18,
+      "type": "Madaniyah",
+      "trl": "Al Hujuraat",
+      "audio": "https://server8.mp3quran.net/afs/049.mp3"
+    },
+    {
+      "id": 50,
+      "ar": "ق",
+      "ltn": "Qaaf",
+      "asma": "ق",
+      "len": 45,
+      "type": "Makkiyah",
+      "trl": "Qaaf",
+      "audio": "https://server8.mp3quran.net/afs/050.mp3"
+    },
+    {
+      "id": 51,
+      "ar": "الذاريات",
+      "ltn": "Adz Dzaariyaat",
+      "asma": "الذاريات",
+      "len": 60,
+      "type": "Makkiyah",
+      "trl": "Adz Dzaariyaat",
+      "audio": "https://server8.mp3quran.net/afs/051.mp3"
+    },
+    {
+      "id": 52,
+      "ar": "الطور",
+      "ltn": "Ath Thuur",
+      "asma": "الطور",
+      "len": 49,
+      "type": "Makkiyah",
+      "trl": "Ath Thuur",
+      "audio": "https://server8.mp3quran.net/afs/052.mp3"
+    },
+    {
+      "id": 53,
+      "ar": "النجم",
+      "ltn": "An Najm",
+      "asma": "النجم",
+      "len": 62,
+      "type": "Makkiyah",
+      "trl": "An Najm",
+      "audio": "https://server8.mp3quran.net/afs/053.mp3"
+    },
+    {
+      "id": 54,
+      "ar": "القمر",
+      "ltn": "Al Qamar",
+      "asma": "القمر",
+      "len": 55,
+      "type": "Makkiyah",
+      "trl": "Al Qamar",
+      "audio": "https://server8.mp3quran.net/afs/054.mp3"
+    },
+    {
+      "id": 55,
+      "ar": "الرحمن",
+      "ltn": "Ar Rahmaan",
+      "asma": "الرحمن",
+      "len": 78,
+      "type": "Madaniyah",
+      "trl": "Ar Rahmaan",
+      "audio": "https://server8.mp3quran.net/afs/055.mp3"
+    },
+    {
+      "id": 56,
+      "ar": "الواقعة",
+      "ltn": "Al Waaqi'ah",
+      "asma": "الواقعة",
+      "len": 96,
+      "type": "Makkiyah",
+      "trl": "Al Waaqi'ah",
+      "audio": "https://server8.mp3quran.net/afs/056.mp3"
+    },
+    {
+      "id": 57,
+      "ar": "الحديد",
+      "ltn": "Al Hadiid",
+      "asma": "الحديد",
+      "len": 29,
+      "type": "Madaniyah",
+      "trl": "Al Hadiid",
+      "audio": "https://server8.mp3quran.net/afs/057.mp3"
+    },
+    {
+      "id": 58,
+      "ar": "المجادلة",
+      "ltn": "Al Mujaadalah",
+      "asma": "المجادلة",
+      "len": 22,
+      "type": "Madaniyah",
+      "trl": "Al Mujaadalah",
+      "audio": "https://server8.mp3quran.net/afs/058.mp3"
+    },
+    {
+      "id": 59,
+      "ar": "الحشر",
+      "ltn": "Al Hasyr",
+      "asma": "الحشر",
+      "len": 24,
+      "type": "Madaniyah",
+      "trl": "Al Hasyr",
+      "audio": "https://server8.mp3quran.net/afs/059.mp3"
+    },
+    {
+      "id": 60,
+      "ar": "الممتحنة",
+      "ltn": "Al mumtahanah",
+      "asma": "الممتحنة",
+      "len": 13,
+      "type": "Madaniyah",
+      "trl": "Al mumtahanah",
+      "audio": "https://server8.mp3quran.net/afs/060.mp3"
+    },
+    {
+      "id": 61,
+      "ar": "الصف",
+      "ltn": "Ash Shaff",
+      "asma": "الصف",
+      "len": 14,
+      "type": "Madaniyah",
+      "trl": "Ash Shaff",
+      "audio": "https://server8.mp3quran.net/afs/061.mp3"
+    },
+    {
+      "id": 62,
+      "ar": "الجمعة",
+      "ltn": "Al Jumuah",
+      "asma": "الجمعة",
+      "len": 11,
+      "type": "Madaniyah",
+      "trl": "Al Jumuah",
+      "audio": "https://server8.mp3quran.net/afs/062.mp3"
+    },
+    {
+      "id": 63,
+      "ar": "المنافقون",
+      "ltn": "Al Munafiqun",
+      "asma": "المنافقون",
+      "len": 11,
+      "type": "Madaniyah",
+      "trl": "Al Munafiqun",
+      "audio": "https://server8.mp3quran.net/afs/063.mp3"
+    },
+    {
+      "id": 64,
+      "ar": "التغابن",
+      "ltn": "Ath Taghabun",
+      "asma": "التغابن",
+      "len": 18,
+      "type": "Madaniyah",
+      "trl": "Ath Taghabun",
+      "audio": "https://server8.mp3quran.net/afs/064.mp3"
+    },
+    {
+      "id": 65,
+      "ar": "الطلاق",
+      "ltn": "Ath Thalaaq",
+      "asma": "الطلاق",
+      "len": 12,
+      "type": "Madaniyah",
+      "trl": "Ath Thalaaq",
+      "audio": "https://server8.mp3quran.net/afs/065.mp3"
+    },
+    {
+      "id": 66,
+      "ar": "التحريم",
+      "ltn": "At Tahriim",
+      "asma": "التحريم",
+      "len": 12,
+      "type": "Madaniyah",
+      "trl": "At Tahriim",
+      "audio": "https://server8.mp3quran.net/afs/066.mp3"
+    },
+    {
+      "id": 67,
+      "ar": "الملك",
+      "ltn": "Al Mulk",
+      "asma": "الملك",
+      "len": 30,
+      "type": "Makkiyah",
+      "trl": "Al Mulk",
+      "audio": "https://server8.mp3quran.net/afs/067.mp3"
+    },
+    {
+      "id": 68,
+      "ar": "القلم",
+      "ltn": "Al Qalam",
+      "asma": "القلم",
+      "len": 52,
+      "type": "Makkiyah",
+      "trl": "Al Qalam",
+      "audio": "https://server8.mp3quran.net/afs/068.mp3"
+    },
+    {
+      "id": 69,
+      "ar": "الحاقة",
+      "ltn": "Al Haaqqah",
+      "asma": "الحاقة",
+      "len": 52,
+      "type": "Makkiyah",
+      "trl": "Al Haaqqah",
+      "audio": "https://server8.mp3quran.net/afs/069.mp3"
+    },
+    {
+      "id": 70,
+      "ar": "المعارج",
+      "ltn": "Al Ma'aarij",
+      "asma": "المعارج",
+      "len": 44,
+      "type": "Makkiyah",
+      "trl": "Al Ma'aarij",
+      "audio": "https://server8.mp3quran.net/afs/070.mp3"
+    },
+    {
+      "id": 71,
+      "ar": "نوح",
+      "ltn": "Nuh",
+      "asma": "نوح",
+      "len": 28,
+      "type": "Makkiyah",
+      "trl": "Nuh",
+      "audio": "https://server8.mp3quran.net/afs/071.mp3"
+    },
+    {
+      "id": 72,
+      "ar": "الجن",
+      "ltn": "Al Jin",
+      "asma": "الجن",
+      "len": 28,
+      "type": "Makkiyah",
+      "trl": "Al Jin",
+      "audio": "https://server8.mp3quran.net/afs/072.mp3"
+    },
+    {
+      "id": 73,
+      "ar": "المزمل",
+      "ltn": "Al Muzammil",
+      "asma": "المزمل",
+      "len": 20,
+      "type": "Makkiyah",
+      "trl": "Al Muzammil",
+      "audio": "https://server8.mp3quran.net/afs/073.mp3"
+    },
+    {
+      "id": 74,
+      "ar": "المدثر",
+      "ltn": "Al Muddastir",
+      "asma": "المدثر",
+      "len": 56,
+      "type": "Makkiyah",
+      "trl": "Al Muddastir",
+      "audio": "https://server8.mp3quran.net/afs/074.mp3"
+    },
+    {
+      "id": 75,
+      "ar": "القيامة",
+      "ltn": "Al Qiyaamah",
+      "asma": "القيامة",
+      "len": 40,
+      "type": "Makkiyah",
+      "trl": "Al Qiyaamah",
+      "audio": "https://server8.mp3quran.net/afs/075.mp3"
+    },
+    {
+      "id": 76,
+      "ar": "الانسان",
+      "ltn": "Al Insaan",
+      "asma": "الانسان",
+      "len": 31,
+      "type": "Madaniyah",
+      "trl": "Al Insaan",
+      "audio": "https://server8.mp3quran.net/afs/076.mp3"
+    },
+    {
+      "id": 77,
+      "ar": "المرسلات",
+      "ltn": "Al Mursalaat",
+      "asma": "المرسلات",
+      "len": 50,
+      "type": "Makkiyah",
+      "trl": "Al Mursalaat",
+      "audio": "https://server8.mp3quran.net/afs/077.mp3"
+    },
+    {
+      "id": 78,
+      "ar": "النبإ",
+      "ltn": "An Naba'",
+      "asma": "النبإ",
+      "len": 40,
+      "type": "Makkiyah",
+      "trl": "An Naba'",
+      "audio": "https://server8.mp3quran.net/afs/078.mp3"
+    },
+    {
+      "id": 79,
+      "ar": "النازعات",
+      "ltn": "An Naazi'at",
+      "asma": "النازعات",
+      "len": 46,
+      "type": "Makkiyah",
+      "trl": "An Naazi'at",
+      "audio": "https://server8.mp3quran.net/afs/079.mp3"
+    },
+    {
+      "id": 80,
+      "ar": "عبس",
+      "ltn": "'Abasa",
+      "asma": "عبس",
+      "len": 42,
+      "type": "Makkiyah",
+      "trl": "'Abasa",
+      "audio": "https://server8.mp3quran.net/afs/080.mp3"
+    },
+    {
+      "id": 81,
+      "ar": "التكوير",
+      "ltn": "At Takwiir",
+      "asma": "التكوير",
+      "len": 29,
+      "type": "Makkiyah",
+      "trl": "At Takwiir",
+      "audio": "https://server8.mp3quran.net/afs/081.mp3"
+    },
+    {
+      "id": 82,
+      "ar": "الإنفطار",
+      "ltn": "Al Infithar",
+      "asma": "الإنفطار",
+      "len": 19,
+      "type": "Makkiyah",
+      "trl": "Al Infithar",
+      "audio": "https://server8.mp3quran.net/afs/082.mp3"
+    },
+    {
+      "id": 83,
+      "ar": "المطففين",
+      "ltn": "Al Muthaffifin",
+      "asma": "المطففين",
+      "len": 36,
+      "type": "Makkiyah",
+      "trl": "Al Muthaffifin",
+      "audio": "https://server8.mp3quran.net/afs/083.mp3"
+    },
+    {
+      "id": 84,
+      "ar": "الإنشقاق",
+      "ltn": "Al Insyiqaq",
+      "asma": "الإنشقاق",
+      "len": 25,
+      "type": "Makkiyah",
+      "trl": "Al Insyiqaq",
+      "audio": "https://server8.mp3quran.net/afs/084.mp3"
+    },
+    {
+      "id": 85,
+      "ar": "البروج",
+      "ltn": "Al Buruuj",
+      "asma": "البروج",
+      "len": 22,
+      "type": "Makkiyah",
+      "trl": "Al Buruuj",
+      "audio": "https://server8.mp3quran.net/afs/085.mp3"
+    },
+    {
+      "id": 86,
+      "ar": "الطارق",
+      "ltn": "Ath Thariq",
+      "asma": "الطارق",
+      "len": 17,
+      "type": "Makkiyah",
+      "trl": "Ath Thariq",
+      "audio": "https://server8.mp3quran.net/afs/086.mp3"
+    },
+    {
+      "id": 87,
+      "ar": "الأعلى",
+      "ltn": "Al A'laa",
+      "asma": "الأعلى",
+      "len": 19,
+      "type": "Makkiyah",
+      "trl": "Al A'laa",
+      "audio": "https://server8.mp3quran.net/afs/087.mp3"
+    },
+    {
+      "id": 88,
+      "ar": "الغاشية",
+      "ltn": "Al Ghaasyiah",
+      "asma": "الغاشية",
+      "len": 26,
+      "type": "Makkiyah",
+      "trl": "Al Ghaasyiah",
+      "audio": "https://server8.mp3quran.net/afs/088.mp3"
+    },
+    {
+      "id": 89,
+      "ar": "الفجر",
+      "ltn": "Al Fajr",
+      "asma": "الفجر",
+      "len": 30,
+      "type": "Makkiyah",
+      "trl": "Al Fajr",
+      "audio": "https://server8.mp3quran.net/afs/089.mp3"
+    },
+    {
+      "id": 90,
+      "ar": "البلد",
+      "ltn": "Al Balad",
+      "asma": "البلد",
+      "len": 20,
+      "type": "Makkiyah",
+      "trl": "Al Balad",
+      "audio": "https://server8.mp3quran.net/afs/090.mp3"
+    },
+    {
+      "id": 91,
+      "ar": "الشمس",
+      "ltn": "Asy Syams",
+      "asma": "الشمس",
+      "len": 15,
+      "type": "Makkiyah",
+      "trl": "Asy Syams",
+      "audio": "https://server8.mp3quran.net/afs/091.mp3"
+    },
+    {
+      "id": 92,
+      "ar": "الليل",
+      "ltn": "Al Lail",
+      "asma": "الليل",
+      "len": 21,
+      "type": "Makkiyah",
+      "trl": "Al Lail",
+      "audio": "https://server8.mp3quran.net/afs/092.mp3"
+    },
+    {
+      "id": 93,
+      "ar": "الضحى",
+      "ltn": "Adh Dhuhaa",
+      "asma": "الضحى",
+      "len": 11,
+      "type": "Makkiyah",
+      "trl": "Adh Dhuhaa",
+      "audio": "https://server8.mp3quran.net/afs/093.mp3"
+    },
+    {
+      "id": 94,
+      "ar": "الشرح",
+      "ltn": "Asy Syarh",
+      "asma": "الشرح",
+      "len": 8,
+      "type": "Makkiyah",
+      "trl": "Asy Syarh",
+      "audio": "https://server8.mp3quran.net/afs/094.mp3"
+    },
+    {
+      "id": 95,
+      "ar": "التين",
+      "ltn": "At Tiin",
+      "asma": "التين",
+      "len": 8,
+      "type": "Makkiyah",
+      "trl": "At Tiin",
+      "audio": "https://server8.mp3quran.net/afs/095.mp3"
+    },
+    {
+      "id": 96,
+      "ar": "العلق",
+      "ltn": "Al 'Alaq",
+      "asma": "العلق",
+      "len": 19,
+      "type": "Makkiyah",
+      "trl": "Al 'Alaq",
+      "audio": "https://server8.mp3quran.net/afs/096.mp3"
+    },
+    {
+      "id": 97,
+      "ar": "القدر",
+      "ltn": "Al Qadr",
+      "asma": "القدر",
+      "len": 5,
+      "type": "Makkiyah",
+      "trl": "Al Qadr",
+      "audio": "https://server8.mp3quran.net/afs/097.mp3"
+    },
+    {
+      "id": 98,
+      "ar": "البينة",
+      "ltn": "Al Bayyinah",
+      "asma": "البينة",
+      "len": 8,
+      "type": "Madaniyah",
+      "trl": "Al Bayyinah",
+      "audio": "https://server8.mp3quran.net/afs/098.mp3"
+    },
+    {
+      "id": 99,
+      "ar": "الزلزلة",
+      "ltn": "Az Zalzalah",
+      "asma": "الزلزلة",
+      "len": 8,
+      "type": "Madaniyah",
+      "trl": "Az Zalzalah",
+      "audio": "https://server8.mp3quran.net/afs/099.mp3"
+    },
+    {
+      "id": 100,
+      "ar": "العاديات",
+      "ltn": "Al 'Aadiyah",
+      "asma": "العاديات",
+      "len": 11,
+      "type": "Makkiyah",
+      "trl": "Al 'Aadiyah",
+      "audio": "https://server8.mp3quran.net/afs/100.mp3"
+    },
+    {
+      "id": 101,
+      "ar": "القارعة",
+      "ltn": "Al Qaari'ah",
+      "asma": "القارعة",
+      "len": 11,
+      "type": "Makkiyah",
+      "trl": "Al Qaari'ah",
+      "audio": "https://server8.mp3quran.net/afs/101.mp3"
+    },
+    {
+      "id": 102,
+      "ar": "التكاثر",
+      "ltn": "At Takaatsur",
+      "asma": "التكاثر",
+      "len": 8,
+      "type": "Makkiyah",
+      "trl": "At Takaatsur",
+      "audio": "https://server8.mp3quran.net/afs/102.mp3"
+    },
+    {
+      "id": 103,
+      "ar": "العصر",
+      "ltn": "Al 'Ashr",
+      "asma": "العصر",
+      "len": 3,
+      "type": "Makkiyah",
+      "trl": "Al 'Ashr",
+      "audio": "https://server8.mp3quran.net/afs/103.mp3"
+    },
+    {
+      "id": 104,
+      "ar": "الهمزة",
+      "ltn": "Al Humazah",
+      "asma": "الهمزة",
+      "len": 9,
+      "type": "Makkiyah",
+      "trl": "Al Humazah",
+      "audio": "https://server8.mp3quran.net/afs/104.mp3"
+    },
+    {
+      "id": 105,
+      "ar": "الفيل",
+      "ltn": "Al Fiil",
+      "asma": "الفيل",
+      "len": 5,
+      "type": "Makkiyah",
+      "trl": "Al Fiil",
+      "audio": "https://server8.mp3quran.net/afs/105.mp3"
+    },
+    {
+      "id": 106,
+      "ar": "قريش",
+      "ltn": "Quraisy",
+      "asma": "قريش",
+      "len": 4,
+      "type": "Makkiyah",
+      "trl": "Quraisy",
+      "audio": "https://server8.mp3quran.net/afs/106.mp3"
+    },
+    {
+      "id": 107,
+      "ar": "الماعون",
+      "ltn": "Al Maa'uun",
+      "asma": "الماعون",
+      "len": 7,
+      "type": "Makkiyah",
+      "trl": "Al Maa'uun",
+      "audio": "https://server8.mp3quran.net/afs/107.mp3"
+    },
+    {
+      "id": 108,
+      "ar": "الكوثر",
+      "ltn": "Al Kautsar",
+      "asma": "الكوثر",
+      "len": 3,
+      "type": "Makkiyah",
+      "trl": "Al Kautsar",
+      "audio": "https://server8.mp3quran.net/afs/108.mp3"
+    },
+    {
+      "id": 109,
+      "ar": "الكافرون",
+      "ltn": "Al Kafirun",
+      "asma": "الكافرون",
+      "len": 6,
+      "type": "Makkiyah",
+      "trl": "Al Kafirun",
+      "audio": "https://server8.mp3quran.net/afs/109.mp3"
+    },
+    {
+      "id": 110,
+      "ar": "النصر",
+      "ltn": "An Nashr",
+      "asma": "النصر",
+      "len": 3,
+      "type": "Madaniyah",
+      "trl": "An Nashr",
+      "audio": "https://server8.mp3quran.net/afs/110.mp3"
+    },
+    {
+      "id": 111,
+      "ar": "المسد",
+      "ltn": "Al Lahab",
+      "asma": "المسد",
+      "len": 5,
+      "type": "Makkiyah",
+      "trl": "Al Lahab",
+      "audio": "https://server8.mp3quran.net/afs/111.mp3"
+    },
+    {
+      "id": 112,
+      "ar": "الإخلاص",
+      "ltn": "Al Ikhlash",
+      "asma": "الإخلاص",
+      "len": 4,
+      "type": "Makkiyah",
+      "trl": "Al Ikhlash",
+      "audio": "https://server8.mp3quran.net/afs/112.mp3"
+    },
+    {
+      "id": 113,
+      "ar": "الفلق",
+      "ltn": "Al Falaq",
+      "asma": "الفلق",
+      "len": 5,
+      "type": "Makkiyah",
+      "trl": "Al Falaq",
+      "audio": "https://server8.mp3quran.net/afs/113.mp3"
+    },
+    {
+      "id": 114,
+      "ar": "الناس",
+      "ltn": "An Naas",
+      "asma": "الناس",
+      "len": 6,
+      "type": "Makkiyah",
+      "trl": "An Naas",
+      "audio": "https://server8.mp3quran.net/afs/114.mp3"
+    }
+  ]

@@ -76,11 +76,6 @@ class _SplashScreenState extends State<SplashScreen>
       print('🔍 Step 1: Checking MMKV initialization...');
 
       final mmkv = MMKV.defaultMMKV();
-      if (mmkv == null) {
-        print('❌ MMKV instance is null - not initialized');
-        _updateDebugInfo('MMKV: Not initialized');
-        return;
-      }
 
       print('✅ MMKV instance exists');
       _updateDebugInfo('MMKV: Initialized');
@@ -355,7 +350,7 @@ class _SplashScreenState extends State<SplashScreen>
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
+                    color: Colors.white.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -374,7 +369,7 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                     decoration: BoxDecoration(
                       // ignore: deprecated_member_use
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(

@@ -10,18 +10,14 @@ class DzikirMainPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF7C3AED),
-              Color(0xFF6D28D9),
-              Color(0xFF5B21B6),
-            ],
+            colors: [Color(0xFF7C3AED), Color(0xFF6D28D9), Color(0xFF5B21B6)],
           ),
         ),
         child: SafeArea(
@@ -45,7 +41,7 @@ class DzikirMainPage extends StatelessWidget {
         children: [
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: IconButton(
@@ -71,26 +67,26 @@ class DzikirMainPage extends StatelessWidget {
     );
   }
 
-  Widget _buildContent(BuildContext context, double screenWidth, double screenHeight) {
+  Widget _buildContent(
+    BuildContext context,
+    double screenWidth,
+    double screenHeight,
+  ) {
     return SingleChildScrollView(
       padding: EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         children: [
           SizedBox(height: 20),
-          
+
           // Header Icon
           Container(
             width: 100,
             height: 100,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              Icons.wb_sunny_outlined,
-              size: 50,
-              color: Colors.white,
-            ),
+            child: Icon(Icons.wb_sunny_outlined, size: 50, color: Colors.white),
           ),
 
           SizedBox(height: 24),
@@ -111,7 +107,7 @@ class DzikirMainPage extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: screenWidth < 360 ? 14 : 15,
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               height: 1.5,
             ),
           ),
@@ -154,27 +150,23 @@ class DzikirMainPage extends StatelessWidget {
           Container(
             padding: EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 width: 1,
               ),
             ),
             child: Row(
               children: [
-                Icon(
-                  Icons.info_outline,
-                  color: Colors.white,
-                  size: 24,
-                ),
+                Icon(Icons.info_outline, color: Colors.white, size: 24),
                 SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Dzikir pagi dan petang adalah amalan yang sangat dianjurkan untuk perlindungan dan keberkahan',
                     style: TextStyle(
                       fontSize: screenWidth < 360 ? 12 : 13,
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       height: 1.5,
                     ),
                   ),
@@ -205,9 +197,7 @@ class DzikirMainPage extends StatelessWidget {
           HapticFeedback.lightImpact();
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => DzikirListPage(type: type),
-            ),
+            MaterialPageRoute(builder: (context) => DzikirListPage(type: type)),
           );
         },
         borderRadius: BorderRadius.circular(20),
@@ -222,7 +212,7 @@ class DzikirMainPage extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: gradientColors[1].withOpacity(0.4),
+                color: gradientColors[1].withValues(alpha: 0.4),
                 blurRadius: 20,
                 offset: Offset(0, 10),
               ),
@@ -234,14 +224,10 @@ class DzikirMainPage extends StatelessWidget {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(
-                  icon,
-                  size: 32,
-                  color: Colors.white,
-                ),
+                child: Icon(icon, size: 32, color: Colors.white),
               ),
               SizedBox(width: 16),
               Expanded(
@@ -261,18 +247,14 @@ class DzikirMainPage extends StatelessWidget {
                       subtitle,
                       style: TextStyle(
                         fontSize: screenWidth < 360 ? 12 : 13,
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                         height: 1.4,
                       ),
                     ),
                   ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right,
-                color: Colors.white,
-                size: 28,
-              ),
+              Icon(Icons.chevron_right, color: Colors.white, size: 28),
             ],
           ),
         ),

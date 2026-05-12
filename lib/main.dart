@@ -1,6 +1,8 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart'; // ✅ Wajib untuk SystemChrome
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:mmkv/mmkv.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -9,15 +11,55 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'splashscreen.dart';
 import 'dart:io' show Platform;
 import 'dart:developer' as developer show log;
+import 'package:firebase_core/firebase_core.dart';
+import 'utils/analytics_service.dart';
+import 'utils/fcm_service.dart';
+import 'utils/offline_cache_service.dart';
 
 // Inisialisasi global plugin notifikasi
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
+/// ✅ FIX: Setup System UI yang kompatibel semua OEM Android
+/// Menggantikan setStatusBarColor/setNavigationBarColor yang deprecated
+/// dan menyebabkan bug di Samsung, OPPO, Xiaomi, Realme, Vivo, dll.
+void _setupSystemUI() {
+  // Mode: edge-to-edge — Flutter menggambar sampai tepi layar
+  // MainActivity.kt sudah set WindowCompat.setDecorFitsSystemWindows(false)
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
+  // Set overlay style: transparan agar tidak ada warna bawaan Android
+  // yang menabrak warna tema Flutter app
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      // Status bar (atas)
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light, // ikon putih (cocok bg gelap)
+      statusBarBrightness: Brightness.dark, // iOS equivalent
+      // Navigation bar (bawah)
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarDividerColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.light,
+
+      // Android kontras navigation bar (Android 10+)
+      systemNavigationBarContrastEnforced: false,
+      // Android kontras status bar (Android 10+)
+      systemStatusBarContrastEnforced: false,
+    ),
+  );
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   developer.log('🚀 App starting...');
+
+  // Inisialisasi Firebase
+  await Firebase.initializeApp();
+  developer.log('✅ Firebase initialized');
+
+  // Setup system UI sebelum app launch
+  _setupSystemUI();
 
   try {
     // Inisialisasi MMKV
@@ -26,12 +68,20 @@ void main() async {
 
     // Test MMKV
     final mmkv = MMKV.defaultMMKV();
-    mmkv?.encodeBool('startup_test', true);
-    final test = mmkv?.decodeBool('startup_test', defaultValue: false);
+    mmkv.encodeBool('startup_test', true);
+    final test = mmkv.decodeBool('startup_test', defaultValue: false);
     developer.log('🔍 MMKV startup test: $test');
   } catch (e) {
     developer.log('❌ MMKV init failed: $e');
   }
+
+  // ✅ Inisialisasi Offline Cache Service
+  await OfflineCacheService.initialize();
+  developer.log('✅ OfflineCacheService initialized');
+
+  // ✅ Inisialisasi FCM Push Notification
+  await FCMService.initialize();
+  developer.log('✅ FCMService initialized');
 
   // Inisialisasi notifikasi lokal
   const AndroidInitializationSettings androidSettings =
@@ -46,13 +96,7 @@ void main() async {
     iOS: iosSettings,
   );
 
-  await flutterLocalNotificationsPlugin.initialize(
-    initSettings,
-    onDidReceiveNotificationResponse: (payload) {
-      // Bisa digunakan untuk deep link nanti
-      developer.log('🔔 Notification tapped! Payload: $payload');
-    },
-  );
+  await flutterLocalNotificationsPlugin.initialize(initSettings);
 
   developer.log('🚀 Running app...');
   runApp(const MyApp());
@@ -65,8 +109,40 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'MOLAH',
-      theme: ThemeData(primarySwatch: Colors.red),
+      theme: ThemeData(
+        // ✅ FIX: Hindari primarySwatch (deprecated), gunakan colorScheme
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.red,
+          brightness: Brightness.light,
+        ),
+        useMaterial3: true,
+        // ✅ Tipografi global: Inter (Instagram-style)
+        // Semua Text widget di seluruh app otomatis menggunakan font ini
+        textTheme: GoogleFonts.interTextTheme(),
+        // ✅ FIX: AppBarTheme dengan SystemUiOverlayStyle eksplisit
+        appBarTheme: AppBarTheme(
+          systemOverlayStyle: const SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.light,
+            statusBarBrightness: Brightness.dark,
+            systemNavigationBarColor: Colors.transparent,
+            systemNavigationBarDividerColor: Colors.transparent,
+            systemNavigationBarIconBrightness: Brightness.light,
+            systemNavigationBarContrastEnforced: false,
+            systemStatusBarContrastEnforced: false,
+          ),
+          backgroundColor: Colors.red,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          titleTextStyle: GoogleFonts.inter(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
       home: const AppWrapper(),
+      navigatorObservers: [AnalyticsService.observer],
       debugShowCheckedModeBanner: false,
     );
   }
@@ -90,7 +166,7 @@ class _AppWrapperState extends State<AppWrapper> {
     super.initState();
     // Log molah.png saat aplikasi dimulai
     developer.log('🖼️ Loading logo: assets/img/molah.png');
-    
+
     // Cek update setelah app dimuat
     WidgetsBinding.instance.addPostFrameCallback((_) {
       checkForUpdate();
@@ -215,8 +291,8 @@ class _AppWrapperState extends State<AppWrapper> {
       context: context,
       barrierDismissible: false, // User harus memilih
       builder: (BuildContext context) {
-        return WillPopScope(
-          onWillPop: () async => false, // Mencegah back button
+        return PopScope(
+          canPop: false,
           child: AlertDialog(
             title: const Text('Update Diperlukan'),
             content: const Text(
@@ -304,8 +380,8 @@ class _AppWrapperState extends State<AppWrapper> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return WillPopScope(
-          onWillPop: () async => false,
+        return PopScope(
+          canPop: false,
           child: const AlertDialog(
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -327,8 +403,8 @@ class _AppWrapperState extends State<AppWrapper> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return WillPopScope(
-          onWillPop: () async => false,
+        return PopScope(
+          canPop: false,
           child: AlertDialog(
             title: const Text('Update Berhasil'),
             content: const Text(
@@ -356,8 +432,8 @@ class _AppWrapperState extends State<AppWrapper> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return WillPopScope(
-          onWillPop: () async => false,
+        return PopScope(
+          canPop: false,
           child: AlertDialog(
             title: const Text('Update Gagal'),
             content: const Text(
@@ -423,8 +499,8 @@ class _AppWrapperState extends State<AppWrapper> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return WillPopScope(
-          onWillPop: () async => false,
+        return PopScope(
+          canPop: false,
           child: AlertDialog(
             title: const Text('Update Tersedia'),
             content: const Text(

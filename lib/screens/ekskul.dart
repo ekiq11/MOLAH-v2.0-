@@ -2,7 +2,6 @@
 // ignore_for_file: deprecated_member_use
 
 import 'dart:math';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:convert';
 import 'dart:io';
@@ -698,7 +697,7 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.red.withOpacity(0.3),
+            color: Colors.red.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: Offset(0, 4),
           ),
@@ -709,7 +708,7 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
           Container(
             padding: EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(Icons.school, color: Colors.white, size: 24),
@@ -731,7 +730,7 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
                 Text(
                   'NISN: ${_paymentData['nisn'] ?? widget.nisn}',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                     fontSize: 14,
                   ),
                 ),
@@ -746,7 +745,7 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -766,17 +765,17 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
                         ),
                         decoration: BoxDecoration(
                           color: status['status'] == "BELUM LUNAS"
-                              ? const Color(0xFFF59E0B).withOpacity(0.2)
+                              ? const Color(0xFFF59E0B).withValues(alpha: 0.2)
                               : status['status'] == "LUNAS"
-                              ? const Color(0xFF059669).withOpacity(0.2)
-                              : Colors.white.withOpacity(0.2),
+                              ? const Color(0xFF059669).withValues(alpha: 0.2)
+                              : Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: status['status'] == "BELUM LUNAS"
-                                ? const Color(0xFFFBBF24).withOpacity(0.3)
+                                ? const Color(0xFFFBBF24).withValues(alpha: 0.3)
                                 : status['status'] == "LUNAS"
-                                ? const Color(0xFF10B981).withOpacity(0.3)
-                                : Colors.white.withOpacity(0.3),
+                                ? const Color(0xFF10B981).withValues(alpha: 0.3)
+                                : Colors.white.withValues(alpha: 0.3),
                             width: 1,
                           ),
                         ),
@@ -820,7 +819,7 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: Offset(0, 2),
           ),
@@ -932,9 +931,9 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
@@ -978,7 +977,7 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: Offset(0, 2),
           ),
@@ -1173,9 +1172,9 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -1208,7 +1207,7 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: Offset(0, 2),
           ),
@@ -1979,7 +1978,7 @@ $currentDate
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha: 0.2),
             blurRadius: 15,
             offset: Offset(0, 5),
           ),
@@ -2029,7 +2028,7 @@ $currentDate
                           Text(
                             'Sistem Pembayaran Ekstrakurikuler',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                               fontSize: smallFontSize,
                             ),
                             maxLines: 1,
@@ -2042,7 +2041,7 @@ $currentDate
                     Container(
                       padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
@@ -2060,7 +2059,7 @@ $currentDate
                     vertical: isSmallScreen ? 5 : 8,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(

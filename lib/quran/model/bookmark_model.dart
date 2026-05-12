@@ -4,9 +4,8 @@ import 'package:pizab_molah/quran/model/surah_model.dart';
 import 'package:pizab_molah/quran/screens/read_page.dart';
 import 'package:pizab_molah/quran/service/quran_service.dart';
 
-
 class QuranBookmarksPage extends StatefulWidget {
-  const QuranBookmarksPage({Key? key}) : super(key: key);
+  const QuranBookmarksPage({super.key});
 
   @override
   State<QuranBookmarksPage> createState() => _QuranBookmarksPageState();
@@ -25,12 +24,12 @@ class _QuranBookmarksPageState extends State<QuranBookmarksPage> {
 
   Future<void> _loadBookmarks() async {
     setState(() => _isLoading = true);
-    
+
     final bookmarks = await _quranService.getBookmarks();
-    
+
     // Sort by last read (newest first)
     bookmarks.sort((a, b) => b.lastRead.compareTo(a.lastRead));
-    
+
     setState(() {
       _bookmarks = bookmarks;
       _isLoading = false;
@@ -50,7 +49,7 @@ class _QuranBookmarksPageState extends State<QuranBookmarksPage> {
         bookmark.ayahNumber,
       );
       _loadBookmarks();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -59,10 +58,14 @@ class _QuranBookmarksPageState extends State<QuranBookmarksPage> {
                 Container(
                   padding: EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(Icons.check_circle, color: Colors.white, size: 20),
+                  child: Icon(
+                    Icons.check_circle,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
                 SizedBox(width: 12),
                 Expanded(
@@ -88,9 +91,7 @@ class _QuranBookmarksPageState extends State<QuranBookmarksPage> {
 
   Widget _buildDeleteDialog(BookmarkModel bookmark) {
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       elevation: 0,
       backgroundColor: Colors.transparent,
       child: Container(
@@ -100,7 +101,7 @@ class _QuranBookmarksPageState extends State<QuranBookmarksPage> {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 20,
               offset: Offset(0, 10),
             ),
@@ -113,7 +114,7 @@ class _QuranBookmarksPageState extends State<QuranBookmarksPage> {
             Container(
               padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Color(0xFFEF4444).withOpacity(0.1),
+                color: Color(0xFFEF4444).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -123,7 +124,7 @@ class _QuranBookmarksPageState extends State<QuranBookmarksPage> {
               ),
             ),
             SizedBox(height: 20),
-            
+
             // Title
             Text(
               'Hapus Bookmark?',
@@ -134,15 +135,12 @@ class _QuranBookmarksPageState extends State<QuranBookmarksPage> {
               ),
             ),
             SizedBox(height: 12),
-            
+
             // Content
             Text(
               'Anda akan menghapus bookmark untuk:',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Color(0xFF6B7280),
-              ),
+              style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
             ),
             SizedBox(height: 8),
             Container(
@@ -174,7 +172,7 @@ class _QuranBookmarksPageState extends State<QuranBookmarksPage> {
               ),
             ),
             SizedBox(height: 24),
-            
+
             // Buttons
             Row(
               children: [
@@ -242,7 +240,6 @@ class _QuranBookmarksPageState extends State<QuranBookmarksPage> {
             fontWeight: FontWeight.bold,
             color: Colors.white,
             fontSize: isTablet ? 20 : 18,
-            
           ),
         ),
         centerTitle: true,
@@ -251,7 +248,7 @@ class _QuranBookmarksPageState extends State<QuranBookmarksPage> {
         leading: Container(
           margin: EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(12),
           ),
           child: IconButton(
@@ -272,24 +269,21 @@ class _QuranBookmarksPageState extends State<QuranBookmarksPage> {
                   SizedBox(height: 16),
                   Text(
                     'Memuat bookmark...',
-                    style: TextStyle(
-                      color: Color(0xFF6B7280),
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: Color(0xFF6B7280), fontSize: 14),
                   ),
                 ],
               ),
             )
           : _bookmarks.isEmpty
-              ? _buildEmptyState(isTablet)
-              : ListView.builder(
-                  padding: EdgeInsets.all(isTablet ? 24 : 16),
-                  itemCount: _bookmarks.length,
-                  itemBuilder: (context, index) {
-                    final bookmark = _bookmarks[index];
-                    return _buildBookmarkItem(bookmark, isTablet, index);
-                  },
-                ),
+          ? _buildEmptyState(isTablet)
+          : ListView.builder(
+              padding: EdgeInsets.all(isTablet ? 24 : 16),
+              itemCount: _bookmarks.length,
+              itemBuilder: (context, index) {
+                final bookmark = _bookmarks[index];
+                return _buildBookmarkItem(bookmark, isTablet, index);
+              },
+            ),
     );
   }
 
@@ -338,10 +332,10 @@ class _QuranBookmarksPageState extends State<QuranBookmarksPage> {
                 vertical: isTablet ? 16 : 14,
               ),
               decoration: BoxDecoration(
-                color: Color(0xFF059669).withOpacity(0.1),
+                color: Color(0xFF059669).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: Color(0xFF059669).withOpacity(0.2),
+                  color: Color(0xFF059669).withValues(alpha: 0.2),
                   width: 1,
                 ),
               ),
@@ -386,13 +380,10 @@ class _QuranBookmarksPageState extends State<QuranBookmarksPage> {
     return SliverPadding(
       padding: EdgeInsets.all(isTablet ? 24 : 16),
       sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final bookmark = _bookmarks[index];
-            return _buildBookmarkItem(bookmark, isTablet, index);
-          },
-          childCount: _bookmarks.length,
-        ),
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final bookmark = _bookmarks[index];
+          return _buildBookmarkItem(bookmark, isTablet, index);
+        }, childCount: _bookmarks.length),
       ),
     );
   }
@@ -419,15 +410,12 @@ class _QuranBookmarksPageState extends State<QuranBookmarksPage> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Colors.white,
-              Color(0xFFFAFAFA),
-            ],
+            colors: [Colors.white, Color(0xFFFAFAFA)],
           ),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Color(0xFF059669).withOpacity(0.08),
+              color: Color(0xFF059669).withValues(alpha: 0.08),
               blurRadius: 20,
               offset: Offset(0, 4),
             ),
@@ -467,7 +455,7 @@ class _QuranBookmarksPageState extends State<QuranBookmarksPage> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Color(0xFF059669).withOpacity(0.3),
+                          color: Color(0xFF059669).withValues(alpha: 0.3),
                           blurRadius: 12,
                           offset: Offset(0, 4),
                         ),
@@ -480,7 +468,7 @@ class _QuranBookmarksPageState extends State<QuranBookmarksPage> {
                     ),
                   ),
                   SizedBox(width: isTablet ? 20 : 16),
-                  
+
                   // Content
                   Expanded(
                     child: Column(
@@ -506,13 +494,13 @@ class _QuranBookmarksPageState extends State<QuranBookmarksPage> {
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [
-                                    Color(0xFF059669).withOpacity(0.15),
-                                    Color(0xFF047857).withOpacity(0.1),
+                                    Color(0xFF059669).withValues(alpha: 0.15),
+                                    Color(0xFF047857).withValues(alpha: 0.1),
                                   ],
                                 ),
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                  color: Color(0xFF059669).withOpacity(0.2),
+                                  color: Color(0xFF059669).withValues(alpha: 0.2),
                                   width: 1,
                                 ),
                               ),
@@ -559,13 +547,13 @@ class _QuranBookmarksPageState extends State<QuranBookmarksPage> {
                       ],
                     ),
                   ),
-                  
+
                   SizedBox(width: 8),
-                  
+
                   // Delete Button
                   Container(
                     decoration: BoxDecoration(
-                      color: Color(0xFFEF4444).withOpacity(0.1),
+                      color: Color(0xFFEF4444).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: IconButton(

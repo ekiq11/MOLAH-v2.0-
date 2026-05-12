@@ -4,14 +4,11 @@ import 'package:pizab_molah/doa/screens/doa_list_page.dart';
 import 'package:pizab_molah/dzikir/screens/main_dzikir.dart';
 import 'package:pizab_molah/quran/screens/quran_main.dart';
 
-
 import '../screens/HafalanHistoryPage.dart';
 import '../screens/ekskul.dart';
 import '../screens/history_transaction.dart';
 import '../screens/reward.dart';
 import '../screens/spp.dart';
-
-
 
 class QuickActions extends StatelessWidget {
   final String nisn;
@@ -21,7 +18,7 @@ class QuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -29,15 +26,12 @@ class QuickActions extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 15,
             offset: Offset(0, 4),
           ),
         ],
-        border: Border.all(
-          color: Color(0xFFF3F4F6),
-          width: 1,
-        ),
+        border: Border.all(color: Color(0xFFF3F4F6), width: 1),
       ),
       child: Stack(
         children: [
@@ -50,7 +44,7 @@ class QuickActions extends StatelessWidget {
               height: 100,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Color(0xFF3B82F6).withOpacity(0.05),
+                color: Color(0xFF3B82F6).withValues(alpha: 0.05),
               ),
             ),
           ),
@@ -62,11 +56,11 @@ class QuickActions extends StatelessWidget {
               height: 120,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Color(0xFF10B981).withOpacity(0.04),
+                color: Color(0xFF10B981).withValues(alpha: 0.04),
               ),
             ),
           ),
-          
+
           // Konten utama
           Padding(
             padding: EdgeInsets.all(16),
@@ -98,17 +92,13 @@ class QuickActions extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             boxShadow: [
               BoxShadow(
-                color: Color(0xFF3B82F6).withOpacity(0.3),
+                color: Color(0xFF3B82F6).withValues(alpha: 0.3),
                 blurRadius: 8,
                 offset: Offset(0, 2),
               ),
             ],
           ),
-          child: Icon(
-            Icons.dashboard_rounded,
-            color: Colors.white,
-            size: 18,
-          ),
+          child: Icon(Icons.dashboard_rounded, color: Colors.white, size: 18),
         ),
         SizedBox(width: 10),
         Column(
@@ -141,7 +131,7 @@ class QuickActions extends StatelessWidget {
 
     int columns;
     double spacing;
-    
+
     if (screenWidth < 360) {
       columns = 3;
       spacing = 12.0;
@@ -176,7 +166,6 @@ class QuickActions extends StatelessWidget {
 
   List<ActionItem> _getActionItems(BuildContext context) {
     return [
-      
       ActionItem(
         icon: Icons.auto_stories_rounded,
         title: 'Hafalan',
@@ -191,7 +180,7 @@ class QuickActions extends StatelessWidget {
           );
         },
       ),
-      
+
       ActionItem(
         icon: Icons.stars_rounded,
         title: 'Reward',
@@ -214,9 +203,7 @@ class QuickActions extends StatelessWidget {
           HapticFeedback.lightImpact();
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => SPPPaymentPage(nisn: nisn),
-            ),
+            MaterialPageRoute(builder: (context) => SPPPaymentPage(nisn: nisn)),
           );
         },
       ),
@@ -243,10 +230,8 @@ class QuickActions extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => TransactionHistoryPage(
-                nisn: nisn,
-                studentName: 'Santri',
-              ),
+              builder: (context) =>
+                  TransactionHistoryPage(nisn: nisn, studentName: 'Santri'),
             ),
           );
         },
@@ -259,23 +244,19 @@ class QuickActions extends StatelessWidget {
           HapticFeedback.lightImpact();
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => QuranMainPage(),
-            ),
+            MaterialPageRoute(builder: (context) => QuranMainPage()),
           );
         },
       ),
       ActionItem(
         icon: Icons.mosque_rounded,
         title: 'Doa-Doa',
-       color: Color(0xFF059669),
+        color: Color(0xFF059669),
         onTap: () {
           HapticFeedback.lightImpact();
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => DoaListPage(),
-            ),
+            MaterialPageRoute(builder: (context) => DoaListPage()),
           );
         },
       ),
@@ -283,39 +264,41 @@ class QuickActions extends StatelessWidget {
         icon: Icons.wb_sunny_outlined,
         title: 'Dzikir',
         color: Color(0xFF7C3AED),
-        
+
         onTap: () {
           HapticFeedback.lightImpact();
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => DzikirMainPage(),
-            ),
+            MaterialPageRoute(builder: (context) => DzikirMainPage()),
           );
         },
       ),
     ];
   }
 
-  Widget _buildMenuItem(ActionItem action, double itemWidth, double screenWidth) {
-    final double containerSize = itemWidth < 70 
+  Widget _buildMenuItem(
+    ActionItem action,
+    double itemWidth,
+    double screenWidth,
+  ) {
+    final double containerSize = itemWidth < 70
         ? 52.0
-        : itemWidth < 90 
-            ? 56.0 
-            : itemWidth < 110 
-                ? 60.0 
-                : 64.0;
-    
+        : itemWidth < 90
+        ? 56.0
+        : itemWidth < 110
+        ? 60.0
+        : 64.0;
+
     final double iconSize = containerSize * 0.5;
-    
-    final double titleFontSize = screenWidth < 360 
-        ? 11.0 
-        : screenWidth < 600 
-            ? 12.0 
-            : 13.0;
-    
+
+    final double titleFontSize = screenWidth < 360
+        ? 11.0
+        : screenWidth < 600
+        ? 12.0
+        : 13.0;
+
     final double borderRadius = 14.0;
-    
+
     return InkWell(
       onTap: action.onTap,
       borderRadius: BorderRadius.circular(borderRadius),
@@ -331,21 +314,18 @@ class QuickActions extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    action.color.withOpacity(0.8),
-                    action.color,
-                  ],
+                  colors: [action.color.withValues(alpha: 0.8), action.color],
                 ),
                 borderRadius: BorderRadius.circular(borderRadius),
                 boxShadow: [
                   BoxShadow(
-                    color: action.color.withOpacity(0.2),
+                    color: action.color.withValues(alpha: 0.2),
                     blurRadius: 12,
                     offset: Offset(0, 4),
                     spreadRadius: 0,
                   ),
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 20,
                     offset: Offset(0, 8),
                     spreadRadius: -5,
@@ -362,14 +342,10 @@ class QuickActions extends StatelessWidget {
                         fit: BoxFit.contain,
                       ),
                     )
-                  : Icon(
-                      action.icon,
-                      color: Colors.white,
-                      size: iconSize,
-                    ),
+                  : Icon(action.icon, color: Colors.white, size: iconSize),
             ),
             SizedBox(height: 8),
-            
+
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 4),
               child: Text(

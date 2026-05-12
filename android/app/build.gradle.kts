@@ -18,6 +18,8 @@ plugins {
     id("kotlin-android")
     // Flutter Gradle Plugin HARUS terakhir
     id("dev.flutter.flutter-gradle-plugin")
+    // Firebase / Google Services
+    id("com.google.gms.google-services")
 }
 
 // ===============================
@@ -28,9 +30,6 @@ android {
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
-    // ===========================
-    // Java & Kotlin Options
-    // ===========================
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
@@ -41,9 +40,6 @@ android {
         jvmTarget = "1.8"
     }
 
-    // ===========================
-    // Signing Config
-    // ===========================
     signingConfigs {
         create("release") {
             keyAlias = keystoreProperties["keyAlias"] as String
@@ -53,35 +49,25 @@ android {
         }
     }
 
-    // ===========================
-    // Default Config
-    // ===========================
     defaultConfig {
         applicationId = "com.pizab_molah"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-
-        // 🔥 WAJIB untuk minSdk < 21
         multiDexEnabled = true
     }
 
-    // ===========================
-    // Build Types
-    // ===========================
     buildTypes {
         getByName("release") {
             isMinifyEnabled = true
             isShrinkResources = true
             signingConfig = signingConfigs.getByName("release")
-
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
-
         getByName("debug") {
             // default
         }
@@ -89,16 +75,22 @@ android {
 }
 
 // ===============================
-// Dependencies (KTS SYNTAX)
+// Dependencies
 // ===============================
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.window:window:1.3.0")
+    implementation("androidx.appcompat:appcompat:1.7.0")
 
     implementation("com.google.android.play:app-update:2.1.0")
     implementation("com.google.android.play:review:2.0.1")
 
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     implementation("androidx.multidex:multidex:2.0.1")
+
+    // Firebase BOM
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation("com.google.firebase:firebase-analytics")
 }
 
 // ===============================
