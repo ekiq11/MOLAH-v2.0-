@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:pizab_molah/utils/login_preferences.dart';
+import 'package:pizab_molah/login.dart';
 
 class ProfilePage extends StatefulWidget {
   final String nisn;
@@ -66,14 +68,15 @@ class _ProfilePageState extends State<ProfilePage>
           'Profil Santri',
           style: TextStyle(
             color: Color(0xFF2D3748),
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
+            fontWeight: FontWeight.w900,
+            fontSize: 20,
+            letterSpacing: 0.5,
           ),
         ),
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back_ios_new,
-            color: Color(0xFFDC2626),
+            color: Color(0xFF10B981),
             size: 20,
           ),
           onPressed: () => Navigator.pop(context),
@@ -114,7 +117,12 @@ class _ProfilePageState extends State<ProfilePage>
                   SizedBox(height: 12),
                   _buildStatusInfo(isSmallScreen),
 
-                  SizedBox(height: 40),
+                  SizedBox(height: 32),
+
+                  // Logout Button
+                  _buildLogoutButton(context),
+
+                  SizedBox(height: 120), // Memberi ruang agar tidak tertutup bottom navbar
                 ],
               ),
             ),
@@ -124,73 +132,6 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  Widget _buildSliverAppBar(bool isSmallScreen) {
-    return SliverAppBar(
-      expandedHeight: 200,
-      pinned: true,
-      stretch: true,
-      backgroundColor: Color(0xFFDC2626),
-      leading: IconButton(
-        icon: Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
-        onPressed: () => Navigator.pop(context),
-      ),
-      flexibleSpace: FlexibleSpaceBar(
-        centerTitle: true,
-        title: Text(
-          'Profil Santri',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: isSmallScreen ? 18 : 20,
-            shadows: [
-              Shadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                offset: Offset(0, 2),
-                blurRadius: 4,
-              ),
-            ],
-          ),
-        ),
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFFDC2626), Color(0xFFB91C1C), Color(0xFF991B1B)],
-            ),
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                top: -50,
-                right: -50,
-                child: Container(
-                  width: 200,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.1),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: -30,
-                left: -30,
-                child: Container(
-                  width: 150,
-                  height: 150,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.08),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildProfileHeader(bool isSmallScreen) {
     String name = _data['nama'] ?? 'Nama Santri';
@@ -204,11 +145,11 @@ class _ProfilePageState extends State<ProfilePage>
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFDC2626), Color(0xFFB91C1C), Color(0xFF991B1B)],
+          colors: [Color(0xFF10B981), Color(0xFF059669), Color(0xFF047857)],
         ),
         boxShadow: [
           BoxShadow(
-            color: Color(0xFFDC2626).withValues(alpha: 0.4),
+            color: Color(0xFF10B981).withValues(alpha: 0.4),
             blurRadius: 20,
             offset: Offset(0, 10),
           ),
@@ -272,7 +213,7 @@ class _ProfilePageState extends State<ProfilePage>
                         child: Text(
                           initial,
                           style: TextStyle(
-                            color: Color(0xFFDC2626),
+                            color: Color(0xFF10B981),
                             fontWeight: FontWeight.bold,
                             fontSize: 32,
                           ),
@@ -537,8 +478,8 @@ class _ProfilePageState extends State<ProfilePage>
             title: 'IZIN TERAKHIR',
             value: _formatIzinTerakhir(_data['izin_terakhir']),
             icon: Icons.event_rounded,
-            gradientColors: [Colors.red[400]!, Colors.red[600]!],
-            bgColor: Colors.red[50]!,
+            gradientColors: [Colors.green[400]!, Colors.green[600]!],
+            bgColor: Colors.green[50]!,
           ),
         ];
 
@@ -575,20 +516,21 @@ class _ProfilePageState extends State<ProfilePage>
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white.withValues(alpha: 0.8), // Glassmorphism base
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 1.5), // Glass border
         boxShadow: [
           BoxShadow(
-            color: cardData.gradientColors[1].withValues(alpha: 0.15),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: cardData.gradientColors[1].withValues(alpha: 0.12),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
             spreadRadius: 0,
           ),
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-            spreadRadius: -5,
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+            spreadRadius: -2,
           ),
         ],
       ),
@@ -709,6 +651,138 @@ class _ProfilePageState extends State<ProfilePage>
       return 'Belum Pernah Izin';
     }
     return izinString;
+  }
+
+  Widget _buildLogoutButton(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFDC2626).withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _showLogoutDialog(context),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.logout_rounded, color: Colors.white),
+              SizedBox(width: 8),
+              Text(
+                'Keluar Akun',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEE2E2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.logout_rounded, color: Color(0xFFDC2626), size: 32),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Keluar Akun',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF111827)),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Apakah Anda yakin ingin keluar dari aplikasi MOLAH?',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        side: const BorderSide(color: Color(0xFFE5E7EB)),
+                      ),
+                      child: const Text('Batal', style: TextStyle(color: Color(0xFF4B5563), fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        await LoginPreferences.clearAllUserData(widget.nisn);
+                        if (context.mounted) {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(builder: (context) => const LoginScreen()),
+                            (route) => false,
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFDC2626),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      child: const Text('Keluar', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

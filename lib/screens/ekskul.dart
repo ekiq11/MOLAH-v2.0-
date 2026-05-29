@@ -15,6 +15,7 @@ import 'package:csv/csv.dart';
 import 'package:mmkv/mmkv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class EkskulPaymentScreen extends StatefulWidget {
   final String nisn;
@@ -510,23 +511,32 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
       appBar: AppBar(
         title: Text(
           'Pembayaran Ekskul',
-          style: TextStyle(
-            color: Colors.grey[800],
-            fontWeight: FontWeight.w600,
+          style: GoogleFonts.inter(
+            color: const Color(0xFF1A1A1A),
+            fontWeight: FontWeight.w800,
             fontSize: 18,
+            letterSpacing: -0.3,
           ),
         ),
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        elevation: 1,
+        foregroundColor: const Color(0xFF1A1A1A),
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Color(0xFF1A1A1A)),
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+          systemNavigationBarColor: Colors.transparent,
+          systemNavigationBarIconBrightness: Brightness.dark,
+        ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           if (!_isLoading && _paymentData.isNotEmpty) ...[
             IconButton(
-              icon: Icon(Icons.refresh),
+              icon: const Icon(Icons.refresh),
               onPressed: _fetchPaymentData,
               tooltip: 'Refresh data',
             ),
@@ -543,17 +553,17 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
 
   Widget _buildLoadingState() {
     return SingleChildScrollView(
-      physics: AlwaysScrollableScrollPhysics(),
+      physics: const AlwaysScrollableScrollPhysics(),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             _buildStudentInfoShimmer(),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             _buildPaymentSummaryShimmer(),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             _buildChartShimmer(),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             _buildPaymentHistoryShimmer(),
           ],
         ),
@@ -571,7 +581,8 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
       child: FadeTransition(
         opacity: _fadeAnimation,
         child: SingleChildScrollView(
-          physics: AlwaysScrollableScrollPhysics(),
+          physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics()),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -579,16 +590,14 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
               children: [
                 if (_errorMessage.isNotEmpty) ...[
                   _buildErrorBanner(),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                 ],
                 _buildStudentInfo(),
-                SizedBox(height: 16),
-                _buildPaymentSummary(),
-                SizedBox(height: 16),
-                _buildPaymentChart(),
-                SizedBox(height: 16),
-                _buildPaymentHistory(),
-                SizedBox(height: 20),
+                const SizedBox(height: 16),
+                _buildFloatingDashboard(),
+                const SizedBox(height: 16),
+                _buildPaymentTimeline(),
+                const SizedBox(height: 20),
               ],
             ),
           ),
@@ -597,49 +606,548 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
     );
   }
 
+  Widget _buildStudentInfo() {
+    final status = _getPaymentStatus();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.sports_basketball_rounded, color: Colors.blue[600], size: 14),
+                    const SizedBox(width: 6),
+                    Text(
+                      'EKSTRAKURIKULER',
+                      style: GoogleFonts.inter(
+                        color: Colors.blue[800],
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_paymentData['status'] != null && _paymentData['status'].toString().isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: status['status'] == "BELUM LUNAS"
+                        ? Colors.orange[50]
+                        : status['status'] == "LUNAS"
+                        ? Colors.green[50]
+                        : Colors.grey[100],
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    status['status'],
+                    style: GoogleFonts.inter(
+                      color: status['status'] == "BELUM LUNAS"
+                          ? Colors.orange[700]
+                          : status['status'] == "LUNAS"
+                          ? Colors.green[700]
+                          : Colors.grey[600],
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Text(
+            _paymentData['nama'] ?? 'Nama tidak ditemukan',
+            style: GoogleFonts.inter(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.3,
+              color: const Color(0xFF1A1A1A),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'NISN: ${_paymentData['nisn'] ?? widget.nisn}',
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: const Color(0xFF8E8E8E),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFloatingDashboard() {
+    final iuranTahunan = _paymentData['iuran_tahunan'] ?? 0;
+    final nominalDibayar = _paymentData['nominal_dibayar'] ?? 0;
+    final sisaPembayaran = _paymentData['sisa_pembayaran'] ?? 0;
+    final progressPercentage = iuranTahunan > 0 ? (nominalDibayar / iuranTahunan) : 0.0;
+    final ekskulText = _paymentData['ekskul']?.toString() ?? '';
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.pie_chart_rounded, color: Colors.red[600], size: 24),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Progress Pembayaran',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF1A1A1A),
+                    letterSpacing: -0.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Circular Progress Section
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 100,
+                  height: 100,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      CircularProgressIndicator(
+                        value: 1.0,
+                        strokeWidth: 8,
+                        color: Colors.grey[100],
+                      ),
+                      CircularProgressIndicator(
+                        value: progressPercentage,
+                        strokeWidth: 8,
+                        backgroundColor: Colors.transparent,
+                        color: Colors.blue[600],
+                        strokeCap: StrokeCap.round,
+                      ),
+                      Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '${(progressPercentage * 100).toStringAsFixed(0)}%',
+                              style: GoogleFonts.inter(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF1A1A1A),
+                                letterSpacing: -1,
+                              ),
+                            ),
+                            Text(
+                              'Selesai',
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF8E8E8E),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 24),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Total Terbayar',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF8E8E8E),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          _formatCurrency(nominalDibayar),
+                          style: GoogleFonts.inter(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.blue[600],
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Sisa Tagihan',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF8E8E8E),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          _formatCurrency(sisaPembayaran),
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.orange[600],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Ekskul Info Strip
+          if (ekskulText.isNotEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(24),
+                  bottomRight: Radius.circular(24),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.star_rounded, color: Colors.blue[600], size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Pilihan Ekskul',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF8E8E8E),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        Text(
+                          ekskulText,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1A1A1A),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentTimeline() {
+    final paidMonths = _getPaidMonths();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.green[50],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.history_rounded, color: Colors.green[600], size: 24),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Jejak Pembayaran',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF1A1A1A),
+                  letterSpacing: -0.3,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          
+          if (paidMonths.isEmpty)
+            Center(
+              child: Column(
+                children: [
+                  Icon(Icons.directions_run_rounded, size: 48, color: Colors.grey[300]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Belum ada jejak',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF8E8E8E),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Column(
+              children: paidMonths.asMap().entries.map((entry) {
+                final index = entry.key;
+                final month = entry.value;
+                final isLast = index == paidMonths.length - 1;
+
+                return IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Timeline Line & Dot
+                      SizedBox(
+                        width: 32,
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: Colors.green[50],
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${index + 1}',
+                                  style: GoogleFonts.inter(
+                                    color: Colors.green[600],
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            if (!isLast)
+                              Expanded(
+                                child: Container(
+                                  width: 2,
+                                  color: Colors.green[50],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // Timeline Content
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => _navigateToInvoice(index, month),
+                          child: Container(
+                            margin: EdgeInsets.only(bottom: isLast ? 0 : 20),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFFF1F5F9)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.02),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        month,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                          color: const Color(0xFF1A1A1A),
+                                          letterSpacing: -0.3,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Iuran Bulan ke-${index + 1}',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                          color: const Color(0xFF8E8E8E),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green[50],
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Text(
+                                        'LUNAS',
+                                        style: GoogleFonts.inter(
+                                          color: Colors.green[700],
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Icon(Icons.receipt_long_rounded, color: Colors.green[600], size: 14),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildErrorState() {
     return Center(
       child: Padding(
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
-            SizedBox(height: 16),
-            Text(
+            const SizedBox(height: 16),
+            const Text(
               'Data tidak ditemukan',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
               'NISN ${widget.nisn} tidak ditemukan dalam sistem',
               style: TextStyle(color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 4),
+            const SizedBox(height: 4),
             Text(
               _errorMessage,
               style: TextStyle(color: Colors.grey[500], fontSize: 12),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ElevatedButton.icon(
                   onPressed: _fetchPaymentData,
-                  icon: Icon(Icons.refresh),
-                  label: Text('Coba Lagi'),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Coba Lagi'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red[600],
                     foregroundColor: Colors.white,
                   ),
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 OutlinedButton.icon(
                   onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.arrow_back),
-                  label: Text('Kembali'),
+                  icon: const Icon(Icons.arrow_back),
+                  label: const Text('Kembali'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.grey[600],
                   ),
@@ -664,7 +1172,7 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
       child: Row(
         children: [
           Icon(Icons.warning, color: Colors.amber[700], size: 22),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               _errorMessage,
@@ -675,728 +1183,6 @@ class _EkskulPaymentScreenState extends State<EkskulPaymentScreen>
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStudentInfo() {
-    final status = _getPaymentStatus();
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [    Color(0xFFDC2626),
-                Color(0xFFB91C1C),
-                Color(0xFF991B1B),],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.red.withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(Icons.school, color: Colors.white, size: 24),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _paymentData['nama'] ?? 'Nama tidak ditemukan',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'NISN: ${_paymentData['nisn'] ?? widget.nisn}',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontSize: 14,
-                  ),
-                ),
-                if (_paymentData['status'] != null &&
-                    _paymentData['status'].toString().isNotEmpty) ...[
-                  SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          _paymentData['status'],
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 4),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: status['status'] == "BELUM LUNAS"
-                              ? const Color(0xFFF59E0B).withValues(alpha: 0.2)
-                              : status['status'] == "LUNAS"
-                              ? const Color(0xFF059669).withValues(alpha: 0.2)
-                              : Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: status['status'] == "BELUM LUNAS"
-                                ? const Color(0xFFFBBF24).withValues(alpha: 0.3)
-                                : status['status'] == "LUNAS"
-                                ? const Color(0xFF10B981).withValues(alpha: 0.3)
-                                : Colors.white.withValues(alpha: 0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Text(
-                          status['status'],
-                          style: TextStyle(
-                            color: status['status'] == "BELUM LUNAS"
-                                ? const Color(0xFFF59E0B)
-                                : status['status'] == "LUNAS"
-                                ? const Color(0xFF10B981)
-                                : Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPaymentSummary() {
-    final ekskulText = _paymentData['ekskul']?.toString() ?? '';
-    final ekskulCount = ekskulText.toLowerCase().contains('ekskul2')
-        ? 2
-        : ekskulText.toLowerCase().contains('ekskul1')
-        ? 1
-        : 0;
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.sports, color: Colors.red[600], size: 24),
-              SizedBox(width: 8),
-              Text(
-                'Ringkasan Pembayaran',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[800],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 20),
-
-          // Tampilkan nama ekstrakurikuler jika ada
-          if (ekskulText.isNotEmpty) ...[
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(16),
-              margin: EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue[200]!),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.sports_kabaddi, color: Colors.blue[600], size: 20),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      ekskulText,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.blue[700],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-
-          Row(
-            children: [
-              Expanded(
-                child: _buildSummaryItem(
-                  'Ekstrakurikuler',
-                  '$ekskulCount Kegiatan',
-                  Icons.celebration,
-                  Colors.blue,
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: _buildSummaryItem(
-                  'Bulan Lunas',
-                  '${_paymentData['lunas_bulan_ke'] ?? 0}/12',
-                  Icons.check_circle,
-                  Colors.green,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildSummaryItem(
-                  'Total Dibayar',
-                  _formatCurrency(_paymentData['nominal_dibayar'] ?? 0),
-                  Icons.account_balance_wallet,
-                  Colors.purple,
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: _buildSummaryItem(
-                  'Sisa Pembayaran',
-                  _formatCurrency(_paymentData['sisa_pembayaran'] ?? 0),
-                  Icons.pending_actions,
-                  Colors.orange,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryItem(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
-            ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 4),
-          Text(
-            title,
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPaymentChart() {
-    final iuranTahunan = _paymentData['iuran_tahunan'] ?? 0;
-    final nominalDibayar = _paymentData['nominal_dibayar'] ?? 0;
-    final sisaPembayaran = _paymentData['sisa_pembayaran'] ?? 0;
-
-    // Calculate progress percentage
-    final progressPercentage = iuranTahunan > 0
-        ? (nominalDibayar / iuranTahunan)
-        : 0.0;
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.trending_up, color: Colors.red[600], size: 24),
-              SizedBox(width: 8),
-              Text(
-                'Progress Pembayaran',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[800],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 20),
-
-          // Progress Bar Section
-          Container(
-            padding: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Colors.blue[50]!, Colors.blue[100]!],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.blue[200]!, width: 1),
-            ),
-            child: Column(
-              children: [
-                // Progress percentage text
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Total Progress',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[800],
-                      ),
-                    ),
-                    Text(
-                      '${(progressPercentage * 100).toStringAsFixed(1)}%',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue[700],
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 12),
-
-                // Progress Bar
-                Container(
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Stack(
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                      ),
-                      AnimatedContainer(
-                        duration: Duration(milliseconds: 1000),
-                        curve: Curves.easeOut,
-                        height: 12,
-                        width:
-                            MediaQuery.of(context).size.width *
-                            0.7 *
-                            progressPercentage,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: progressPercentage >= 1.0
-                                ? [Colors.green[400]!, Colors.green[600]!]
-                                : progressPercentage >= 0.5
-                                ? [Colors.blue[400]!, Colors.blue[600]!]
-                                : [Colors.orange[400]!, Colors.red[500]!],
-                          ),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 16),
-
-                // Amount details
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Sudah Dibayar',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          _formatCurrency(nominalDibayar),
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green[700],
-                          ),
-                        ),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          'Total Iuran',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          _formatCurrency(iuranTahunan),
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[800],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 16),
-
-          // Status indicators
-          Row(
-            children: [
-              Expanded(
-                child: _buildProgressIndicator(
-                  'Terbayar',
-                  _formatCurrency(nominalDibayar),
-                  progressPercentage >= 1.0
-                      ? Colors.green[400]!
-                      : Colors.blue[400]!,
-                  Icons.check_circle_outline,
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: _buildProgressIndicator(
-                  'Sisa Bayar',
-                  _formatCurrency(sisaPembayaran),
-                  sisaPembayaran > 0 ? Colors.orange[400]! : Colors.green[400]!,
-                  sisaPembayaran > 0
-                      ? Icons.pending_actions
-                      : Icons.check_circle,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgressIndicator(
-    String title,
-    String amount,
-    Color color,
-    IconData icon,
-  ) {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          SizedBox(height: 8),
-          Text(title, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-          SizedBox(height: 4),
-          Text(
-            amount,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPaymentHistory() {
-    final paidMonths = _getPaidMonths();
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.history, color: Colors.red[600], size: 24),
-              SizedBox(width: 8),
-              Text(
-                'Riwayat Pembayaran',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[800],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 20),
-          if (paidMonths.isEmpty)
-            Center(
-              child: Column(
-                children: [
-                  Icon(Icons.inbox, size: 48, color: Colors.grey[400]),
-                  SizedBox(height: 12),
-                  Text(
-                    'Belum ada pembayaran',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Data pembayaran akan muncul setelah melakukan pembayaran',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            )
-          else ...[
-            // Monthly payment details
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(16),
-              margin: EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: Colors.green[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.green[200]!),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.payments, color: Colors.green[600], size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Iuran per bulan: ${_formatCurrency(_paymentData['iuran_per_bulan'] ?? 0)}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.green[700],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // List of paid months - CLICKABLE untuk invoice
-            Column(
-              children: paidMonths.asMap().entries.map((entry) {
-                final index = entry.key;
-                final month = entry.value;
-                final isLast = index == paidMonths.length - 1;
-
-                return Container(
-                  margin: EdgeInsets.only(bottom: isLast ? 0 : 12),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.green[400],
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Center(
-                          child: Text(
-                            '${index + 1}',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 16),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => _navigateToInvoice(index, month),
-                          child: Container(
-                            padding: EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.green[50],
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.green[200]!),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        month,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.grey[800],
-                                        ),
-                                      ),
-                                      Text(
-                                        'Pembayaran bulan ke-${index + 1}',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                      if (_paymentData['iuran_per_bulan'] !=
-                                              null &&
-                                          _paymentData['iuran_per_bulan'] >
-                                              0) ...[
-                                        SizedBox(height: 2),
-                                        Text(
-                                          _formatCurrency(
-                                            _paymentData['iuran_per_bulan'],
-                                          ),
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.green[700],
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.green[400],
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        'LUNAS',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(width: 8),
-                                    Icon(
-                                      Icons.receipt_long,
-                                      color: Colors.green[600],
-                                      size: 20,
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
         ],
       ),
     );
@@ -2019,7 +1805,8 @@ $currentDate
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: headerFontSize,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -2067,8 +1854,9 @@ $currentDate
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: titleFontSize,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
+                      fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
+                      
                     ),
                   ),
                 ),
@@ -2104,7 +1892,8 @@ $currentDate
                             invoiceNumber,
                             style: TextStyle(
                               fontSize: bodyFontSize,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
                               color: Colors.grey[800],
                               fontFamily: 'monospace',
                             ),
@@ -2229,7 +2018,8 @@ $currentDate
                               'TOTAL PEMBAYARAN',
                               style: TextStyle(
                                 fontSize: titleFontSize,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
                                 color: Colors.green[700],
                               ),
                               maxLines: 1,
@@ -2251,7 +2041,8 @@ $currentDate
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: smallFontSize,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
                               ),
                             ),
                           ),
@@ -2268,7 +2059,8 @@ $currentDate
                                 _formatCurrency(iuranPerBulan),
                                 style: TextStyle(
                                   fontSize: isSmallScreen ? 22 : 28,
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
                                   color: Colors.green[700],
                                 ),
                               ),
@@ -2330,9 +2122,9 @@ $currentDate
                               'PEMBAYARAN TERVERIFIKASI',
                               style: TextStyle(
                                 fontSize: smallFontSize,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
                                 color: Colors.green[700],
-                                letterSpacing: 0.3,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -2388,9 +2180,9 @@ $currentDate
           title,
           style: TextStyle(
             fontSize: titleFontSize,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
             color: Colors.grey[700],
-            letterSpacing: 0.5,
           ),
         ),
         SizedBox(height: isSmallScreen ? 8 : 12),

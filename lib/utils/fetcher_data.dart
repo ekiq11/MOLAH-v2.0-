@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:csv/csv.dart';
 import '../utils/currency_formater.dart';
@@ -16,8 +17,8 @@ class DataFetcher {
         );
 
         // Debug: Print data untuk melihat struktur
-        print('CSV Data loaded. Rows: ${csvTable.length}');
-        print('Looking for username/NISN: $username');
+        debugPrint('CSV Data loaded. Rows: ${csvTable.length}');
+        debugPrint('Looking for username/NISN: $username');
 
         // Cari data santri berdasarkan NISN (username) di kolom A
         for (int i = 1; i < csvTable.length; i++) {
@@ -28,7 +29,7 @@ class DataFetcher {
           String loginUsername = username.toString().trim();
 
           // Debug: Print setiap baris untuk melihat data
-          print(
+          debugPrint(
             'Row $i - CSV NISN: "$csvNisn", Login Username: "$loginUsername", Nama: ${row.length > 4 ? row[4] : 'empty'}',
           );
 
@@ -40,15 +41,15 @@ class DataFetcher {
 
           if (csvNisn == loginUsername) {
             isMatch = true;
-            print('Match found: Exact match');
+            debugPrint('Match found: Exact match');
           } else if (csvNisn ==
               loginUsername.replaceFirst(RegExp(r'^0+'), '')) {
             isMatch = true;
-            print('Match found: CSV without leading zero');
+            debugPrint('Match found: CSV without leading zero');
           } else if (csvNisn.padLeft(loginUsername.length, '0') ==
               loginUsername) {
             isMatch = true;
-            print('Match found: CSV padded with leading zeros');
+            debugPrint('Match found: CSV padded with leading zeros');
           }
 
           if (isMatch) {
@@ -97,23 +98,23 @@ class DataFetcher {
                   : '0',
             };
 
-            print(
+            debugPrint(
               'Data santri ditemukan: ${santriData['nama']} (NISN: ${santriData['nisn']})',
             );
-            print('Lembaga: ${santriData['lembaga']}');
-            print('Izin Terakhir: ${santriData['izin_terakhir']}');
+            debugPrint('Lembaga: ${santriData['lembaga']}');
+            debugPrint('Izin Terakhir: ${santriData['izin_terakhir']}');
             return santriData;
           }
         }
 
-        print('Data santri dengan NISN $username tidak ditemukan');
+        debugPrint('Data santri dengan NISN $username tidak ditemukan');
         throw Exception('Data santri tidak ditemukan');
       } else {
-        print('HTTP Error: ${response.statusCode}');
+        debugPrint('HTTP Error: ${response.statusCode}');
         throw Exception('HTTP Error: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error fetching data: $e');
+      debugPrint('Error fetching data: $e');
       throw Exception('Error fetching data: $e');
     }
   }

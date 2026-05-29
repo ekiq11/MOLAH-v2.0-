@@ -165,7 +165,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFFDC2626), Color(0xFFB91C1C), Color(0xFF991B1B)],
+              colors: [Color(0xFF10B981), Color(0xFF059669), Color(0xFF047857)],
             ),
           ),
           child: Stack(
@@ -397,61 +397,58 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
     required Gradient gradient,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       decoration: BoxDecoration(
-        gradient: gradient,
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
+              gradient: gradient,
+              borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(icon, color: Colors.white, size: 22),
+            child: Icon(icon, color: Colors.white, size: 24),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 20),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey[500],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
           FittedBox(
             fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
             child: Text(
               value,
-              style: const TextStyle(
-                fontSize: 26,
+              style: TextStyle(
+                fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Colors.grey[800],
+                letterSpacing: -0.5,
               ),
             ),
           ),
           const SizedBox(height: 4),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.white.withValues(alpha: 0.9),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 9,
-                color: Colors.white.withValues(alpha: 0.7),
-              ),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[400],
             ),
           ),
         ],
@@ -462,15 +459,15 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
   Widget _buildPeriodFilter() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(6),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -495,16 +492,16 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
           });
         },
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 250),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
           decoration: BoxDecoration(
             gradient: isSelected
                 ? const LinearGradient(
-                    colors: [Color(0xFFDC2626), Color(0xFFB91C1C)],
+                    colors: [Color(0xFF10B981), Color(0xFF059669)],
                   )
                 : null,
             color: isSelected ? null : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
             children: [
@@ -513,12 +510,12 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                 color: isSelected ? Colors.white : Colors.grey[400],
                 size: 20,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Text(
                 label,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.grey[600],
+                  color: isSelected ? Colors.white : Colors.grey[500],
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                   fontSize: 11,
                 ),
@@ -561,7 +558,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFFDC2626), Color(0xFFB91C1C)],
+                    colors: [Color(0xFF10B981), Color(0xFF059669)],
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -1359,7 +1356,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                   } else {
                     double intensity = activity / maxActivity;
                     cellColor = const Color(
-                      0xFFDC2626,
+                      0xFF10B981,
                     ).withValues(alpha: 0.2 + (intensity * 0.8));
                     if (activity >= 3) {
                       cellIcon = Icons.local_fire_department;
@@ -1375,7 +1372,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: activity > 0
-                              ? const Color(0xFFDC2626).withValues(alpha: 0.3)
+                              ? const Color(0xFF10B981).withValues(alpha: 0.3)
                               : Colors.grey[200]!,
                           width: 1,
                         ),
@@ -1403,7 +1400,7 @@ class _HafalanProgressPageState extends State<HafalanProgressPage>
                                     fontSize: 9,
                                     fontWeight: FontWeight.bold,
                                     color: activity >= 3
-                                        ? const Color(0xFFDC2626)
+                                        ? const Color(0xFF10B981)
                                         : const Color(0xFF6B7280),
                                   ),
                                 ),

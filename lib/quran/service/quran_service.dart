@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 // service/quran_service.dart - COMPLETE WITH DARK MODE SUPPORT
 import 'dart:convert';
 import 'package:flutter/services.dart';
@@ -16,28 +17,28 @@ class QuranService {
   // ==================== LOAD SURAH ====================
   Future<SurahModel?> loadSurah(int surahNumber) async {
     try {
-      print('📖 Loading surah $surahNumber...');
+      debugPrint('📖 Loading surah $surahNumber...');
 
       // Load ayat (teks Arab)
       final ayahJson = await rootBundle.loadString(
         'assets/quran-json/ayat/arabic_verse_uthmani$surahNumber.json',
       );
       final ayahData = json.decode(ayahJson);
-      print('✅ Ayah data loaded for surah $surahNumber');
+      debugPrint('✅ Ayah data loaded for surah $surahNumber');
 
       // Load transliteration
       final transliterationJson = await rootBundle.loadString(
         'assets/quran-json/transliteration/$surahNumber.json',
       );
       final transliterationData = json.decode(transliterationJson);
-      print('✅ Transliteration data loaded for surah $surahNumber');
+      debugPrint('✅ Transliteration data loaded for surah $surahNumber');
 
       // Load translation
       final translationJson = await rootBundle.loadString(
         'assets/quran-json/terjemahan/$surahNumber.json',
       );
       final translationData = json.decode(translationJson);
-      print('✅ Translation data loaded for surah $surahNumber');
+      debugPrint('✅ Translation data loaded for surah $surahNumber');
 
       // Load surah metadata
       final listSurahJson = await rootBundle.loadString(
@@ -48,7 +49,7 @@ class QuranService {
         (s) => s['id'] == surahNumber,
         orElse: () => null,
       );
-      print('✅ Metadata loaded for surah $surahNumber');
+      debugPrint('✅ Metadata loaded for surah $surahNumber');
 
       // Gabungkan semua data
       final surahModel = SurahModel(
@@ -69,13 +70,13 @@ class QuranService {
         ),
       );
 
-      print(
+      debugPrint(
         '✅ Surah $surahNumber loaded successfully with ${surahModel.len} ayat',
       );
       return surahModel;
     } catch (e, stackTrace) {
-      print('❌ Error loading surah $surahNumber: $e');
-      print('Stack trace: $stackTrace');
+      debugPrint('❌ Error loading surah $surahNumber: $e');
+      debugPrint('Stack trace: $stackTrace');
       return null;
     }
   }
@@ -90,7 +91,7 @@ class QuranService {
 
       return jsonData.map((json) => SurahListModel.fromJson(json)).toList();
     } catch (e) {
-      print('❌ Error loading surah list: $e');
+      debugPrint('❌ Error loading surah list: $e');
       return [];
     }
   }
@@ -105,7 +106,7 @@ class QuranService {
           .map((json) => BookmarkModel.fromJson(jsonDecode(json)))
           .toList();
     } catch (e) {
-      print('❌ Error getting bookmarks: $e');
+      debugPrint('❌ Error getting bookmarks: $e');
       return [];
     }
   }
@@ -130,7 +131,7 @@ class QuranService {
 
       await prefs.setStringList(_bookmarksKey, bookmarksJson);
     } catch (e) {
-      print('❌ Error adding bookmark: $e');
+      debugPrint('❌ Error adding bookmark: $e');
     }
   }
 
@@ -148,7 +149,7 @@ class QuranService {
 
       await prefs.setStringList(_bookmarksKey, bookmarksJson);
     } catch (e) {
-      print('❌ Error removing bookmark: $e');
+      debugPrint('❌ Error removing bookmark: $e');
     }
   }
 
@@ -159,7 +160,7 @@ class QuranService {
         (b) => b.surahNumber == surahNumber && b.ayahNumber == ayahNumber,
       );
     } catch (e) {
-      print('❌ Error checking bookmark: $e');
+      debugPrint('❌ Error checking bookmark: $e');
       return false;
     }
   }
@@ -175,7 +176,7 @@ class QuranService {
       }
       return null;
     } catch (e) {
-      print('❌ Error getting last read: $e');
+      debugPrint('❌ Error getting last read: $e');
       return null;
     }
   }
@@ -185,7 +186,7 @@ class QuranService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_lastReadKey, jsonEncode(bookmark.toJson()));
     } catch (e) {
-      print('❌ Error saving last read: $e');
+      debugPrint('❌ Error saving last read: $e');
     }
   }
 
@@ -197,7 +198,7 @@ class QuranService {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getDouble(_fontSizeKey) ?? 28.0;
     } catch (e) {
-      print('❌ Error getting font size: $e');
+      debugPrint('❌ Error getting font size: $e');
       return 28.0;
     }
   }
@@ -207,7 +208,7 @@ class QuranService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setDouble(_fontSizeKey, size);
     } catch (e) {
-      print('❌ Error saving font size: $e');
+      debugPrint('❌ Error saving font size: $e');
     }
   }
 
@@ -217,7 +218,7 @@ class QuranService {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getBool(_showTranslationKey) ?? true;
     } catch (e) {
-      print('❌ Error getting show translation: $e');
+      debugPrint('❌ Error getting show translation: $e');
       return true;
     }
   }
@@ -227,7 +228,7 @@ class QuranService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_showTranslationKey, show);
     } catch (e) {
-      print('❌ Error saving show translation: $e');
+      debugPrint('❌ Error saving show translation: $e');
     }
   }
 
@@ -237,7 +238,7 @@ class QuranService {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getBool(_showTransliterationKey) ?? true;
     } catch (e) {
-      print('❌ Error getting show transliteration: $e');
+      debugPrint('❌ Error getting show transliteration: $e');
       return true;
     }
   }
@@ -247,7 +248,7 @@ class QuranService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_showTransliterationKey, show);
     } catch (e) {
-      print('❌ Error saving show transliteration: $e');
+      debugPrint('❌ Error saving show transliteration: $e');
     }
   }
 
@@ -257,7 +258,7 @@ class QuranService {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getBool(_showTajwidKey) ?? false;
     } catch (e) {
-      print('❌ Error getting show tajwid: $e');
+      debugPrint('❌ Error getting show tajwid: $e');
       return false;
     }
   }
@@ -266,9 +267,9 @@ class QuranService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_showTajwidKey, show);
-      print('✅ Tajwid setting saved: $show');
+      debugPrint('✅ Tajwid setting saved: $show');
     } catch (e) {
-      print('❌ Error saving show tajwid: $e');
+      debugPrint('❌ Error saving show tajwid: $e');
     }
   }
 
@@ -278,7 +279,7 @@ class QuranService {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getBool(_darkModeKey) ?? false;
     } catch (e) {
-      print('❌ Error getting dark mode: $e');
+      debugPrint('❌ Error getting dark mode: $e');
       return false;
     }
   }
@@ -287,9 +288,9 @@ class QuranService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_darkModeKey, isDark);
-      print('✅ Dark mode setting saved: $isDark');
+      debugPrint('✅ Dark mode setting saved: $isDark');
     } catch (e) {
-      print('❌ Error saving dark mode: $e');
+      debugPrint('❌ Error saving dark mode: $e');
     }
   }
 }

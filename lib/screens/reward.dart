@@ -397,15 +397,19 @@ class _RewardPelanggaranPageState extends State<RewardPelanggaranPage>
       if (res.statusCode == 200) {
         final data = const CsvToListConverter().convert(res.body);
         if (data.isNotEmpty) {
-          final filtered = data
-              .skip(1)
-              .where(
-                (row) =>
-                    row.length > 6 &&
-                    _isNisnMatch(row[6].toString(), widget.nisn),
-              )
-              .map((row) => RewardPelanggaranData.fromCsvRow(row))
-              .toList();
+          final uniqueData = <String, RewardPelanggaranData>{};
+          for (var row in data.skip(1)) {
+            if (row.length > 6 && _isNisnMatch(row[6].toString(), widget.nisn)) {
+              final item = RewardPelanggaranData.fromCsvRow(row);
+              // Gunakan ID unik dari CSV. Jika tidak ada, buat kombinasi teks sbg penanda unik
+              final key = item.id.isNotEmpty ? item.id : '${item.hariTanggal}_${item.waktu}_${item.rincianKejadian}';
+              
+              if (!uniqueData.containsKey(key)) {
+                uniqueData[key] = item;
+              }
+            }
+          }
+          final filtered = uniqueData.values.toList();
           if (filtered.isNotEmpty) {
             filtered.sort((a, b) {
               final dA = _parseDateTime(a), dB = _parseDateTime(b);
@@ -495,7 +499,7 @@ class _RewardPelanggaranPageState extends State<RewardPelanggaranPage>
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back_ios_new,
-            color: Color(0xFFDC2626),
+            color: Color(0xFF10B981),
             size: 20,
           ),
           onPressed: () => Navigator.pop(context),
@@ -511,7 +515,7 @@ class _RewardPelanggaranPageState extends State<RewardPelanggaranPage>
                 height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: Color(0xFFDC2626),
+                  color: Color(0xFF10B981),
                 ),
               ),
             )
@@ -528,7 +532,7 @@ class _RewardPelanggaranPageState extends State<RewardPelanggaranPage>
 
       body: RefreshIndicator(
         onRefresh: _refreshData,
-        color: const Color(0xFFDC2626),
+        color: const Color(0xFF10B981),
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
@@ -560,35 +564,40 @@ class _RewardPelanggaranPageState extends State<RewardPelanggaranPage>
                   horizontal: 16,
                   vertical: 12,
                 ),
-                child: Row(
-                  children: [
-                    widgets.buildTabButton(
-                      'semua',
-                      'SEMUA',
-                      _allData.length,
-                      Icons.view_list,
-                      _selectedTab,
-                      (v) => setState(() => _selectedTab = v),
-                    ),
-                    const SizedBox(width: 8),
-                    widgets.buildTabButton(
-                      'reward',
-                      'REWARD',
-                      _rewardData.length,
-                      Icons.star,
-                      _selectedTab,
-                      (v) => setState(() => _selectedTab = v),
-                    ),
-                    const SizedBox(width: 8),
-                    widgets.buildTabButton(
-                      'pelanggaran',
-                      'PELANGGARAN',
-                      _pelanggaranData.length,
-                      Icons.warning,
-                      _selectedTab,
-                      (v) => setState(() => _selectedTab = v),
-                    ),
-                  ],
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: Row(
+                    children: [
+                      widgets.buildTabButton(
+                        'semua',
+                        'SEMUA',
+                        _allData.length,
+                        Icons.view_list,
+                        _selectedTab,
+                        (v) => setState(() => _selectedTab = v),
+                      ),
+                      widgets.buildTabButton(
+                        'reward',
+                        'REWARD',
+                        _rewardData.length,
+                        Icons.star,
+                        _selectedTab,
+                        (v) => setState(() => _selectedTab = v),
+                      ),
+                      widgets.buildTabButton(
+                        'pelanggaran',
+                        'PELANGGARAN',
+                        _pelanggaranData.length,
+                        Icons.warning,
+                        _selectedTab,
+                        (v) => setState(() => _selectedTab = v),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -641,7 +650,7 @@ class _RewardPelanggaranPageState extends State<RewardPelanggaranPage>
           icon: const Icon(Icons.refresh),
           label: const Text('Coba Lagi'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFDC2626),
+            backgroundColor: const Color(0xFF10B981),
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             shape: RoundedRectangleBorder(
@@ -721,7 +730,7 @@ class _PdfActionButtonState extends State<_PdfActionButton>
         decoration: BoxDecoration(
           gradient: widget.enabled
               ? const LinearGradient(
-                  colors: [Color(0xFFDC2626), Color(0xFF991B1B)],
+                  colors: [Color(0xFF10B981), Color(0xFF047857)],
                 )
               : null,
           color: widget.enabled ? null : Colors.grey[300],
@@ -729,7 +738,7 @@ class _PdfActionButtonState extends State<_PdfActionButton>
           boxShadow: widget.enabled
               ? [
                   BoxShadow(
-                    color: const Color(0xFFDC2626).withValues(alpha: 0.4),
+                    color: const Color(0xFF10B981).withValues(alpha: 0.4),
                     blurRadius: 8,
                     offset: const Offset(0, 3),
                   ),
@@ -795,12 +804,12 @@ class _PdfOptionsSheet extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDC2626).withValues(alpha: 0.1),
+                  color: const Color(0xFF10B981).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
                   Icons.picture_as_pdf_rounded,
-                  color: Color(0xFFDC2626),
+                  color: Color(0xFF10B981),
                   size: 22,
                 ),
               ),

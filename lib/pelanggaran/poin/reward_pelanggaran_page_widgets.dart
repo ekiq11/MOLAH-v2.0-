@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pizab_molah/pelanggaran/model/reward_model.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 
 // Extension untuk _RewardPelanggaranPageState
@@ -31,152 +32,94 @@ Widget buildStudentHeader(
           child: Container(
             margin: EdgeInsets.fromLTRB(16, 8, 16, 20),
             decoration: BoxDecoration(
+              color: Colors.white,
               borderRadius: BorderRadius.circular(24),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFFDC2626),
-                  Color(0xFFB91C1C),
-                  Color(0xFF991B1B),
-                ],
-              ),
               boxShadow: [
                 BoxShadow(
-                  color: Color(0xFFDC2626).withValues(alpha: 0.4),
-                  blurRadius: 20,
-                  offset: Offset(0, 10),
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(24),
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: -30,
-                    right: -30,
-                    child: Container(
-                      width: 120,
-                      height: 120,
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white.withValues(alpha: 0.1),
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        Icons.person_rounded,
+                        color: Colors.blue[600],
+                        size: 32,
                       ),
                     ),
-                  ),
-                  Positioned(
-                    bottom: -40,
-                    left: -20,
-                    child: Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white.withValues(alpha: 0.08),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: [Colors.white, Colors.white.withValues(alpha: 0.7)],
-                            ),
-                          ),
-                          child: Container(
-                            width: 70,
-                            height: 70,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Colors.white.withValues(alpha: 0.9),
-                                  Colors.white.withValues(alpha: 0.7),
-                                ],
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (displayName.isNotEmpty)
+                            Text(
+                              displayName,
+                              style: GoogleFonts.inter(
+                                color: const Color(0xFF1A1A1A),
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.3,
                               ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            child: Center(
-                              child: Text(
-                                displayName.isNotEmpty ? displayName[0].toUpperCase() : 'S',
-                                style: TextStyle(
-                                  color: Color(0xFFDC2626),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 32,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
+                          SizedBox(height: 8),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
                             children: [
-                              if (displayName.isNotEmpty)
-                                Text(
-                                  displayName,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 0.5,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              SizedBox(height: 8),
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 6,
-                                children: [
-                                  buildInfoChip(Icons.badge_outlined, nisn),
-                                  if (kelasAsrama.isNotEmpty)
-                                    buildInfoChip(Icons.school_outlined, kelasAsrama),
-                                ],
-                              ),
+                              buildInfoChip(Icons.badge_outlined, nisn),
+                              if (kelasAsrama.isNotEmpty)
+                                buildInfoChip(Icons.school_outlined, kelasAsrama),
                             ],
                           ),
-                        ),
-                        SizedBox(width: 8),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (isFromCache)
-                              Container(
-                                padding: EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(Icons.cloud_off, color: Colors.white, size: 18),
-                              ),
-                            if (isFromCache) SizedBox(height: 8),
-                            GestureDetector(
-                              onTap: onRefresh,
-                              child: Container(
-                                padding: EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(Icons.refresh, color: Colors.white, size: 18),
-                              ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isFromCache)
+                          Container(
+                            padding: EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          ],
+                            child: Icon(Icons.cloud_off, color: Colors.grey[600], size: 18),
+                          ),
+                        if (isFromCache) SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: onRefresh,
+                          child: Container(
+                            padding: EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(Icons.refresh, color: Colors.grey[600], size: 18),
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -188,27 +131,22 @@ Widget buildStudentHeader(
 
 Widget buildInfoChip(IconData icon, String text) {
   return Container(
-    constraints: BoxConstraints(maxWidth: 160),
-    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.25),
-      borderRadius: BorderRadius.circular(20),
+      color: Colors.grey[100],
+      borderRadius: BorderRadius.circular(8),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: Colors.white),
+        Icon(icon, size: 14, color: const Color(0xFF8E8E8E)),
         SizedBox(width: 4),
-        Flexible(
-          child: Text(
-            text,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+        Text(
+          text,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: const Color(0xFF8E8E8E),
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],
@@ -230,7 +168,7 @@ Widget buildTabButton(
       ? Color(0xFF4CAF50)
       : value == 'pelanggaran'
           ? Color(0xFFDC2626)
-          : Color(0xFFDC2626);
+          : Color(0xFF10B981);
 
   return Expanded(
     child: GestureDetector(
@@ -238,54 +176,59 @@ Widget buildTabButton(
       child: AnimatedContainer(
         duration: Duration(milliseconds: 300),
         curve: Curves.easeInOut,
-        padding: EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
-          color: isSelected ? activeColor : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: isSelected ? activeColor.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.05),
-              blurRadius: isSelected ? 12 : 4,
-              offset: Offset(0, isSelected ? 6 : 2),
-            ),
-          ],
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(30), // Pill shape
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ]
+              : [],
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
-              color: isSelected ? Colors.white : Colors.grey[600],
-              size: 24,
+              color: isSelected ? activeColor : Colors.grey[500],
+              size: 16,
             ),
-            SizedBox(height: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.grey[700],
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                fontSize: 11,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            SizedBox(height: 4),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: isSelected ? Colors.white.withValues(alpha: 0.3) : Colors.grey[100],
-                borderRadius: BorderRadius.circular(10),
-              ),
+            SizedBox(width: 6),
+            Flexible(
               child: Text(
-                '$count',
+                label,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : activeColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
+                  color: isSelected ? activeColor : Colors.grey[600],
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  fontSize: 11,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (count > 0) ...[
+              SizedBox(width: 6),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isSelected ? activeColor.withValues(alpha: 0.1) : Colors.grey[300],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '$count',
+                  style: TextStyle(
+                    color: isSelected ? activeColor : Colors.grey[700],
+                    fontWeight: FontWeight.w800,
+                    fontSize: 10,
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -320,12 +263,15 @@ Widget buildDataCard(RewardPelanggaranData data, int index, DateTime? parsedDate
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: isToday ? Border.all(color: primaryColor, width: 2) : null,
+              border: Border.all(
+                color: isToday ? primaryColor.withValues(alpha: 0.5) : const Color(0xFFF1F5F9),
+                width: isToday ? 2 : 1,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: isToday ? primaryColor.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 15,
-                  offset: Offset(0, 5),
+                  color: isToday ? primaryColor.withValues(alpha: 0.15) : const Color(0xFF0F172A).withValues(alpha: 0.03),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),

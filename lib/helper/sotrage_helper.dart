@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:mmkv/mmkv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -14,17 +15,17 @@ class StorageHelper {
       // Backup dengan SharedPreferences
       _prefs = await SharedPreferences.getInstance();
 
-      print('✓ Storage berhasil diinisialisasi');
+      debugPrint('✓ Storage berhasil diinisialisasi');
       return true;
     } catch (e) {
-      print('✗ Error storage: $e');
+      debugPrint('✗ Error storage: $e');
       // Tetap coba SharedPreferences sebagai fallback
       try {
         _prefs = await SharedPreferences.getInstance();
-        print('✓ Menggunakan SharedPreferences sebagai backup');
+        debugPrint('✓ Menggunakan SharedPreferences sebagai backup');
         return true;
       } catch (e2) {
-        print('✗ Semua storage gagal: $e2');
+        debugPrint('✗ Semua storage gagal: $e2');
         return false;
       }
     }
@@ -39,19 +40,19 @@ class StorageHelper {
     try {
       _mmkv?.encodeString(key, value);
       mmkvSuccess = true;
-      print('✓ MMKV saved: $key = $value');
+      debugPrint('✓ MMKV saved: $key = $value');
     } catch (e) {
-      print('✗ MMKV save error: $e');
+      debugPrint('✗ MMKV save error: $e');
     }
 
     // Backup ke SharedPreferences
     try {
       prefsSuccess = await _prefs?.setString(key, value) ?? false;
       if (prefsSuccess) {
-        print('✓ SharedPrefs saved: $key = $value');
+        debugPrint('✓ SharedPrefs saved: $key = $value');
       }
     } catch (e) {
-      print('✗ SharedPrefs save error: $e');
+      debugPrint('✗ SharedPrefs save error: $e');
     }
 
     return mmkvSuccess || prefsSuccess;
@@ -62,22 +63,22 @@ class StorageHelper {
     // Coba MMKV dulu
     try {
       String? mmkvValue = _mmkv?.decodeString(key);
-      print('✓ MMKV read: $key = $mmkvValue');
+      debugPrint('✓ MMKV read: $key = $mmkvValue');
       return mmkvValue;
     } catch (e) {
-      print('✗ MMKV read error: $e');
+      debugPrint('✗ MMKV read error: $e');
     }
 
     // Fallback ke SharedPreferences
     try {
       String? prefsValue = _prefs?.getString(key);
-      print('✓ SharedPrefs read: $key = $prefsValue');
+      debugPrint('✓ SharedPrefs read: $key = $prefsValue');
       return prefsValue;
     } catch (e) {
-      print('✗ SharedPrefs read error: $e');
+      debugPrint('✗ SharedPrefs read error: $e');
     }
 
-    print('✗ Data tidak ditemukan: $key');
+    debugPrint('✗ Data tidak ditemukan: $key');
     return null;
   }
 
@@ -90,19 +91,19 @@ class StorageHelper {
     try {
       _mmkv?.encodeBool(key, value);
       mmkvSuccess = true;
-      print('✓ MMKV saved: $key = $value');
+      debugPrint('✓ MMKV saved: $key = $value');
     } catch (e) {
-      print('✗ MMKV save error: $e');
+      debugPrint('✗ MMKV save error: $e');
     }
 
     // Backup ke SharedPreferences
     try {
       prefsSuccess = await _prefs?.setBool(key, value) ?? false;
       if (prefsSuccess) {
-        print('✓ SharedPrefs saved: $key = $value');
+        debugPrint('✓ SharedPrefs saved: $key = $value');
       }
     } catch (e) {
-      print('✗ SharedPrefs save error: $e');
+      debugPrint('✗ SharedPrefs save error: $e');
     }
 
     return mmkvSuccess || prefsSuccess;
@@ -113,22 +114,22 @@ class StorageHelper {
     // Coba MMKV dulu
     try {
       bool? mmkvValue = _mmkv?.decodeBool(key);
-      print('✓ MMKV read: $key = $mmkvValue');
+      debugPrint('✓ MMKV read: $key = $mmkvValue');
       return mmkvValue;
     } catch (e) {
-      print('✗ MMKV read error: $e');
+      debugPrint('✗ MMKV read error: $e');
     }
 
     // Fallback ke SharedPreferences
     try {
       bool? prefsValue = _prefs?.getBool(key);
-      print('✓ SharedPrefs read: $key = $prefsValue');
+      debugPrint('✓ SharedPrefs read: $key = $prefsValue');
       return prefsValue;
     } catch (e) {
-      print('✗ SharedPrefs read error: $e');
+      debugPrint('✗ SharedPrefs read error: $e');
     }
 
-    print('✗ Data tidak ditemukan: $key, menggunakan default: $defaultValue');
+    debugPrint('✗ Data tidak ditemukan: $key, menggunakan default: $defaultValue');
     return defaultValue;
   }
 
@@ -140,18 +141,18 @@ class StorageHelper {
     try {
       _mmkv?.removeValue(key);
       mmkvSuccess = true;
-      print('✓ MMKV removed: $key');
+      debugPrint('✓ MMKV removed: $key');
     } catch (e) {
-      print('✗ MMKV remove error: $e');
+      debugPrint('✗ MMKV remove error: $e');
     }
 
     try {
       prefsSuccess = await _prefs?.remove(key) ?? false;
       if (prefsSuccess) {
-        print('✓ SharedPrefs removed: $key');
+        debugPrint('✓ SharedPrefs removed: $key');
       }
     } catch (e) {
-      print('✗ SharedPrefs remove error: $e');
+      debugPrint('✗ SharedPrefs remove error: $e');
     }
 
     return mmkvSuccess || prefsSuccess;
@@ -159,7 +160,7 @@ class StorageHelper {
 
   // Debug: Cek semua data yang tersimpan
   static void debugPrintAll() {
-    print('=== DEBUG STORAGE ===');
+    debugPrint('=== DEBUG STORAGE ===');
 
     // Cek beberapa key umum
     List<String> commonKeys = ['user_logged_in', 'username', 'user_token'];
@@ -168,15 +169,15 @@ class StorageHelper {
       try {
         // MMKV
         var mmkvValue = _mmkv?.decodeString(key) ?? _mmkv?.decodeBool(key);
-        print('MMKV [$key]: $mmkvValue');
+        debugPrint('MMKV [$key]: $mmkvValue');
 
         // SharedPreferences
         var prefsValue = _prefs?.get(key);
-        print('SharedPrefs [$key]: $prefsValue');
+        debugPrint('SharedPrefs [$key]: $prefsValue');
       } catch (e) {
-        print('Error checking $key: $e');
+        debugPrint('Error checking $key: $e');
       }
     }
-    print('=== END DEBUG ===');
+    debugPrint('=== END DEBUG ===');
   }
 }

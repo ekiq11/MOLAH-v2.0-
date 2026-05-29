@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:mmkv/mmkv.dart';
 import 'dart:convert';
 
@@ -8,7 +9,7 @@ class LoginPreferences {
       final mmkv = MMKV.defaultMMKV();
       return mmkv;
     } catch (e) {
-      print('❌ Error getting MMKV instance: $e');
+      debugPrint('❌ Error getting MMKV instance: $e');
       return null;
     }
   }
@@ -25,10 +26,10 @@ class LoginPreferences {
       final result = mmkv.decodeBool(testKey, defaultValue: false);
       mmkv.removeValue(testKey); // Cleanup
 
-      print('✅ MMKV Health Check: $result');
+      debugPrint('✅ MMKV Health Check: $result');
       return result;
     } catch (e) {
-      print('❌ MMKV Health Check failed: $e');
+      debugPrint('❌ MMKV Health Check failed: $e');
       return false;
     }
   }
@@ -38,7 +39,7 @@ class LoginPreferences {
     try {
       final mmkv = _getMMKV();
       if (mmkv == null) {
-        print('❌ MMKV null in isLoggedIn');
+        debugPrint('❌ MMKV null in isLoggedIn');
         return false;
       }
 
@@ -51,17 +52,17 @@ class LoginPreferences {
       final hasUserData =
           (mmkv.decodeString('user_data_json') ?? '').isNotEmpty;
 
-      print(
+      debugPrint(
         '🔍 Login Check - Flag: $hasLoginFlag, Username: $hasUsername, Data: $hasUserData',
       );
 
       // Harus semua ada untuk dianggap logged in
       final result = hasLoginFlag && hasUsername && hasUserData;
-      print('🔍 Final login status: $result');
+      debugPrint('🔍 Final login status: $result');
 
       return result;
     } catch (e) {
-      print('❌ Error checking login status: $e');
+      debugPrint('❌ Error checking login status: $e');
       return false;
     }
   }
@@ -73,11 +74,11 @@ class LoginPreferences {
       if (mmkv == null) return null;
 
       final username = mmkv.decodeString('user_username');
-      print('🔍 Retrieved username: "$username"');
+      debugPrint('🔍 Retrieved username: "$username"');
 
       return username?.isNotEmpty == true ? username : null;
     } catch (e) {
-      print('❌ Error getting username: $e');
+      debugPrint('❌ Error getting username: $e');
       return null;
     }
   }
@@ -102,7 +103,7 @@ class LoginPreferences {
     try {
       final mmkv = _getMMKV();
       if (mmkv == null) {
-        print('❌ MMKV null in saveLoginData');
+        debugPrint('❌ MMKV null in saveLoginData');
         return false;
       }
 
@@ -120,16 +121,16 @@ class LoginPreferences {
       final savedUsername = mmkv.decodeString('user_username');
       final savedFlag = mmkv.decodeBool('user_logged_in', defaultValue: false);
 
-      print(
+      debugPrint(
         '✅ Save verification - Username: "$savedUsername", Flag: $savedFlag',
       );
 
       final success = savedUsername == username && savedFlag;
-      print('✅ Save login data result: $success');
+      debugPrint('✅ Save login data result: $success');
 
       return success;
     } catch (e) {
-      print('❌ Error saving login data: $e');
+      debugPrint('❌ Error saving login data: $e');
       return false;
     }
   }
@@ -139,7 +140,7 @@ class LoginPreferences {
     try {
       final mmkv = _getMMKV();
       if (mmkv == null) {
-        print('❌ MMKV null in clearAllUserData');
+        debugPrint('❌ MMKV null in clearAllUserData');
         return false;
       }
 
@@ -159,7 +160,7 @@ class LoginPreferences {
       for (final key in keysToRemove) {
         if (mmkv.containsKey(key)) {
           mmkv.removeValue(key);
-          print('🗑️ Removed key: $key');
+          debugPrint('🗑️ Removed key: $key');
         }
       }
 
@@ -174,13 +175,13 @@ class LoginPreferences {
       final stillHasUsername =
           (mmkv.decodeString('user_username') ?? '').isNotEmpty;
 
-      print(
+      debugPrint(
         '🔍 Clear verification - Still logged: $stillLoggedIn, Still has username: $stillHasUsername',
       );
 
       return !stillLoggedIn && !stillHasUsername;
     } catch (e) {
-      print('❌ Error clearing user data: $e');
+      debugPrint('❌ Error clearing user data: $e');
       return false;
     }
   }

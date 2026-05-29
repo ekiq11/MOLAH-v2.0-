@@ -1,5 +1,8 @@
+import 'dart:ui';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'widgets/home_shimmer.dart';
+
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:csv/csv.dart';
@@ -21,9 +24,11 @@ import 'utils/fetcher_data.dart';
 import 'login.dart';
 import 'utils/login_preferences.dart';
 import 'widgets/quick_actions.dart';
-import 'widgets/report_section.dart';
-import 'widgets/student_info.dart';
 import 'widgets/header_widget.dart';
+import 'widgets/bento_dashboard.dart';
+import 'package:pizab_molah/widgets/profile.dart';
+import 'package:pizab_molah/screens/HafalanHistoryPage.dart';
+import 'package:pizab_molah/screens/history_transaction.dart';
 
 class HomeScreen extends StatefulWidget {
   final String username;
@@ -51,10 +56,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   // Controllers
   late AnimationController _animationController;
-  late AnimationController _shimmerController;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
-  late Animation<double> _shimmerAnimation;
 
   // Timers and utilities
   Timer? _dataTimer;
@@ -117,18 +120,16 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   @override
-  void dispose() async {
+  void dispose() {
     debugPrint('🧹 _HomeScreenState.dispose: Cleaning up...');
     _dataTimer?.cancel();
     _debounceTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
-    _shimmerController.stop();
     _animationController.dispose();
-    _shimmerController.dispose();
     _httpClient.close();
     LoadingTimeoutDialog.cancelTimeout();
     GoogleSheetsMonitorService.stopMonitoringForUser(widget.username);
-    await GoogleSheetsMonitorService.cleanupForUser(widget.username);
+    GoogleSheetsMonitorService.cleanupForUser(widget.username);
 
     // --- TAMBAHAN BARU: Batalkan subscription connectivity ---
     _connectivitySubscription?.cancel();
@@ -152,10 +153,6 @@ class _HomeScreenState extends State<HomeScreen>
       duration: const Duration(milliseconds: 400), // Reduced from 600ms
       vsync: this,
     );
-    _shimmerController = AnimationController(
-      duration: const Duration(milliseconds: 1200), // Reduced from 1500ms
-      vsync: this,
-    );
     _slideAnimation =
         Tween<Offset>(
           begin: const Offset(0.0, 0.2), // Reduced from 0.3
@@ -169,14 +166,10 @@ class _HomeScreenState extends State<HomeScreen>
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
-    _shimmerAnimation = Tween<double>(begin: -1.0, end: 1.0).animate(
-      CurvedAnimation(parent: _shimmerController, curve: Curves.easeInOut),
-    );
   }
 
   Future<void> _initializeApp() async {
     try {
-      _initializeAnimation();
       await _initializeMMKV();
       // Mulai timeout dialog sebelum loading data
       if (mounted) {
@@ -299,14 +292,8 @@ class _HomeScreenState extends State<HomeScreen>
           debugPrint('Error parsing cached notifications: $e');
         }
       }
-      if (_santriData.isEmpty && _isLoading) {
-        _shimmerController.repeat();
-      }
     } catch (e) {
       debugPrint('Error loading cached data from MMKV: $e');
-      if (_isLoading) {
-        _shimmerController.repeat();
-      }
     }
   }
 
@@ -364,9 +351,6 @@ class _HomeScreenState extends State<HomeScreen>
     if (!silent && mounted) {
       LoadingTimeoutDialog.startTimeout(context, _handleRetryDataFetch);
       setState(() => _isLoading = true);
-      if (!_shimmerController.isAnimating) {
-        _shimmerController.repeat();
-      }
     }
 
     debugPrint(
@@ -490,12 +474,6 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _handleFetchError(dynamic error, bool silent) async {
     debugPrint('❌ Fetch error: $error');
-    // Cancel timeout dan stop shimmer
-    LoadingTimeoutDialog.cancelTimeout();
-    if (_shimmerController.isAnimating) {
-      _shimmerController.stop();
-    }
-
     String errorMessage = 'Gagal memuat data';
     if (error.toString().contains('internet') ||
         error.toString().contains('connection')) {
@@ -737,9 +715,6 @@ class _HomeScreenState extends State<HomeScreen>
     bool fromCache = false,
   }) async {
     final hasChanges = _checkChanges(newData);
-    if (_shimmerController.isAnimating) {
-      _shimmerController.stop();
-    }
     if (mounted) {
       setState(() {
         _santriData = Map<String, dynamic>.from(newData);
@@ -1070,20 +1045,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _onBottomNavTap(int index) {
-    switch (index) {
-      case 0:
-        setState(() => _currentIndex = 0);
-        break;
-      case 1:
-        setState(() => _currentIndex = 1);
-        break;
-      case 2:
-        setState(() => _currentIndex = 2);
-        break;
-      case 3:
-        _showLogoutDialog();
-        break;
-    }
+    setState(() => _currentIndex = index);
   }
 
   @override
@@ -1098,7 +1060,9 @@ class _HomeScreenState extends State<HomeScreen>
       ),
       child: Scaffold(
         backgroundColor: Colors.grey[50],
+        extendBody: true, // Untuk floating nav bar
         body: SafeArea(
+          bottom: false,
           child: Column(
             children: [
               // Banner Offline
@@ -1114,12 +1078,23 @@ class _HomeScreenState extends State<HomeScreen>
                   index: _currentIndex,
                   children: [
                     _isLoading && _santriData.isEmpty
-                        ? _buildLoadingState(screenSize)
+                        ? HomeShimmerLoading(screenSize: screenSize)
                         : _buildMainContent(screenSize),
-                    _buildEnhancedNotificationPage(screenSize),
                     PaymentPage(
                       username: widget.username,
                       studentName: _santriData['nama'] ?? 'Santri',
+                    ),
+                    HafalanHistoryPage(
+                      nisn: widget.username,
+                      namaSantri: _santriData['nama'] ?? 'Santri',
+                    ),
+                    TransactionHistoryPage(
+                      nisn: widget.username,
+                      studentName: _santriData['nama'] ?? 'Santri',
+                    ),
+                    ProfilePage(
+                      nisn: widget.username,
+                      santriData: _santriData,
                     ),
                   ],
                 ),
@@ -1133,81 +1108,120 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildBottomNavigationBar(Size screenSize) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.2),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.bottomCenter,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(left: 16, right: 16, bottom: 20),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _currentIndex > 2 ? 0 : _currentIndex,
-        onTap: _onBottomNavTap,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: Colors.red[600],
-        unselectedItemColor: Colors.grey[500],
-        selectedFontSize: screenSize.width * 0.028,
-        unselectedFontSize: screenSize.width * 0.025,
-        elevation: 0,
-        items: [
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.home_rounded),
-            activeIcon: Icon(Icons.home_rounded),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            // DIPERBAIKI: Gunakan ValueListenableBuilder untuk ikon notifikasi
-            icon: ValueListenableBuilder<List<NotificationItem>>(
-              valueListenable:
-                  GoogleSheetsMonitorService.getNotificationsForUser(
-                    widget.username,
-                  ) ??
-                  ValueNotifier([]),
-              builder: (context, notifications, child) {
-                final unreadCount = notifications
-                    .where((n) => !n.isRead)
-                    .length;
-                return _buildNotificationIcon(unreadCount: unreadCount);
-              },
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(30),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                child: Row(
+                  children: [
+                    _buildNavItem(0, Icons.home_rounded, 'Home'),
+                    _buildNavItem(1, Icons.receipt_long_rounded, 'Tagihan'),
+                    const SizedBox(width: 60), // Perfect center gap
+                    _buildNavItem(3, Icons.history_rounded, 'Riwayat'),
+                    _buildNavItem(4, Icons.person_rounded, 'Profil'),
+                  ],
+                ),
+              ),
             ),
-            activeIcon: ValueListenableBuilder<List<NotificationItem>>(
-              valueListenable:
-                  GoogleSheetsMonitorService.getNotificationsForUser(
-                    widget.username,
-                  ) ??
-                  ValueNotifier([]),
-              builder: (context, notifications, child) {
-                final unreadCount = notifications
-                    .where((n) => !n.isRead)
-                    .length;
-                return _buildNotificationIcon(
-                  unreadCount: unreadCount,
-                  active: true,
-                );
-              },
-            ),
-            label: 'Notifikasi',
           ),
+        ),
+        Positioned(
+          bottom: 45, // Perfectly centered above the navbar gap
+          child: GestureDetector(
+            onTap: () => _onBottomNavTap(2),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              height: 60,
+              width: 60,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: _currentIndex == 2
+                      ? [const Color(0xFF059669), const Color(0xFF047857)]
+                      : [const Color(0xFF10B981), const Color(0xFF059669)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                    blurRadius: _currentIndex == 2 ? 16 : 10,
+                    offset: Offset(0, _currentIndex == 2 ? 8 : 5),
+                    spreadRadius: _currentIndex == 2 ? 2 : 0,
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.menu_book_rounded,
+                color: Colors.white,
+                size: 30,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.receipt_long, color: Colors.grey),
-            activeIcon: Icon(Icons.receipt_long_rounded),
-            label: 'Tagihan',
+  Widget _buildNavItem(int index, IconData icon, String label) {
+    final isSelected = _currentIndex == index;
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _onBottomNavTap(index),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? const Color(0xFF10B981) : Colors.grey[400],
+                size: 26,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? const Color(0xFF10B981) : Colors.grey[400],
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                  letterSpacing: -0.3,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.logout_rounded, color: Colors.grey),
-            activeIcon: Icon(Icons.logout_rounded, color: Colors.red[600]),
-            label: 'Keluar',
-          ),
-        ],
+        ),
       ),
     );
   }
+
 
   // DIPERBAIKI: Fungsi ini sekarang menerima parameter `unreadCount`
   Widget _buildNotificationIcon({bool active = false, int unreadCount = 0}) {
@@ -1247,33 +1261,26 @@ class _HomeScreenState extends State<HomeScreen>
       child: FadeTransition(
         opacity: _fadeAnimation,
         child: RefreshIndicator(
-          color: Colors.red[400],
+          color: const Color(0xFF10B981),
           onRefresh: _handleRefresh,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
               children: [
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    screenSize.width * 0.04,
-                    screenSize.width * 0.04,
-                    screenSize.width * 0.04,
-                    0,
-                  ),
-                  child: CombinedHeader(
-                    santriData: _santriData,
-                    // DIPERBAIKI: Gunakan ValueListenableBuilder untuk mengambil jumlah notifikasi
-                    notificationCount:
-                        GoogleSheetsMonitorService.getUnreadCountForUser(
-                          widget.username,
-                        ),
-                    onNotificationTap: _showEnhancedNotificationDialog,
-                    onLogoutTap: _showLogoutDialog,
-                    saldo: _santriData['saldo'] ?? '0',
-                    onTopUpTap: _showTopUpDialog,
-                    isSaldoVisible: _isSaldoVisible,
-                    onToggleSaldoVisibility: _toggleSaldoVisibility,
-                  ),
+                SizedBox(height: screenSize.width * 0.02),
+                CombinedHeader(
+                  santriData: _santriData,
+                  // DIPERBAIKI: Gunakan ValueListenableBuilder untuk mengambil jumlah notifikasi
+                  notificationCount:
+                      GoogleSheetsMonitorService.getUnreadCountForUser(
+                        widget.username,
+                      ),
+                  onNotificationTap: _showEnhancedNotificationDialog,
+                  onLogoutTap: _showLogoutDialog,
+                  saldo: _santriData['saldo'] ?? '0',
+                  onTopUpTap: _showTopUpDialog,
+                  isSaldoVisible: _isSaldoVisible,
+                  onToggleSaldoVisibility: _toggleSaldoVisibility,
                 ),
                 Padding(
                   padding: EdgeInsets.all(screenSize.width * 0.05),
@@ -1285,10 +1292,8 @@ class _HomeScreenState extends State<HomeScreen>
                       ],
                       QuickActions(nisn: widget.username),
                       SizedBox(height: screenSize.height * 0.03),
-                      _buildReportSection(),
-                      SizedBox(height: screenSize.height * 0.025),
-                      _buildStudentInfo(),
-                      SizedBox(height: screenSize.height * 0.025),
+                      BentoDashboard(santriData: _santriData, nisn: widget.username),
+                      SizedBox(height: 120), // Memberi ruang agar tidak tertutup bottom navbar
                     ],
                   ),
                 ),
@@ -1298,648 +1303,6 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       ),
     );
-  }
-
-  Widget _buildEnhancedNotificationPage(Size screenSize) {
-    return Column(
-      children: [
-        AppBar(
-          title: ValueListenableBuilder<List<NotificationItem>>(
-            valueListenable:
-                GoogleSheetsMonitorService.getNotificationsForUser(
-                  widget.username,
-                ) ??
-                ValueNotifier([]),
-            builder: (context, notifications, child) {
-              final unreadCount = notifications.where((n) => !n.isRead).length;
-              return Row(
-                children: [
-                  Icon(Icons.notifications_active, color: Colors.red[600]),
-                  SizedBox(width: screenSize.width * 0.03),
-                  Flexible(
-                    child: Text(
-                      'Notifikasi ($unreadCount baru)',
-                      style: TextStyle(
-                        color: Colors.grey[800],
-                        fontWeight: FontWeight.bold,
-                        fontSize: screenSize.width * 0.045,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black87,
-          elevation: 1,
-          centerTitle: false,
-          actions: [
-            ValueListenableBuilder<List<NotificationItem>>(
-              valueListenable:
-                  GoogleSheetsMonitorService.getNotificationsForUser(
-                    widget.username,
-                  ) ??
-                  ValueNotifier([]),
-              builder: (context, notifications, child) {
-                if (notifications.isNotEmpty) {
-                  return TextButton(
-                    onPressed: () async {
-                      await GoogleSheetsMonitorService.clearAllNotificationsForUser(
-                        widget.username,
-                      );
-                      // Dihapus: if (mounted) setState(() {});
-                      // Tidak perlu setState, ValueListenableBuilder akan otomatis rebuild.
-                    },
-                    child: Text(
-                      'Hapus Semua',
-                      style: TextStyle(
-                        color: Colors.red[600],
-                        fontWeight: FontWeight.w500,
-                        fontSize: screenSize.width * 0.032,
-                      ),
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
-          ],
-        ),
-        Expanded(
-          child: ValueListenableBuilder<List<NotificationItem>>(
-            valueListenable:
-                GoogleSheetsMonitorService.getNotificationsForUser(
-                  widget.username,
-                ) ??
-                ValueNotifier([]),
-            builder: (context, notifications, child) {
-              if (notifications.isEmpty) {
-                return _buildEmptyNotifications(screenSize);
-              }
-              return _buildEnhancedNotificationList(notifications, screenSize);
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEmptyNotifications(Size screenSize) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: EdgeInsets.all(screenSize.width * 0.08),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.notifications_none,
-              size: screenSize.width * 0.16,
-              color: Colors.grey[400],
-            ),
-          ),
-          SizedBox(height: screenSize.height * 0.03),
-          Text(
-            'Tidak ada notifikasi',
-            style: TextStyle(
-              fontSize: screenSize.width * 0.045,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[600],
-            ),
-          ),
-          SizedBox(height: screenSize.height * 0.01),
-          Text(
-            'Perubahan data akan muncul di sini',
-            style: TextStyle(
-              fontSize: screenSize.width * 0.035,
-              color: Colors.grey[500],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEnhancedNotificationList(
-    List<NotificationItem> notifications,
-    Size screenSize,
-  ) {
-    return RefreshIndicator(
-      color: Colors.red[400],
-      onRefresh: _handleRefresh,
-      child: ListView.separated(
-        padding: EdgeInsets.all(screenSize.width * 0.04),
-        itemCount: notifications.length,
-        separatorBuilder: (_, __) =>
-            SizedBox(height: screenSize.height * 0.015),
-        itemBuilder: (context, index) =>
-            _buildNotificationItem(notifications[index], screenSize),
-      ),
-    );
-  }
-
-  Widget _buildNotificationItem(
-    NotificationItem notification,
-    Size screenSize,
-  ) {
-    return Container(
-      padding: EdgeInsets.all(screenSize.width * 0.04),
-      decoration: BoxDecoration(
-        color: notification.isRead ? Colors.white : Colors.blue[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: notification.isRead ? Colors.grey[200]! : Colors.blue[200]!,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () {
-          GoogleSheetsMonitorService.markAsReadForUser(
-            widget.username,
-            notification.id,
-          );
-          // Tidak perlu setState di sini.
-          // ValueListenableBuilder akan otomatis membangun ulang item yang relevan.
-        },
-        child: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(screenSize.width * 0.02),
-              decoration: BoxDecoration(
-                color: notification.isRead
-                    ? Colors.grey[100]
-                    : Colors.blue[100],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                notification.isRead ? Icons.info_outline : Icons.info,
-                color: notification.isRead
-                    ? Colors.grey[600]
-                    : Colors.blue[600],
-                size: screenSize.width * 0.05,
-              ),
-            ),
-            SizedBox(width: screenSize.width * 0.03),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      if (!notification.isRead)
-                        Container(
-                          width: 8,
-                          height: 8,
-                          margin: EdgeInsets.only(
-                            right: screenSize.width * 0.02,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.blue[400],
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      Expanded(
-                        child: Text(
-                          notification.title,
-                          style: TextStyle(
-                            fontSize: screenSize.width * 0.035,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[800],
-                          ),
-                        ),
-                      ),
-                      Text(
-                        _formatTimestamp(notification.timestamp),
-                        style: TextStyle(
-                          fontSize: screenSize.width * 0.028,
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: screenSize.height * 0.005),
-                  Text(
-                    notification.message,
-                    style: TextStyle(
-                      fontSize: screenSize.width * 0.032,
-                      fontWeight: FontWeight.w500,
-                      height: 1.4,
-                    ),
-                  ),
-                  SizedBox(height: screenSize.height * 0.005),
-                  Text(
-                    'Sumber: ${notification.sheetName}',
-                    style: TextStyle(
-                      fontSize: screenSize.width * 0.028,
-                      color: Colors.grey[500],
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _formatTimestamp(DateTime timestamp) {
-    final now = DateTime.now();
-    final difference = now.difference(timestamp);
-    if (difference.inMinutes < 1) {
-      return 'Baru saja';
-    } else if (difference.inHours < 1) {
-      return '${difference.inMinutes}m';
-    } else if (difference.inDays < 1) {
-      return '${difference.inHours}j';
-    } else {
-      return '${difference.inDays}h';
-    }
-  }
-
-  Widget _buildLoadingState(Size screenSize) {
-    return SingleChildScrollView(
-      physics: const NeverScrollableScrollPhysics(),
-      child: Column(
-        children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              screenSize.width * 0.04,
-              screenSize.width * 0.04,
-              screenSize.width * 0.04,
-              0,
-            ),
-            child: _buildHeaderShimmer(screenSize),
-          ),
-          Padding(
-            padding: EdgeInsets.all(screenSize.width * 0.05),
-            child: Column(
-              children: [
-                _buildQuickActionsShimmer(screenSize),
-                SizedBox(height: screenSize.height * 0.03),
-                _buildReportShimmer(screenSize),
-                SizedBox(height: screenSize.height * 0.025),
-                _buildStudentInfoShimmer(screenSize),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildShimmerContainer({
-    required double width,
-    required double height,
-    double borderRadius = 8,
-  }) {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(borderRadius),
-        color: Colors.grey[300],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: AnimatedBuilder(
-          animation: _shimmerAnimation,
-          builder: (context, child) {
-            return Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [
-                    Colors.grey[300]!,
-                    Colors.grey[100]!,
-                    Colors.grey[300]!,
-                  ],
-                  stops: const [0.0, 0.5, 1.0],
-                  transform: GradientRotation(_shimmerAnimation.value * 0.3),
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeaderShimmer(Size screenSize) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        vertical: screenSize.width * 0.05,
-        horizontal: screenSize.width * 0.06,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.grey[300],
-        borderRadius: BorderRadius.circular(screenSize.width * 0.06),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              _buildShimmerContainer(
-                width: screenSize.width * 0.14,
-                height: screenSize.width * 0.14,
-                borderRadius: 16,
-              ),
-              SizedBox(width: screenSize.width * 0.05),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildShimmerContainer(
-                      width: screenSize.width * 0.3,
-                      height: screenSize.width * 0.035,
-                      borderRadius: 6,
-                    ),
-                    SizedBox(height: screenSize.height * 0.005),
-                    _buildShimmerContainer(
-                      width: screenSize.width * 0.45,
-                      height: screenSize.width * 0.05,
-                      borderRadius: 8,
-                    ),
-                    SizedBox(height: screenSize.height * 0.003),
-                    _buildShimmerContainer(
-                      width: screenSize.width * 0.35,
-                      height: screenSize.width * 0.035,
-                      borderRadius: 6,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: screenSize.height * 0.035),
-          Container(
-            padding: EdgeInsets.all(screenSize.width * 0.055),
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.grey[300]!, width: 1),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildShimmerContainer(
-                        width: screenSize.width * 0.25,
-                        height: screenSize.width * 0.032,
-                        borderRadius: 6,
-                      ),
-                      SizedBox(height: screenSize.height * 0.01),
-                      _buildShimmerContainer(
-                        width: screenSize.width * 0.4,
-                        height: screenSize.width * 0.065,
-                        borderRadius: 10,
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(width: screenSize.width * 0.04),
-                _buildShimmerContainer(
-                  width: screenSize.width * 0.09,
-                  height: screenSize.width * 0.09,
-                  borderRadius: 12,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActionsShimmer(Size screenSize) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(screenSize.width * 0.05),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildShimmerContainer(
-            width: screenSize.width * 0.3,
-            height: screenSize.width * 0.05,
-            borderRadius: 10,
-          ),
-          SizedBox(height: screenSize.height * 0.02),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(
-              4,
-              (index) => Column(
-                children: [
-                  _buildShimmerContainer(
-                    width: screenSize.width * 0.125,
-                    height: screenSize.width * 0.125,
-                    borderRadius: screenSize.width * 0.0625,
-                  ),
-                  SizedBox(height: screenSize.height * 0.01),
-                  _buildShimmerContainer(
-                    width: screenSize.width * 0.15,
-                    height: screenSize.width * 0.03,
-                    borderRadius: 6,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReportShimmer(Size screenSize) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(screenSize.width * 0.05),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildShimmerContainer(
-            width: screenSize.width * 0.25,
-            height: screenSize.width * 0.05,
-            borderRadius: 10,
-          ),
-          SizedBox(height: screenSize.height * 0.02),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  children: [
-                    _buildShimmerContainer(
-                      width: double.infinity,
-                      height: screenSize.width * 0.04,
-                      borderRadius: 8,
-                    ),
-                    SizedBox(height: screenSize.height * 0.01),
-                    _buildShimmerContainer(
-                      width: screenSize.width * 0.2,
-                      height: screenSize.width * 0.06,
-                      borderRadius: 12,
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: screenSize.width * 0.04),
-              Expanded(
-                child: Column(
-                  children: [
-                    _buildShimmerContainer(
-                      width: double.infinity,
-                      height: screenSize.width * 0.04,
-                      borderRadius: 8,
-                    ),
-                    SizedBox(height: screenSize.height * 0.01),
-                    _buildShimmerContainer(
-                      width: screenSize.width * 0.2,
-                      height: screenSize.width * 0.06,
-                      borderRadius: 12,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStudentInfoShimmer(Size screenSize) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(screenSize.width * 0.05),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildShimmerContainer(
-            width: screenSize.width * 0.3,
-            height: screenSize.width * 0.05,
-            borderRadius: 10,
-          ),
-          SizedBox(height: screenSize.height * 0.02),
-          ...List.generate(
-            4,
-            (index) => Padding(
-              padding: EdgeInsets.only(bottom: screenSize.height * 0.015),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildShimmerContainer(
-                    width: screenSize.width * 0.25,
-                    height: screenSize.width * 0.04,
-                    borderRadius: 8,
-                  ),
-                  _buildShimmerContainer(
-                    width: screenSize.width * 0.2,
-                    height: screenSize.width * 0.04,
-                    borderRadius: 8,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildErrorBanner(Size screenSize) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(screenSize.width * 0.04),
-      decoration: BoxDecoration(
-        color: Colors.amber[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.amber[200]!),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.info_outline,
-            color: Colors.amber[700],
-            size: screenSize.width * 0.055,
-          ),
-          SizedBox(width: screenSize.width * 0.03),
-          Expanded(
-            child: Text(
-              _errorMessage,
-              style: TextStyle(
-                color: Colors.amber[800],
-                fontSize: screenSize.width * 0.035,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReportSection() {
-    return ReportSection(santriData: _santriData);
-  }
-
-  Widget _buildStudentInfo() {
-    return StudentInfo(santriData: _santriData);
   }
 
   // --- TAMBAHAN BARU: Method untuk pemberitahuan ---
@@ -1948,7 +1311,7 @@ class _HomeScreenState extends State<HomeScreen>
       final results = await _connectivity.checkConnectivity();
       _updateConnectionStatus(results);
     } on PlatformException catch (e) {
-      print('❌ Failed to check connectivity status: $e');
+      debugPrint('❌ Failed to check connectivity status: $e');
     }
   }
 
@@ -1984,6 +1347,33 @@ class _HomeScreenState extends State<HomeScreen>
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
         duration: const Duration(seconds: 5),
+      ),
+    );
+  }
+
+  Widget _buildErrorBanner(Size screenSize) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(screenSize.width * 0.03),
+      decoration: BoxDecoration(
+        color: Colors.red[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red[200]!),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, color: Colors.red[700], size: 20),
+          SizedBox(width: screenSize.width * 0.02),
+          Expanded(
+            child: Text(
+              _errorMessage,
+              style: TextStyle(
+                color: Colors.red[800],
+                fontSize: screenSize.width * 0.035,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

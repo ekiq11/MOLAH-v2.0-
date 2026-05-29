@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:csv/csv.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class TransactionHistoryPage extends StatefulWidget {
   final String nisn;
@@ -823,7 +824,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
 
   Widget _buildTabSelector() {
     return Container(
-      padding: const EdgeInsets.all(4),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.grey[200],
         borderRadius: BorderRadius.circular(12),
@@ -841,7 +842,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
                   color: _selectedTabIndex == 0
-                      ? Colors.red[400]
+                      ? const Color(0xFFEF4444) // Red for Transaksi
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -858,8 +859,8 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                     const SizedBox(width: 8),
                     Text(
                       'Transaksi',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w700,
                         fontSize: 14,
                         color: _selectedTabIndex == 0
                             ? Colors.white
@@ -882,7 +883,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
                   color: _selectedTabIndex == 1
-                      ? Colors.green[400]
+                      ? const Color(0xFF10B981) // Premium green
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -899,8 +900,8 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                     const SizedBox(width: 8),
                     Text(
                       'Top Up',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w700,
                         fontSize: 14,
                         color: _selectedTabIndex == 1
                             ? Colors.white
@@ -920,23 +921,15 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
   Widget _buildSummaryCard() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Color(0xFFDC2626),
-            Color(0xFFB91C1C),
-            Color(0xFF991B1B),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.red.withValues(alpha: 0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -945,25 +938,35 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
         children: [
           Row(
             children: [
-              Icon(Icons.person, color: Colors.white, size: 24),
-              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(Icons.wallet_rounded, color: Colors.blue[600], size: 24),
+              ),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       _summaryData['nama'] ?? widget.studentName,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF1A1A1A),
                         fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
                       ),
                     ),
+                    const SizedBox(height: 4),
                     Text(
                       'NISN: ${_summaryData['nisn'] ?? widget.nisn}',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF8E8E8E),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
@@ -971,24 +974,28 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 30),
           Row(
             children: [
               Expanded(
                 child: _buildSummaryItem(
                   'Total Masuk',
                   _summaryData['total_masuk'] ?? 'Rp0',
-                  Icons.arrow_downward,
-                  Colors.green[400]!,
+                  Icons.arrow_downward_rounded,
+                  Colors.green[600]!,
                 ),
               ),
-              const SizedBox(width: 16),
+              Container(
+                height: 40,
+                width: 1,
+                color: Colors.grey[200],
+              ),
               Expanded(
                 child: _buildSummaryItem(
                   'Total Keluar',
                   _summaryData['total_keluar'] ?? 'Rp0',
-                  Icons.arrow_upward,
-                  Colors.orange[400]!,
+                  Icons.arrow_upward_rounded,
+                  Colors.red[600]!,
                 ),
               ),
             ],
@@ -1004,25 +1011,22 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
     IconData icon,
     Color iconColor,
   ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(12),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, color: iconColor, size: 20),
-              const SizedBox(width: 8),
+              Icon(icon, color: iconColor, size: 16),
+              const SizedBox(width: 6),
               Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                title.toUpperCase(),
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF8E8E8E),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
                 ),
               ),
             ],
@@ -1030,10 +1034,11 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
           const SizedBox(height: 8),
           Text(
             amount,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+            style: GoogleFonts.inter(
+              color: const Color(0xFF1A1A1A),
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.3,
             ),
           ),
         ],
@@ -1052,7 +1057,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: _displayedTransactions.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          separatorBuilder: (_, __) => const SizedBox(height: 0),
           itemBuilder: (context, index) {
             return _buildTransactionItem(_displayedTransactions[index]);
           },
@@ -1096,7 +1101,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: _displayedTopUps.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          separatorBuilder: (_, __) => const SizedBox(height: 0),
           itemBuilder: (context, index) {
             return _buildTopUpItem(_displayedTopUps[index]);
           },
@@ -1139,33 +1144,35 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
         int.parse(pemakaianValue) > 0;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: isExpense ? Colors.red[50] : Colors.green[50],
-              borderRadius: BorderRadius.circular(10),
+              shape: BoxShape.circle,
             ),
             child: Icon(
-              isExpense ? Icons.arrow_upward : Icons.arrow_downward,
+              isExpense ? Icons.arrow_outward_rounded : Icons.south_west_rounded,
               color: isExpense ? Colors.red[600] : Colors.green[600],
               size: 20,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1175,18 +1182,20 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                   children: [
                     Text(
                       isExpense ? 'Pengeluaran' : 'Pemasukan',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                        color: Colors.grey[800],
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: const Color(0xFF1A1A1A),
+                        letterSpacing: -0.3,
                       ),
                     ),
                     Text(
                       isExpense ? transaction.pemakaian : transaction.sisaSaldo,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: isExpense ? Colors.red[600] : Colors.green[600],
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: isExpense ? Colors.red[600] : const Color(0xFF1A1A1A),
+                        letterSpacing: -0.3,
                       ),
                     ),
                   ],
@@ -1194,13 +1203,22 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                 const SizedBox(height: 4),
                 Text(
                   transaction.waktu,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  style: GoogleFonts.inter(
+                    fontSize: 13, 
+                    color: const Color(0xFF8E8E8E),
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
                 if (transaction.kodeTransaksi.isNotEmpty) ...[
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   Text(
-                    'Keterangan: ${transaction.kodeTransaksi}',
-                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                    transaction.kodeTransaksi,
+                    style: GoogleFonts.inter(
+                      fontSize: 11, 
+                      color: const Color(0xFF8E8E8E),
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ],
               ],
@@ -1213,29 +1231,31 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
 
   Widget _buildTopUpItem(TopUpItem topUp) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.green.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.green[50],
-              borderRadius: BorderRadius.circular(10),
+              shape: BoxShape.circle,
             ),
-            child: Icon(Icons.add_circle, color: Colors.green[600], size: 20),
+            child: Icon(Icons.add_rounded, color: Colors.green[600], size: 20),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1245,18 +1265,20 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                   children: [
                     Text(
                       'Top Up Saldo',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                        color: Colors.grey[800],
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: const Color(0xFF1A1A1A),
+                        letterSpacing: -0.3,
                       ),
                     ),
                     Text(
                       topUp.topUpAmount,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
                         color: Colors.green[600],
+                        letterSpacing: -0.3,
                       ),
                     ),
                   ],
@@ -1264,12 +1286,24 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                 const SizedBox(height: 4),
                 Text(
                   topUp.waktu,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  style: GoogleFonts.inter(
+                    fontSize: 13, 
+                    color: const Color(0xFF8E8E8E),
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-                Text(
-                  'Keterangan: ${topUp.kodeTransaksi}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
+                if (topUp.kodeTransaksi.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    topUp.kodeTransaksi,
+                    style: GoogleFonts.inter(
+                      fontSize: 11, 
+                      color: const Color(0xFF8E8E8E),
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

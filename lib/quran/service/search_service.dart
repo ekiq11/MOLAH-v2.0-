@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 // service/search_service.dart - SMART SEARCH WITH FUZZY MATCHING
 import 'dart:async';
 import 'dart:convert';
@@ -464,7 +465,7 @@ class SearchService {
       _surahCache[surahNumber] = data;
       return data;
     } catch (e) {
-      print('Error loading surah $surahNumber: $e');
+      debugPrint('Error loading surah $surahNumber: $e');
       rethrow;
     }
   }
@@ -551,7 +552,7 @@ class SearchService {
             ];
           }
         } catch (e) {
-          print('Error loading direct query: $e');
+          debugPrint('Error loading direct query: $e');
         }
       }
       return [];
@@ -603,7 +604,7 @@ class SearchService {
           }
         }
       } catch (e) {
-        print('Error searching surah $surahNumber: $e');
+        debugPrint('Error searching surah $surahNumber: $e');
         continue;
       }
     }
@@ -649,7 +650,7 @@ class SearchService {
           }
         }
       } catch (e) {
-        print('Error searching surah $surahNumber: $e');
+        debugPrint('Error searching surah $surahNumber: $e');
         continue;
       }
     }
@@ -692,7 +693,7 @@ class SearchService {
           }
         }
       } catch (e) {
-        print('Error searching surah $surahNumber: $e');
+        debugPrint('Error searching surah $surahNumber: $e');
         continue;
       }
     }

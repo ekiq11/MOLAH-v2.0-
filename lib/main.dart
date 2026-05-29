@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart'; // ✅ Wajib untuk SystemChrome
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:mmkv/mmkv.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:in_app_update/in_app_update.dart';
@@ -11,14 +10,15 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'splashscreen.dart';
 import 'dart:io' show Platform;
 import 'dart:developer' as developer show log;
+import 'dart:ui';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'utils/analytics_service.dart';
 import 'utils/fcm_service.dart';
 import 'utils/offline_cache_service.dart';
 
-// Inisialisasi global plugin notifikasi
-final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-    FlutterLocalNotificationsPlugin();
+// CATATAN: FlutterLocalNotificationsPlugin diinisialisasi di dalam FCMService
+// dan GoogleSheetsMonitorService masing-masing. Tidak perlu instance global di sini.
 
 /// ✅ FIX: Setup System UI yang kompatibel semua OEM Android
 /// Menggantikan setStatusBarColor/setNavigationBarColor yang deprecated
@@ -34,16 +34,9 @@ void _setupSystemUI() {
     const SystemUiOverlayStyle(
       // Status bar (atas)
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light, // ikon putih (cocok bg gelap)
-      statusBarBrightness: Brightness.dark, // iOS equivalent
-      // Navigation bar (bawah)
       systemNavigationBarColor: Colors.transparent,
       systemNavigationBarDividerColor: Colors.transparent,
-      systemNavigationBarIconBrightness: Brightness.light,
-
-      // Android kontras navigation bar (Android 10+)
       systemNavigationBarContrastEnforced: false,
-      // Android kontras status bar (Android 10+)
       systemStatusBarContrastEnforced: false,
     ),
   );
@@ -57,6 +50,14 @@ void main() async {
   // Inisialisasi Firebase
   await Firebase.initializeApp();
   developer.log('✅ Firebase initialized');
+
+  // Integrasi Crashlytics
+  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+  PlatformDispatcher.instance.onError = (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    return true;
+  };
+  developer.log('✅ Crashlytics initialized');
 
   // Setup system UI sebelum app launch
   _setupSystemUI();
@@ -83,20 +84,8 @@ void main() async {
   await FCMService.initialize();
   developer.log('✅ FCMService initialized');
 
-  // Inisialisasi notifikasi lokal
-  const AndroidInitializationSettings androidSettings =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
-  const DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
-    requestAlertPermission: true,
-    requestBadgePermission: true,
-    requestSoundPermission: true,
-  );
-  const InitializationSettings initSettings = InitializationSettings(
-    android: androidSettings,
-    iOS: iosSettings,
-  );
-
-  await flutterLocalNotificationsPlugin.initialize(initSettings);
+  // ✅ Notifikasi diinisialisasi di FCMService.initialize() — tidak perlu duplikat di sini
+  // FCMService sudah handle: permission request, channel creation, dan plugin init
 
   developer.log('🚀 Running app...');
   runApp(const MyApp());
@@ -112,26 +101,25 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         // ✅ FIX: Hindari primarySwatch (deprecated), gunakan colorScheme
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.red,
+          seedColor: const Color(0xFF10B981),
           brightness: Brightness.light,
         ),
         useMaterial3: true,
-        // ✅ Tipografi global: Inter (Instagram-style)
-        // Semua Text widget di seluruh app otomatis menggunakan font ini
-        textTheme: GoogleFonts.interTextTheme(),
+        // ✅ Tipografi global: Inter (Instagram-style) dengan warna yang tajam dan kontras
+        textTheme: GoogleFonts.interTextTheme().apply(
+          bodyColor: const Color(0xFF1A1A1A), // Hitam pekat Instagram-style
+          displayColor: const Color(0xFF1A1A1A),
+        ),
         // ✅ FIX: AppBarTheme dengan SystemUiOverlayStyle eksplisit
         appBarTheme: AppBarTheme(
           systemOverlayStyle: const SystemUiOverlayStyle(
             statusBarColor: Colors.transparent,
-            statusBarIconBrightness: Brightness.light,
-            statusBarBrightness: Brightness.dark,
             systemNavigationBarColor: Colors.transparent,
             systemNavigationBarDividerColor: Colors.transparent,
-            systemNavigationBarIconBrightness: Brightness.light,
             systemNavigationBarContrastEnforced: false,
             systemStatusBarContrastEnforced: false,
           ),
-          backgroundColor: Colors.red,
+          backgroundColor: const Color(0xFF10B981),
           foregroundColor: Colors.white,
           elevation: 0,
           titleTextStyle: GoogleFonts.inter(
@@ -179,13 +167,7 @@ class _AppWrapperState extends State<AppWrapper> {
     if (_isCheckingUpdate || !_canProceed) {
       return Scaffold(
         body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Colors.red, Colors.redAccent],
-            ),
-          ),
+          color: Colors.white,
           child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -201,7 +183,7 @@ class _AppWrapperState extends State<AppWrapper> {
                     return const Icon(
                       Icons.mobile_friendly,
                       size: 80,
-                      color: Colors.white,
+                      color: Color(0xFF10B981),
                     );
                   },
                 ),
@@ -210,19 +192,20 @@ class _AppWrapperState extends State<AppWrapper> {
                   'MOLAH',
                   style: TextStyle(
                     fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF0F172A),
+                    letterSpacing: 1.5,
                   ),
                 ),
                 const SizedBox(height: 40),
                 // Loading indicator
                 const CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
                 ),
                 const SizedBox(height: 20),
                 const Text(
                   'Memeriksa pembaruan...',
-                  style: TextStyle(fontSize: 16, color: Colors.white70),
+                  style: TextStyle(fontSize: 14, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
                 ),
               ],
             ),
@@ -356,13 +339,13 @@ class _AppWrapperState extends State<AppWrapper> {
         InAppUpdate.completeFlexibleUpdate()
             .then((_) {
               developer.log('✅ Flexible update completed');
-              Navigator.of(context).pop(); // Tutup progress dialog
-              _showUpdateCompletedDialog();
+              if (mounted) Navigator.of(context).pop(); // Tutup progress dialog
+              if (mounted) _showUpdateCompletedDialog();
             })
             .catchError((error) {
               developer.log('❌ Flexible update failed: $error');
-              Navigator.of(context).pop(); // Tutup progress dialog
-              _showUpdateFailedDialog();
+              if (mounted) Navigator.of(context).pop(); // Tutup progress dialog
+              if (mounted) _showUpdateFailedDialog();
             });
       } else {
         // Jika tidak ada opsi update yang tersedia, tampilkan error

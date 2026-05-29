@@ -651,6 +651,25 @@ class GoogleSheetsMonitorService {
     if (_localNotificationPlugin != null) return;
     _localNotificationPlugin = FlutterLocalNotificationsPlugin();
 
+    // ✅ FIX: initialize() HARUS dipanggil DULU sebelum createNotificationChannel()
+    // Memanggil resolvePlatformSpecificImplementation sebelum initialize() → null!
+    const AndroidInitializationSettings android = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
+    const DarwinInitializationSettings ios = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+    await _localNotificationPlugin!.initialize(
+      const InitializationSettings(android: android, iOS: ios),
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        debugPrint('Notification tapped: ${response.payload}');
+      },
+      onDidReceiveBackgroundNotificationResponse: _onBackgroundNotificationTap,
+    );
+
+    // Setelah initialize, baru resolve implementation untuk buat channel
     final androidPlugin = _localNotificationPlugin
         ?.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
@@ -701,21 +720,6 @@ class GoogleSheetsMonitorService {
       ),
     );
 
-    const AndroidInitializationSettings android = AndroidInitializationSettings(
-      '@mipmap/ic_launcher',
-    );
-    const DarwinInitializationSettings ios = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-    await _localNotificationPlugin!.initialize(
-      const InitializationSettings(android: android, iOS: ios),
-      onDidReceiveNotificationResponse: (NotificationResponse response) {
-        debugPrint('Notification tapped: ${response.payload}');
-      },
-      onDidReceiveBackgroundNotificationResponse: _onBackgroundNotificationTap,
-    );
     debugPrint('✅ LocalNotifications initialized with 3 channels');
   }
 
@@ -1905,12 +1909,13 @@ class EnhancedNotificationDialog {
     }
     int visibleCount = 10;
     final ScrollController scrollController = ScrollController();
+
     await showDialog(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            // ✅ TAMBAHAN: Responsive sizing saja
+            // Responsive sizing
             final screenSize = MediaQuery.of(context).size;
             final dialogWidth = screenSize.width > 600
                 ? 450.0
@@ -1942,19 +1947,22 @@ class EnhancedNotificationDialog {
                       .take(visibleCount)
                       .toList();
 
-                  scrollController.addListener(() {
-                    if (scrollController.position.pixels ==
-                        scrollController.position.maxScrollExtent) {
-                      if (visibleCount < 15 &&
-                          visibleCount < recentNotifications.length) {
-                        setState(() {
-                          visibleCount = 15;
-                        });
+                  // ✅ FIX: Listener scroll untuk load more menggunakan NotificationListener
+                  // bukan addListener yang terus bertambah setiap rebuild (memory leak)
+                  return NotificationListener<ScrollNotification>(
+                    onNotification: (scrollInfo) {
+                      if (scrollInfo.metrics.pixels >=
+                          scrollInfo.metrics.maxScrollExtent - 50) {
+                        if (visibleCount < recentNotifications.length) {
+                          setState(() {
+                            visibleCount = (visibleCount + 10)
+                                .clamp(0, recentNotifications.length);
+                          });
+                        }
                       }
-                    }
-                  });
-
-                  return Container(
+                      return false;
+                    },
+                    child: Container(
                     width: dialogWidth,
                     height: dialogHeight,
                     constraints: BoxConstraints(
@@ -1966,12 +1974,12 @@ class EnhancedNotificationDialog {
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFDC2626).withValues(alpha: 0.15),
+                          color: const Color(0xFF10B981).withValues(alpha: 0.15),
                           blurRadius: 30,
                           offset: const Offset(0, 10),
                         ),
                         BoxShadow(
-                          color: const Color(0xFF991B1B).withValues(alpha: 0.1),
+                          color: const Color(0xFF059669).withValues(alpha: 0.1),
                           blurRadius: 60,
                           offset: const Offset(0, 20),
                         ),
@@ -1988,9 +1996,8 @@ class EnhancedNotificationDialog {
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
                               colors: [
-                                Color(0xFFDC2626),
-                                Color(0xFFB91C1C),
-                                Color(0xFF991B1B),
+                                Color(0xFF10B981),
+                                Color(0xFF059669),
                               ],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
@@ -2000,7 +2007,7 @@ class EnhancedNotificationDialog {
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFFDC2626).withValues(alpha: 0.3),
+                                color: const Color(0xFF10B981).withValues(alpha: 0.3),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
                               ),
@@ -2095,60 +2102,110 @@ class EnhancedNotificationDialog {
                                     onPressed: () async {
                                       final confirm = await showDialog<bool>(
                                         context: context,
-                                        builder: (context) => AlertDialog(
+                                        builder: (context) => Dialog(
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              20,
-                                            ),
+                                            borderRadius: BorderRadius.circular(24),
                                           ),
-                                          title: Row(
-                                            children: [
-                                              Container(
-                                                padding: const EdgeInsets.all(
-                                                  8,
+                                          elevation: 0,
+                                          backgroundColor: Colors.transparent,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(24),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              shape: BoxShape.rectangle,
+                                              borderRadius: BorderRadius.circular(24),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black.withValues(alpha: 0.1),
+                                                  blurRadius: 20,
+                                                  offset: const Offset(0, 10),
                                                 ),
-                                                decoration: BoxDecoration(
-                                                  color: const Color(
-                                                    0xFFFEE2E2,
+                                              ],
+                                            ),
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets.all(16),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.red[50],
+                                                    shape: BoxShape.circle,
                                                   ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
+                                                  child: Icon(
+                                                    Icons.delete_sweep_rounded,
+                                                    color: Colors.red[600],
+                                                    size: 40,
+                                                  ),
                                                 ),
-                                                child: const Icon(
-                                                  Icons.delete_sweep,
-                                                  color: Color(0xFFDC2626),
-                                                  size: 24,
+                                                const SizedBox(height: 24),
+                                                const Text(
+                                                  'Hapus Semua Notifikasi?',
+                                                  style: TextStyle(
+                                                    fontSize: 20,
+                                                    fontWeight: FontWeight.w900,
+                                                    color: Color(0xFF0F172A),
+                                                  ),
+                                                  textAlign: TextAlign.center,
                                                 ),
-                                              ),
-                                              const SizedBox(width: 12),
-                                              const Text('Hapus Semua?'),
-                                            ],
-                                          ),
-                                          content: const Text(
-                                            'Apakah Anda yakin ingin menghapus semua notifikasi?',
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(context, false),
-                                              child: const Text('Batal'),
+                                                const SizedBox(height: 12),
+                                                const Text(
+                                                  'Tindakan ini tidak dapat dibatalkan. Semua riwayat notifikasi Anda akan dihapus permanen.',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Color(0xFF64748B),
+                                                    height: 1.5,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                                const SizedBox(height: 32),
+                                                Row(
+                                                  children: [
+                                                    Expanded(
+                                                      child: TextButton(
+                                                        onPressed: () => Navigator.pop(context, false),
+                                                        style: TextButton.styleFrom(
+                                                          padding: const EdgeInsets.symmetric(vertical: 14),
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius: BorderRadius.circular(12),
+                                                          ),
+                                                        ),
+                                                        child: const Text(
+                                                          'Batal',
+                                                          style: TextStyle(
+                                                            color: Color(0xFF64748B),
+                                                            fontSize: 16,
+                                                            fontWeight: FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 16),
+                                                    Expanded(
+                                                      child: ElevatedButton(
+                                                        onPressed: () => Navigator.pop(context, true),
+                                                        style: ElevatedButton.styleFrom(
+                                                          backgroundColor: Colors.red[600],
+                                                          foregroundColor: Colors.white,
+                                                          padding: const EdgeInsets.symmetric(vertical: 14),
+                                                          elevation: 0,
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius: BorderRadius.circular(12),
+                                                          ),
+                                                        ),
+                                                        child: const Text(
+                                                          'Hapus',
+                                                          style: TextStyle(
+                                                            fontSize: 16,
+                                                            fontWeight: FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
                                             ),
-                                            ElevatedButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(context, true),
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: const Color(
-                                                  0xFFDC2626,
-                                                ),
-                                                foregroundColor: Colors.white,
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                ),
-                                              ),
-                                              child: const Text('Hapus'),
-                                            ),
-                                          ],
+                                          ),
                                         ),
                                       );
 
@@ -2182,10 +2239,8 @@ class EnhancedNotificationDialog {
                                         decoration: BoxDecoration(
                                           gradient: LinearGradient(
                                             colors: [
-                                              const Color(0xFFFEE2E2),
-                                              const Color(
-                                                0xFFFEE2E2,
-                                              ).withValues(alpha: 0.5),
+                                              const Color(0xFFD1FAE5),
+                                              const Color(0xFFD1FAE5).withValues(alpha: 0.5),
                                             ],
                                             begin: Alignment.topLeft,
                                             end: Alignment.bottomRight,
@@ -2193,18 +2248,16 @@ class EnhancedNotificationDialog {
                                           shape: BoxShape.circle,
                                           boxShadow: [
                                             BoxShadow(
-                                              color: const Color(
-                                                0xFFDC2626,
-                                              ).withValues(alpha: 0.1),
+                                              color: const Color(0xFF10B981).withValues(alpha: 0.1),
                                               blurRadius: 20,
                                               spreadRadius: 5,
                                             ),
                                           ],
                                         ),
                                         child: const Icon(
-                                          Icons.notifications_none,
+                                          Icons.notifications_none_rounded,
                                           size: 80,
-                                          color: Color(0xFFDC2626),
+                                          color: Color(0xFF10B981),
                                         ),
                                       ),
                                       const SizedBox(height: 16),
@@ -2275,35 +2328,24 @@ class EnhancedNotificationDialog {
                                         decoration: BoxDecoration(
                                           gradient: const LinearGradient(
                                             colors: [
-                                              Color(0xFFFEE2E2),
-                                              Color(0xFFFECDD3),
+                                              Color(0xFFD1FAE5),
+                                              Color(0xFFA7F3D0),
                                             ],
                                           ),
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
+                                          borderRadius: BorderRadius.circular(10),
                                         ),
                                         child: ElevatedButton.icon(
                                           onPressed: () async {
-                                            await GoogleSheetsMonitorService.markAllAsReadForUser(
-                                              username,
-                                            );
+                                            await GoogleSheetsMonitorService.markAllAsReadForUser(username);
                                           },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: Colors.transparent,
-                                            foregroundColor: const Color(
-                                              0xFFB91C1C,
-                                            ),
+                                            foregroundColor: const Color(0xFF065F46),
                                             elevation: 0,
                                             shadowColor: Colors.transparent,
                                           ),
-                                          icon: const Icon(
-                                            Icons.done_all,
-                                            size: 18,
-                                          ),
-                                          label: const Text(
-                                            'Tandai Semua Dibaca',
-                                          ),
+                                          icon: const Icon(Icons.done_all_rounded, size: 18),
+                                          label: const Text('Tandai Semua Dibaca'),
                                         ),
                                       ),
                                     if (notifications.isNotEmpty)
@@ -2311,17 +2353,12 @@ class EnhancedNotificationDialog {
                                     Container(
                                       decoration: BoxDecoration(
                                         gradient: const LinearGradient(
-                                          colors: [
-                                            Color(0xFFDC2626),
-                                            Color(0xFFB91C1C),
-                                          ],
+                                          colors: [Color(0xFF111827), Color(0xFF1F2937)],
                                         ),
                                         borderRadius: BorderRadius.circular(10),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: const Color(
-                                              0xFFDC2626,
-                                            ).withValues(alpha: 0.3),
+                                            color: const Color(0xFF111827).withValues(alpha: 0.3),
                                             blurRadius: 8,
                                             offset: const Offset(0, 4),
                                           ),
@@ -2335,7 +2372,7 @@ class EnhancedNotificationDialog {
                                           elevation: 0,
                                           shadowColor: Colors.transparent,
                                         ),
-                                        icon: const Icon(Icons.close, size: 18),
+                                        icon: const Icon(Icons.close_rounded, size: 18),
                                         label: const Text('Tutup'),
                                       ),
                                     ),
@@ -2352,14 +2389,9 @@ class EnhancedNotificationDialog {
                                       child: Container(
                                         decoration: BoxDecoration(
                                           gradient: const LinearGradient(
-                                            colors: [
-                                              Color(0xFFFEE2E2),
-                                              Color(0xFFFECDD3),
-                                            ],
+                                            colors: [Color(0xFFD1FAE5), Color(0xFFA7F3D0)],
                                           ),
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
+                                          borderRadius: BorderRadius.circular(10),
                                         ),
                                         child: ElevatedButton.icon(
                                           onPressed: () async {
@@ -2369,14 +2401,12 @@ class EnhancedNotificationDialog {
                                           },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: Colors.transparent,
-                                            foregroundColor: const Color(
-                                              0xFFB91C1C,
-                                            ),
+                                            foregroundColor: const Color(0xFF065F46),
                                             elevation: 0,
                                             shadowColor: Colors.transparent,
                                           ),
                                           icon: const Icon(
-                                            Icons.done_all,
+                                            Icons.done_all_rounded,
                                             size: 18,
                                           ),
                                           label: const Text('Tandai Dibaca'),
@@ -2388,17 +2418,12 @@ class EnhancedNotificationDialog {
                                   Container(
                                     decoration: BoxDecoration(
                                       gradient: const LinearGradient(
-                                        colors: [
-                                          Color(0xFFDC2626),
-                                          Color(0xFFB91C1C),
-                                        ],
+                                        colors: [Color(0xFF111827), Color(0xFF1F2937)],
                                       ),
                                       borderRadius: BorderRadius.circular(10),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: const Color(
-                                            0xFFDC2626,
-                                          ).withValues(alpha: 0.3),
+                                          color: const Color(0xFF111827).withValues(alpha: 0.3),
                                           blurRadius: 8,
                                           offset: const Offset(0, 4),
                                         ),
@@ -2412,7 +2437,7 @@ class EnhancedNotificationDialog {
                                         elevation: 0,
                                         shadowColor: Colors.transparent,
                                       ),
-                                      icon: const Icon(Icons.close, size: 18),
+                                      icon: const Icon(Icons.close_rounded, size: 18),
                                       label: const Text('Tutup'),
                                     ),
                                   ),
@@ -2423,7 +2448,8 @@ class EnhancedNotificationDialog {
                         ),
                       ],
                     ),
-                  );
+                  ), // ← tutup Container (child dari NotificationListener)
+                  ); // ← tutup NotificationListener
                 },
               ),
             );

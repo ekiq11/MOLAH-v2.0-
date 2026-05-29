@@ -9,6 +9,7 @@ import 'package:csv/csv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:share_plus/share_plus.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class SPPPaymentPage extends StatefulWidget {
   final String nisn;
@@ -224,7 +225,7 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
         errorMessage = '';
       });
 
-      print('Fetching data for NISN: ${widget.nisn}');
+      debugPrint('Fetching data for NISN: ${widget.nisn}');
       String targetNisnNormalized = _normalizeNisn(widget.nisn);
 
       List<List<dynamic>> csvData = [];
@@ -236,11 +237,11 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
           if (response.statusCode == 200) {
             final data = const CsvToListConverter().convert(response.body);
             csvData.addAll(data);
-            print('Fetched from: $url');
+            debugPrint('Fetched from: $url');
             break;
           }
         } catch (e) {
-          print('Failed to fetch from $url: $e');
+          debugPrint('Failed to fetch from $url: $e');
         }
       }
 
@@ -335,7 +336,7 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
             }
           }
         } catch (e) {
-          print('Gagal ambil data uang pangkal: $e');
+          debugPrint('Gagal ambil data uang pangkal: $e');
         }
       }
 
@@ -347,7 +348,7 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
         }
       });
     } catch (e) {
-      print('Error: $e');
+      debugPrint('Error: $e');
       setState(() {
         errorMessage = 'Error: $e';
         isLoading = false;
@@ -380,15 +381,27 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: Color(0xFF1A1A1A)),
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+          systemNavigationBarColor: Colors.transparent,
+          systemNavigationBarIconBrightness: Brightness.dark,
+        ),
         title: Text(
           'Pembayaran SPP & Uang Pangkal',
-          style: TextStyle(
-            color: Colors.grey[800],
-            fontWeight: FontWeight.w600,
+          style: GoogleFonts.inter(
+            color: const Color(0xFF1A1A1A),
+            fontWeight: FontWeight.w800,
             fontSize: 18,
+            letterSpacing: -0.3,
           ),
         ),
         centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           IconButton(
             icon: Container(
@@ -423,16 +436,15 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
   // Dalam _buildPaymentHistory(), ubah onTap:
   Widget _buildPaymentHistory() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 20,
-            spreadRadius: 0,
-            offset: const Offset(0, 4),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -441,62 +453,30 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.history_rounded,
-                color: Color(0xFF4F46E5),
-                size: 20,
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.green[50],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.calendar_month_rounded, color: Colors.green[600], size: 20),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
               Text(
-                'Riwayat Pembayaran SPP',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[800],
+                'Riwayat Bulanan',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3,
+                  color: const Color(0xFF1A1A1A),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  const Color(0xFF4F46E5).withValues(alpha: 0.1),
-                  const Color(0xFF7C3AED).withValues(alpha: 0.05),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: const Color(0xFF4F46E5).withValues(alpha: 0.2),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildStatusInfo(
-                  'Lunas',
-                  '${santriData!.lunasBulanKe}',
-                  const Color(0xFF10B981),
-                ),
-                Container(width: 1, height: 40, color: Colors.grey[300]),
-                _buildStatusInfo(
-                  'Belum Lunas',
-                  '${12 - santriData!.lunasBulanKe}',
-                  const Color(0xFFEF4444),
-                ),
-                Container(width: 1, height: 40, color: Colors.grey[300]),
-                _buildStatusInfo('Total Bulan', '12', const Color(0xFF6B7280)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
           LayoutBuilder(
             builder: (context, constraints) {
-              int crossAxisCount = 3;
+              int crossAxisCount = 4;
               if (constraints.maxWidth > 400) crossAxisCount = 4;
               if (constraints.maxWidth > 500) crossAxisCount = 6;
               return GridView.builder(
@@ -505,151 +485,48 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: crossAxisCount,
                   childAspectRatio: 0.85,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
                 ),
                 itemCount: monthNames.length,
                 itemBuilder: (context, index) {
                   String monthName = monthNames[index];
                   bool isPaid = index < santriData!.lunasBulanKe;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    decoration: BoxDecoration(
-                      gradient: isPaid
-                          ? LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                const Color(0xFF10B981).withValues(alpha: 0.15),
-                                const Color(0xFF059669).withValues(alpha: 0.2),
-                              ],
-                            )
-                          : LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                const Color(0xFFEF4444).withValues(alpha: 0.08),
-                                const Color(0xFFDC2626).withValues(alpha: 0.12),
-                              ],
-                            ),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isPaid
-                            ? const Color(0xFF10B981).withValues(alpha: 0.3)
-                            : const Color(0xFFEF4444).withValues(alpha: 0.2),
-                        width: isPaid ? 2 : 1.5,
-                      ),
-                      boxShadow: isPaid
-                          ? [
-                              BoxShadow(
-                                color: const Color(0xFF10B981).withValues(alpha: 0.2),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ]
-                          : [
-                              BoxShadow(
-                                color: const Color(0xFFEF4444).withValues(alpha: 0.1),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () => _navigateToInvoice(
-                          monthName,
-                          index,
-                        ), // PERUBAHAN UTAMA DI SINI
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 12,
-                            horizontal: 8,
+                  
+                  return Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () => _navigateToInvoice(monthName, index),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        decoration: BoxDecoration(
+                          color: isPaid ? Colors.green[50] : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: isPaid ? null : Border.all(
+                            color: Colors.grey[200]!,
+                            width: 1.5,
                           ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: isPaid
-                                        ? [
-                                            const Color(0xFF10B981),
-                                            const Color(0xFF059669),
-                                          ]
-                                        : [
-                                            const Color(0xFFEF4444),
-                                            const Color(0xFFDC2626),
-                                          ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color:
-                                          (isPaid
-                                                  ? const Color(0xFF10B981)
-                                                  : const Color(0xFFEF4444))
-                                              .withValues(alpha: 0.4),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 3),
-                                    ),
-                                  ],
-                                ),
-                                child: Icon(
-                                  isPaid
-                                      ? Icons.check_rounded
-                                      : Icons.schedule_rounded,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                              Icon(
+                                isPaid ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                                color: isPaid ? Colors.green[600] : Colors.grey[400],
+                                size: 24,
                               ),
                               const SizedBox(height: 8),
-                              Flexible(
-                                child: Text(
-                                  monthName,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.grey[700],
-                                  ),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                              Text(
+                                monthName.length > 3 ? monthName.substring(0, 3).toUpperCase() : monthName.toUpperCase(),
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.5,
+                                  color: isPaid ? Colors.green[700] : Colors.grey[500],
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color:
-                                      (isPaid
-                                              ? const Color(0xFF10B981)
-                                              : const Color(0xFFEF4444))
-                                          .withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  isPaid ? 'LUNAS' : 'BELUM',
-                                  style: TextStyle(
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.w700,
-                                    color: isPaid
-                                        ? const Color(0xFF059669)
-                                        : const Color(0xFFDC2626),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          ],
                         ),
                       ),
                     ),
@@ -663,39 +540,16 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[200]!),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
               children: [
-                Icon(
-                  Icons.info_outline_rounded,
-                  color: const Color(0xFF6B7280),
-                  size: 16,
-                ),
+                Icon(Icons.info_rounded, color: Colors.grey[400], size: 16),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Informasi Pembayaran',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF6B7280),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Ketuk bulan untuk melihat invoice/bukti pembayaran. Pembayaran dimulai dari bulan Juli.',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    'Ketuk bulan untuk melihat invoice. Pembayaran dimulai dari Juli.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
                 ),
               ],
@@ -1079,7 +933,9 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
   Widget _buildContent() {
     return RefreshIndicator(
       onRefresh: fetchData,
+      color: const Color(0xFF10B981),
       child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
@@ -1090,6 +946,7 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
             _buildUangPangkalProgress(),
             const SizedBox(height: 20),
             _buildPaymentHistory(),
+            const SizedBox(height: 40),
           ],
         ),
       ),
@@ -1097,148 +954,88 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
   }
 
   Widget _buildProfileCard() {
-    final screenSize = MediaQuery.of(context).size;
-    final isSmallScreen = screenSize.width < 400;
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [    Color(0xFFDC2626),
-                Color(0xFFB91C1C),
-                Color(0xFF991B1B),],
-          stops: [0.0, 0.6, 1.0],
-        ),
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFDC2626).withValues(alpha: 0.4),
-            blurRadius: 25,
-            spreadRadius: 0,
-            offset: const Offset(0, 12),
-          ),
-          BoxShadow(
-            color: const Color(0xFFEF4444).withValues(alpha: 0.2),
-            blurRadius: 15,
-            spreadRadius: 2,
-            offset: const Offset(0, 6),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: isSmallScreen ? 44 : 48,
-            height: isSmallScreen ? 44 : 48,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.white.withValues(alpha: 0.25),
-                  Colors.white.withValues(alpha: 0.15),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.3),
-                width: 1,
-              ),
-            ),
-            child: Icon(
-              Icons.school_rounded,
-              color: Colors.white,
-              size: isSmallScreen ? 20 : 22,
-            ),
-          ),
-          SizedBox(width: isSmallScreen ? 12 : 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 2),
-                Text(
-                  santriData!.nama,
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 14 : 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    height: 1.1,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'NISN :${santriData!.nisn}',
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 14 : 16,
-                    color: Colors.white.withValues(alpha: 0.9),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Row(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        santriData!.status,
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 12 : 13,
-                          color: Colors.white.withValues(alpha: 0.8),
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    SizedBox(width: 4),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isSmallScreen ? 8 : 12,
-                        vertical: isSmallScreen ? 4 : 6,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: santriData!.lunasBulanKe >= 12
-                              ? [
-                                  const Color(0xFF10B981).withValues(alpha: 0.3),
-                                  const Color(0xFF059669).withValues(alpha: 0.2),
-                                ]
-                              : [
-                                  const Color(0xFFFBBF24).withValues(alpha: 0.3),
-                                  const Color(0xFFF59E0B).withValues(alpha: 0.2),
-                                ],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: santriData!.lunasBulanKe >= 12
-                              ? const Color(0xFF10B981).withValues(alpha: 0.5)
-                              : const Color(0xFFFBBF24).withValues(alpha: 0.5),
-                        ),
-                      ),
-                      child: Text(
-                        santriData!.lunasBulanKe >= 12
-                            ? 'LUNAS'
-                            : 'BELUM LUNAS',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: isSmallScreen ? 10 : 11,
-                          fontWeight: FontWeight.w700,
-                        ),
+                    Icon(Icons.verified_user_rounded, color: Colors.blue[600], size: 14),
+                    const SizedBox(width: 6),
+                    Text(
+                      santriData!.status,
+                      style: GoogleFonts.inter(
+                        color: Colors.blue[800],
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
                       ),
                     ),
                   ],
                 ),
-              ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: santriData!.lunasBulanKe >= 12 
+                      ? Colors.green[50]
+                      : Colors.orange[50],
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  santriData!.lunasBulanKe >= 12 ? 'LUNAS' : 'BELUM LUNAS',
+                  style: GoogleFonts.inter(
+                    color: santriData!.lunasBulanKe >= 12 ? Colors.green[700] : Colors.orange[700],
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Text(
+            santriData!.nama,
+            style: GoogleFonts.inter(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.3,
+              color: const Color(0xFF1A1A1A),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'NISN: ${santriData!.nisn}',
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: const Color(0xFF8E8E8E),
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -1246,359 +1043,296 @@ class _SPPPaymentPageState extends State<SPPPaymentPage>
     );
   }
 
-  // Sisa widget lainnya tetap sama...
   Widget _buildPaymentSummary() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 20,
-            spreadRadius: 0,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Ringkasan Pembayaran SPP',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[800],
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildBentoCard(
+                title: 'Progress SPP',
+                value: '${santriData!.lunasBulanKe}/12',
+                subtitle: 'Bulan',
+                icon: Icons.pie_chart_rounded,
+                iconColor: const Color(0xFF3B82F6),
+                progress: santriData!.progressPercentage,
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Progress SPP',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        Text(
-                          '${santriData!.lunasBulanKe}/12 Bulan',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF10B981),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    LinearProgressIndicator(
-                      value: santriData!.progressPercentage,
-                      backgroundColor: Colors.grey[200],
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        santriData!.lunasBulanKe >= 12
-                            ? const Color(0xFF10B981)
-                            : const Color(0xFF3B82F6),
-                      ),
-                      minHeight: 8,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${(santriData!.progressPercentage * 100).toStringAsFixed(0)}% Selesai',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                    ),
-                  ],
-                ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildBentoCard(
+                title: 'Total Dibayar',
+                value: _formatCurrency(santriData!.nominalDibayar),
+                subtitle: 'YTD SPP',
+                icon: Icons.check_circle_rounded,
+                iconColor: const Color(0xFF10B981),
               ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: _buildSummaryItem(
-                  'Total Iuran YTD',
-                  _formatCurrency(santriData!.iuranYTD),
-                  Icons.account_balance_wallet_rounded,
-                  const Color(0xFF3B82F6),
-                ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildBentoCard(
+                title: 'Sisa SPP',
+                value: _formatCurrency(santriData!.sisaPembayaran),
+                subtitle: 'Tunggakan',
+                icon: Icons.warning_rounded,
+                iconColor: const Color(0xFFF59E0B),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildSummaryItem(
-                  'Sudah Dibayar',
-                  _formatCurrency(santriData!.nominalDibayar),
-                  Icons.check_circle_rounded,
-                  const Color(0xFF10B981),
-                ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildBentoCard(
+                title: 'Iuran',
+                value: _formatCurrency(santriData!.monthlyFee.toInt().toString()),
+                subtitle: 'Per Bulan',
+                icon: Icons.payments_rounded,
+                iconColor: const Color(0xFF8B5CF6),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildSummaryItem(
-                  'Sisa Pembayaran',
-                  _formatCurrency(santriData!.sisaPembayaran),
-                  Icons.pending_rounded,
-                  const Color(0xFFEF4444),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildSummaryItem(
-                  'Iuran/Bulan',
-                  _formatCurrency(santriData!.monthlyFee.toInt().toString()),
-                  Icons.payment_rounded,
-                  const Color(0xFF7C3AED),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
   Widget _buildUangPangkalProgress() {
-    if (santriData!.besarUangPangkal == '0') return SizedBox.shrink();
+    if (santriData!.besarUangPangkal == '0') return const SizedBox.shrink();
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFF1F5F9)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 20,
-            spreadRadius: 0,
-            offset: const Offset(0, 4),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Pembayaran Uang Pangkal',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[800],
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.purple[50],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.school_rounded, color: Colors.purple[600], size: 20),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Uang Pangkal',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3,
+                  color: const Color(0xFF1A1A1A),
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: santriData!.progressUangPangkalPercentage >= 1.0 
+                      ? const Color(0xFF10B981).withOpacity(0.1) 
+                      : const Color(0xFFF59E0B).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  santriData!.progressUangPangkalPercentage >= 1.0 ? 'LUNAS' : 'BELUM',
+                  style: TextStyle(
+                    color: santriData!.progressUangPangkalPercentage >= 1.0 
+                        ? const Color(0xFF10B981) 
+                        : const Color(0xFFF59E0B),
+                    fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Progress Pembayaran',
+                style: GoogleFonts.inter(color: const Color(0xFF8E8E8E), fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+              Text(
+                '${(santriData!.progressUangPangkalPercentage * 100).toStringAsFixed(0)}%',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w800,
+                  color: Colors.purple[600],
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: santriData!.progressUangPangkalPercentage,
+              backgroundColor: Colors.grey[100],
+              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF8B5CF6)),
+              minHeight: 12,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           Row(
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Progress Pembayaran',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        Text(
-                          '${(santriData!.progressUangPangkalPercentage * 100).toStringAsFixed(0)}%',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF7C3AED),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    LinearProgressIndicator(
-                      value: santriData!.progressUangPangkalPercentage,
-                      backgroundColor: Colors.grey[200],
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        const Color(0xFF7C3AED),
+                    Text('Total', style: GoogleFonts.inter(color: const Color(0xFF8E8E8E), fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                    const SizedBox(height: 4),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        _formatCurrency(santriData!.besarUangPangkal),
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w800,
+                    letterSpacing: -0.3, fontSize: 14, color: const Color(0xFF1A1A1A)),
                       ),
-                      minHeight: 8,
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Dibayar', style: GoogleFonts.inter(color: const Color(0xFF8E8E8E), fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                    const SizedBox(height: 4),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        _formatCurrency(santriData!.jumlahDibayarUangPangkal),
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w800,
+                    letterSpacing: -0.3, fontSize: 14, color: Colors.green[600]),
+                      ),
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildSummaryItem(
-                  'Uang Pangkal',
-                  _formatCurrency(santriData!.besarUangPangkal),
-                  Icons.money_rounded,
-                  const Color(0xFF7C3AED),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildSummaryItem(
-                  'Sudah Dibayar',
-                  _formatCurrency(santriData!.jumlahDibayarUangPangkal),
-                  Icons.check_circle_rounded,
-                  const Color(0xFF10B981),
-                ),
-              ),
-            ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBentoCard({
+    required String title,
+    required String value,
+    required String subtitle,
+    required IconData icon,
+    required Color iconColor,
+    double? progress,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFF1F5F9)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
-          const SizedBox(height: 12),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: _buildSummaryItem(
-                  'Kekurangan',
-                  _formatCurrency(santriData!.kekuranganUangPangkal),
-                  Icons.pending_rounded,
-                  const Color(0xFFEF4444),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: iconColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(14),
                 ),
+                child: Icon(icon, color: iconColor, size: 22),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF7C3AED).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: const Color(0xFF7C3AED).withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              if (progress != null)
+                SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                      Icon(
-                        Icons.timeline,
-                        color: const Color(0xFF7C3AED),
-                        size: 24,
+                      CircularProgressIndicator(
+                        value: progress,
+                        backgroundColor: Colors.grey[100],
+                        valueColor: AlwaysStoppedAnimation<Color>(iconColor),
+                        strokeWidth: 4,
                       ),
-                      const SizedBox(height: 8),
                       Text(
-                        'Status',
+                        '${(progress * 100).toInt()}%',
                         style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        santriData!.progressUangPangkalPercentage >= 1.0
-                            ? 'LUNAS'
-                            : 'BELUM LUNAS',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color:
-                              santriData!.progressUangPangkalPercentage >= 1.0
-                              ? const Color(0xFF10B981)
-                              : const Color(0xFFEF4444),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
+                          color: iconColor,
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryItem(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
+          const SizedBox(height: 20),
           Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
+            title.toUpperCase(),
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              color: const Color(0xFF8E8E8E),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.3,
+                color: const Color(0xFF1A1A1A),
+              ),
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: Colors.grey[800],
+            subtitle,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: const Color(0xFF8E8E8E),
+              fontWeight: FontWeight.w500,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildStatusInfo(String label, String value, Color color) {
-    return Column(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: color.withValues(alpha: 0.3), width: 2),
-          ),
-          child: Center(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: color,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: Colors.grey[600],
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -1985,7 +1719,8 @@ $currentDate
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: headerFontSize,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -2037,8 +1772,9 @@ $currentDate
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: titleFontSize,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
+                            fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
+                            
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -2105,7 +1841,8 @@ $currentDate
                             _generateInvoiceId(),
                             style: TextStyle(
                               fontSize: bodyFontSize,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
                               color: Colors.grey[800],
                               fontFamily: 'monospace',
                             ),
@@ -2245,7 +1982,8 @@ $currentDate
                               'TOTAL PEMBAYARAN',
                               style: TextStyle(
                                 fontSize: titleFontSize,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
                                 color: isPaid
                                     ? Colors.green[700]
                                     : Colors.orange[700],
@@ -2273,7 +2011,8 @@ $currentDate
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: smallFontSize,
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
                                 ),
                                 textAlign: TextAlign.center,
                                 maxLines: 1,
@@ -2296,7 +2035,8 @@ $currentDate
                                 ),
                                 style: TextStyle(
                                   fontSize: isSmallScreen ? 24 : 28,
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
                                   color: isPaid
                                       ? Colors.green[700]
                                       : Colors.orange[700],
@@ -2359,9 +2099,9 @@ $currentDate
                                   : 'INFORMASI PEMBAYARAN',
                               style: TextStyle(
                                 fontSize: smallFontSize,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
                                 color: const Color(0xFF4F46E5),
-                                letterSpacing: 0.5,
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -2411,9 +2151,9 @@ $currentDate
                                 'PEMBAYARAN TERVERIFIKASI',
                                 style: TextStyle(
                                   fontSize: smallFontSize,
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
                                   color: Colors.green[700],
-                                  letterSpacing: 0.5,
                                 ),
                                 textAlign: TextAlign.center,
                               ),
@@ -2476,9 +2216,9 @@ $currentDate
           title,
           style: TextStyle(
             fontSize: titleFontSize,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
             color: Colors.grey[700],
-            letterSpacing: 0.5,
           ),
         ),
         SizedBox(height: isSmallScreen ? 8 : 12),

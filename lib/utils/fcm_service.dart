@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -9,6 +10,13 @@ import 'package:mmkv/mmkv.dart';
 // ============================================================
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Wajib inisialisasi binding dan Firebase di isolate background
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  // Wajib inisialisasi MMKV di isolate background sebelum digunakan
+  try {
+    await MMKV.initialize();
+  } catch (_) {}
   debugPrint('🔔 [FCM Background] ${message.notification?.title}');
   await FCMService._showFCMNotification(message);
 }
@@ -56,6 +64,7 @@ class FCMService {
       );
 
       // Daftarkan background handler (harus sebelum listener lain)
+      // ✅ FIX: Hanya daftarkan sekali — tidak boleh dipanggil ulang
       FirebaseMessaging.onBackgroundMessage(
         firebaseMessagingBackgroundHandler,
       );
@@ -94,6 +103,19 @@ class FCMService {
   static Future<void> _initLocalNotifications() async {
     _localNotifications = FlutterLocalNotificationsPlugin();
 
+    // ✅ FIX: initialize() HARUS dipanggil SEBELUM createNotificationChannel()
+    // karena resolvePlatformSpecificImplementation membutuhkan plugin sudah diinit
+    await _localNotifications!.initialize(
+      const InitializationSettings(
+        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        iOS: DarwinInitializationSettings(),
+      ),
+      onDidReceiveNotificationResponse: (response) {
+        debugPrint('[FCM] Local notif tapped: ${response.payload}');
+      },
+    );
+
+    // Setelah initialize, baru resolve implementation untuk buat channel
     final androidPlugin = _localNotifications
         ?.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
@@ -112,16 +134,6 @@ class FCMService {
         ledColor: Color(0xFFDC2626),
         showBadge: true,
       ),
-    );
-
-    await _localNotifications!.initialize(
-      const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-        iOS: DarwinInitializationSettings(),
-      ),
-      onDidReceiveNotificationResponse: (response) {
-        debugPrint('[FCM] Local notif tapped: ${response.payload}');
-      },
     );
   }
 

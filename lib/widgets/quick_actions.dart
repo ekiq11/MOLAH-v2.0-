@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:pizab_molah/doa/screens/doa_list_page.dart';
 import 'package:pizab_molah/dzikir/screens/main_dzikir.dart';
 import 'package:pizab_molah/quran/screens/quran_main.dart';
@@ -18,62 +19,27 @@ class QuickActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-
     return Container(
-      width: double.infinity,
+      // Padding horizontal dihapus karena sudah di-handle oleh padding di home.dart
+      margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 8), 
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 15,
-            offset: Offset(0, 4),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
         ],
-        border: Border.all(color: Color(0xFFF3F4F6), width: 1),
       ),
-      child: Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Dekorasi background
-          Positioned(
-            top: -20,
-            right: -20,
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFF3B82F6).withValues(alpha: 0.05),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -30,
-            left: -30,
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFF10B981).withValues(alpha: 0.04),
-              ),
-            ),
-          ),
-
-          // Konten utama
-          Padding(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-                SizedBox(height: 16),
-                _buildGrid(context, screenWidth),
-              ],
-            ),
-          ),
+          _buildHeader(),
+          const SizedBox(height: 24),
+          _buildGrid(context),
         ],
       ),
     );
@@ -83,45 +49,36 @@ class QuickActions extends StatelessWidget {
     return Row(
       children: [
         Container(
-          padding: EdgeInsets.all(8),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0xFF3B82F6).withValues(alpha: 0.3),
-                blurRadius: 8,
-                offset: Offset(0, 2),
-              ),
-            ],
+            color: const Color(0xFF3B82F6).withValues(alpha: 0.1), // Biru pastel
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(Icons.dashboard_rounded, color: Colors.white, size: 18),
+          child: const Icon(Icons.grid_view_rounded, color: Color(0xFF3B82F6), size: 20),
         ),
-        SizedBox(width: 10),
+        const SizedBox(width: 12),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Menu Cepat',
+            AutoSizeText(
+              'Akses Cepat',
               style: GoogleFonts.inter(
-                fontSize: 16,
+                fontSize: 17,
                 fontWeight: FontWeight.w700,
-                color: const Color(0xFF1F2937),
-                letterSpacing: -0.3,
+                color: const Color(0xFF0F172A),
+                letterSpacing: -0.5,
               ),
+              maxLines: 1,
             ),
             const SizedBox(height: 2),
-            Text(
-              'Akses layanan dengan mudah',
+            AutoSizeText(
+              'Menu utama layanan santri',
               style: GoogleFonts.inter(
-                fontSize: 11,
-                fontWeight: FontWeight.w400,
-                color: const Color(0xFF6B7280),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF64748B),
               ),
+              maxLines: 1,
             ),
           ],
         ),
@@ -129,37 +86,25 @@ class QuickActions extends StatelessWidget {
     );
   }
 
-  Widget _buildGrid(BuildContext context, double screenWidth) {
+  Widget _buildGrid(BuildContext context) {
     final actions = _getActionItems(context);
-
-    int columns;
-    double spacing;
-
-    if (screenWidth < 360) {
-      columns = 3;
-      spacing = 12.0;
-    } else if (screenWidth < 600) {
-      columns = 4;
-      spacing = 16.0;
-    } else if (screenWidth < 900) {
-      columns = 5;
-      spacing = 20.0;
-    } else {
-      columns = 6;
-      spacing = 24.0;
-    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final itemWidth = constraints.maxWidth / columns;
+        // Kita paksa 4 item per baris di layar kecil, 5 di layar besar
+        final bool isSmallScreen = MediaQuery.of(context).size.width < 360;
+        final int columns = isSmallScreen ? 3 : 4;
+        final double spacing = 12.0;
+        
+        final double itemWidth = (constraints.maxWidth - (spacing * (columns - 1))) / columns;
 
         return Wrap(
-          spacing: 0,
-          runSpacing: spacing,
+          spacing: spacing,
+          runSpacing: 20, // Jarak antar baris lebih besar
           children: actions.map((action) {
             return SizedBox(
               width: itemWidth,
-              child: _buildMenuItem(action, itemWidth, screenWidth),
+              child: _buildMenuItem(action, itemWidth),
             );
           }).toList(),
         );
@@ -172,7 +117,7 @@ class QuickActions extends StatelessWidget {
       ActionItem(
         icon: Icons.auto_stories_rounded,
         title: 'Hafalan',
-        color: Color(0xFF3B82F6),
+        color: const Color(0xFF3B82F6), // Blue
         onTap: () {
           HapticFeedback.lightImpact();
           Navigator.push(
@@ -183,11 +128,10 @@ class QuickActions extends StatelessWidget {
           );
         },
       ),
-
       ActionItem(
         icon: Icons.stars_rounded,
         title: 'Reward',
-        color: Color(0xFFF59E0B),
+        color: const Color(0xFFF59E0B), // Amber
         onTap: () {
           HapticFeedback.lightImpact();
           Navigator.push(
@@ -201,7 +145,7 @@ class QuickActions extends StatelessWidget {
       ActionItem(
         icon: Icons.school_rounded,
         title: 'SPP',
-        color: Color(0xFF10B981),
+        color: const Color(0xFF10B981), // Emerald
         onTap: () {
           HapticFeedback.lightImpact();
           Navigator.push(
@@ -213,7 +157,7 @@ class QuickActions extends StatelessWidget {
       ActionItem(
         icon: Icons.sports_soccer_rounded,
         title: 'Ekskul',
-        color: Color(0xFF8B5CF6),
+        color: const Color(0xFF8B5CF6), // Violet
         onTap: () {
           HapticFeedback.lightImpact();
           Navigator.push(
@@ -227,7 +171,7 @@ class QuickActions extends StatelessWidget {
       ActionItem(
         icon: Icons.receipt_long_rounded,
         title: 'Riwayat',
-        color: Color(0xFFEF4444),
+        color: const Color(0xFFEF4444), // Red
         onTap: () {
           HapticFeedback.lightImpact();
           Navigator.push(
@@ -241,7 +185,7 @@ class QuickActions extends StatelessWidget {
       ),
       ActionItem(
         title: 'Al-Quran',
-        color: Color(0xFF059669),
+        color: const Color(0xFF059669), // Dark Emerald
         customImage: 'assets/other/iconquran.png',
         onTap: () {
           HapticFeedback.lightImpact();
@@ -254,7 +198,7 @@ class QuickActions extends StatelessWidget {
       ActionItem(
         icon: Icons.mosque_rounded,
         title: 'Doa-Doa',
-        color: Color(0xFF059669),
+        color: const Color(0xFF14B8A6), // Teal
         onTap: () {
           HapticFeedback.lightImpact();
           Navigator.push(
@@ -264,10 +208,9 @@ class QuickActions extends StatelessWidget {
         },
       ),
       ActionItem(
-        icon: Icons.wb_sunny_outlined,
+        icon: Icons.wb_sunny_rounded,
         title: 'Dzikir',
-        color: Color(0xFF7C3AED),
-
+        color: const Color(0xFFEAB308), // Yellow
         onTap: () {
           HapticFeedback.lightImpact();
           Navigator.push(
@@ -279,94 +222,56 @@ class QuickActions extends StatelessWidget {
     ];
   }
 
-  Widget _buildMenuItem(
-    ActionItem action,
-    double itemWidth,
-    double screenWidth,
-  ) {
-    final double containerSize = itemWidth < 70
-        ? 52.0
-        : itemWidth < 90
-        ? 56.0
-        : itemWidth < 110
-        ? 60.0
-        : 64.0;
-
-    final double iconSize = containerSize * 0.5;
-
-    final double titleFontSize = screenWidth < 360
-        ? 11.0
-        : screenWidth < 600
-        ? 12.0
-        : 13.0;
-
-    final double borderRadius = 14.0;
+  Widget _buildMenuItem(ActionItem action, double itemWidth) {
+    // Ukuran proporsional, dibatasi maksimal 56
+    final double containerSize = (itemWidth * 0.8).clamp(48.0, 56.0);
+    final double iconSize = containerSize * 0.45;
 
     return InkWell(
       onTap: action.onTap,
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: containerSize,
-              height: containerSize,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [action.color.withValues(alpha: 0.8), action.color],
-                ),
-                borderRadius: BorderRadius.circular(borderRadius),
-                boxShadow: [
-                  BoxShadow(
-                    color: action.color.withValues(alpha: 0.2),
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
-                    spreadRadius: 0,
-                  ),
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 20,
-                    offset: Offset(0, 8),
-                    spreadRadius: -5,
-                  ),
-                ],
-              ),
+      borderRadius: BorderRadius.circular(16),
+      splashColor: action.color.withValues(alpha: 0.1),
+      highlightColor: action.color.withValues(alpha: 0.05),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: containerSize,
+            height: containerSize,
+            decoration: BoxDecoration(
+              color: action.color.withValues(alpha: 0.1),
+              shape: BoxShape.circle, // Berubah dari kotak melengkung menjadi lingkaran penuh (Instagram style)
+            ),
+            child: Center(
               child: action.customImage != null
-                  ? Padding(
-                      padding: EdgeInsets.all(containerSize * 0.2),
-                      child: Image.asset(
-                        action.customImage!,
-                        width: iconSize * 1.1,
-                        height: iconSize * 1.1,
-                        fit: BoxFit.contain,
-                      ),
+                  ? Image.asset(
+                      action.customImage!,
+                      width: iconSize * 1.2,
+                      height: iconSize * 1.2,
+                      fit: BoxFit.contain,
+                      color: action.color,
                     )
-                  : Icon(action.icon, color: Colors.white, size: iconSize),
+                  : Icon(action.icon, color: action.color, size: iconSize),
             ),
-            SizedBox(height: 8),
-
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4),
-              child: Text(
-                action.title,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  fontSize: titleFontSize,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF374151),
-                  height: 1.2,
-                  letterSpacing: -0.2,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: AutoSizeText(
+              action.title,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF334155), // Slate 700
+                letterSpacing: -0.3,
               ),
+              maxLines: 1,
+              minFontSize: 9,
+              overflow: TextOverflow.ellipsis,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
